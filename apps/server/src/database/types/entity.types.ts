@@ -22,6 +22,7 @@ import {
   Shares,
   FileTasks,
   UserMfa as _UserMFA,
+  UserMfaRecoveryCodes,
   ApiKeys,
   AiProviders as _AiProviders,
   AiModels as _AiModels,
@@ -129,6 +130,12 @@ export type UpdatableFileTask = Updateable<Omit<FileTasks, 'id'>>;
 export type UserMFA = Selectable<_UserMFA>;
 export type InsertableUserMFA = Insertable<_UserMFA>;
 export type UpdatableUserMFA = Updateable<Omit<_UserMFA, 'id'>>;
+
+export type UserMfaRecoveryCode = Selectable<UserMfaRecoveryCodes>;
+export type InsertableUserMfaRecoveryCode = Insertable<UserMfaRecoveryCodes>;
+export type UpdatableUserMfaRecoveryCode = Updateable<
+  Omit<UserMfaRecoveryCodes, 'id'>
+>;
 
 // Api Keys
 export type ApiKey = Selectable<ApiKeys>;

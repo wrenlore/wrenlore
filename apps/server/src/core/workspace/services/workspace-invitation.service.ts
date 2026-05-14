@@ -344,12 +344,6 @@ export class WorkspaceInvitationService {
       });
     }
 
-    if (workspace.enforceMfa) {
-      return {
-        requiresLogin: true,
-      };
-    }
-
     const authToken = await this.tokenService.generateAccessToken(newUser);
     return { authToken };
   }

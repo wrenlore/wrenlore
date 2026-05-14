@@ -469,7 +469,6 @@ export class WorkspaceService {
         'name',
         'logo',
         'enforceSso',
-        'enforceMfa',
         'emailDomains',
       ],
       updateWorkspaceDto,

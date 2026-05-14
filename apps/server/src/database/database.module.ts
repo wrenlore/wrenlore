@@ -17,6 +17,7 @@ import { KyselyDB } from '@wrenlore/db/types/kysely.types';
 import * as process from 'node:process';
 import { MigrationService } from '@wrenlore/db/services/migration.service';
 import { UserTokenRepo } from './repos/user-token/user-token.repo';
+import { UserMfaRepo } from './repos/user/user-mfa.repo';
 import { BacklinkRepo } from '@wrenlore/db/repos/backlink/backlink.repo';
 import { ShareRepo } from '@wrenlore/db/repos/share/share.repo';
 import { NotificationRepo } from '@wrenlore/db/repos/notification/notification.repo';
@@ -76,6 +77,7 @@ import { normalizePostgresUrl } from '../common/helpers';
     CommentRepo,
     AttachmentRepo,
     UserTokenRepo,
+    UserMfaRepo,
     BacklinkRepo,
     ShareRepo,
     NotificationRepo,
@@ -95,6 +97,7 @@ import { normalizePostgresUrl } from '../common/helpers';
     CommentRepo,
     AttachmentRepo,
     UserTokenRepo,
+    UserMfaRepo,
     BacklinkRepo,
     ShareRepo,
     NotificationRepo,

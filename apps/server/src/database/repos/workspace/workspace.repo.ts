@@ -32,7 +32,6 @@ export class WorkspaceRepo {
     'trialEndAt',
     'enforceSso',
     'plan',
-    'enforceMfa',
     'trashRetentionDays',
   ];
   constructor(@InjectKysely() private readonly db: KyselyDB) {}

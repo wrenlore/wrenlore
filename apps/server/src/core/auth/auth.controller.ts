@@ -97,13 +97,6 @@ export class AuthController {
       workspace,
     );
 
-    if (result.requiresLogin) {
-      return {
-        requiresLogin: true,
-      };
-    }
-
-    // Set auth cookie if no MFA is required
     this.setAuthCookie(res, result.authToken);
     return {
       requiresLogin: false,

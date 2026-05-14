@@ -5,11 +5,19 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { WorkspaceModule } from '../workspace/workspace.module';
 import { SignupService } from './services/signup.service';
 import { TokenModule } from './token.module';
+import { MfaService } from './services/mfa.service';
+import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
 
 @Module({
   imports: [TokenModule, WorkspaceModule],
   controllers: [AuthController],
-  providers: [AuthService, SignupService, JwtStrategy],
+  providers: [
+    AuthService,
+    SignupService,
+    JwtStrategy,
+    MfaService,
+    AppSecretCryptoService,
+  ],
   exports: [SignupService],
 })
 export class AuthModule {}

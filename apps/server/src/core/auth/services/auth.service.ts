@@ -217,9 +217,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired token');
     }
 
-    const user = await this.userRepo.findById(userToken.userId, workspace.id, {
-      includeUserMfa: true,
-    });
+    const user = await this.userRepo.findById(userToken.userId, workspace.id);
     if (!user || isUserDisabled(user)) {
       throw new NotFoundException('User not found');
     }
@@ -264,16 +262,6 @@ export class AuthService {
         user.id,
         workspace.id,
       );
-    }
-
-    // Check if user has MFA enabled or workspace enforces MFA
-    const userHasMfa = user?.['mfa']?.isEnabled || false;
-    const workspaceEnforcesMfa = workspace.enforceMfa || false;
-
-    if (userHasMfa || workspaceEnforcesMfa) {
-      return {
-        requiresLogin: true,
-      };
     }
 
     const authToken = await this.tokenService.generateAccessToken(user);

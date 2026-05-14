@@ -336,15 +336,23 @@ export interface Spaces {
 }
 
 export interface UserMfa {
-  backupCodes: string[] | null;
+  confirmedAt: Timestamp | null;
   createdAt: Generated<Timestamp>;
+  enabledAt: Timestamp | null;
   id: Generated<string>;
-  isEnabled: Generated<boolean | null>;
   method: Generated<string>;
-  secret: string | null;
+  totpSecret: string | null;
   updatedAt: Generated<Timestamp>;
   userId: string;
   workspaceId: string;
+}
+
+export interface UserMfaRecoveryCodes {
+  codeHash: string;
+  createdAt: Generated<Timestamp>;
+  id: Generated<string>;
+  usedAt: Timestamp | null;
+  userMfaId: string;
 }
 
 export interface Users {
@@ -403,7 +411,6 @@ export interface Workspaces {
   deletedAt: Timestamp | null;
   description: string | null;
   emailDomains: Generated<string[] | null>;
-  enforceMfa: Generated<boolean | null>;
   enforceSso: Generated<boolean>;
   hostname: string | null;
   id: Generated<string>;
@@ -492,6 +499,7 @@ export interface DB {
   spaceMembers: SpaceMembers;
   spaces: Spaces;
   userMfa: UserMfa;
+  userMfaRecoveryCodes: UserMfaRecoveryCodes;
   users: Users;
   userTokens: UserTokens;
   watchers: Watchers;

@@ -24,10 +24,6 @@ export class UpdateWorkspaceDto extends PartialType(CreateWorkspaceDto) {
 
   @IsOptional()
   @IsBoolean()
-  enforceMfa: boolean;
-
-  @IsOptional()
-  @IsBoolean()
   restrictApiToAdmins: boolean;
 
   @IsOptional()

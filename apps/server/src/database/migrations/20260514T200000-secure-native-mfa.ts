@@ -1,6 +1,12 @@
 import { Kysely, sql } from 'kysely';
 
 export async function up(db: Kysely<any>): Promise<void> {
+  await sql`drop table if exists user_mfa_recovery_codes`.execute(db);
+  await sql`drop table if exists user_mfa`.execute(db);
+  await sql`alter table workspaces drop column if exists enforce_mfa`.execute(
+    db,
+  );
+
   await db.schema
     .createTable('user_mfa')
     .addColumn('id', 'uuid', (col) =>
@@ -46,6 +52,6 @@ export async function up(db: Kysely<any>): Promise<void> {
 }
 
 export async function down(db: Kysely<any>): Promise<void> {
-  await sql`drop table if exists user_mfa_recovery_codes`.execute(db);
-  await sql`drop table if exists user_mfa`.execute(db);
+  await db.schema.dropTable('user_mfa_recovery_codes').execute();
+  await db.schema.dropTable('user_mfa').execute();
 }

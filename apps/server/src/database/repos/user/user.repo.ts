@@ -198,7 +198,8 @@ export class UserRepo {
         .select([
           'userMfa.id',
           'userMfa.method',
-          'userMfa.isEnabled',
+          'userMfa.confirmedAt',
+          'userMfa.enabledAt',
           'userMfa.createdAt',
         ])
         .whereRef('userMfa.userId', '=', 'users.id'),
