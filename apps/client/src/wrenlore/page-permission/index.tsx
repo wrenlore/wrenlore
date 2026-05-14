@@ -238,7 +238,11 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
 
           {canManage && !permissionInfo?.inherited && (
             <>
-              <MultiMemberSelect value={[]} onChange={addSelectedMembers} />
+              <MultiMemberSelect
+                value={[]}
+                onChange={addSelectedMembers}
+                spaceId={page?.spaceId}
+              />
               <Text size="xs" c="dimmed">
                 {t("You remain a page permission writer when restrictions are saved.")}
               </Text>
