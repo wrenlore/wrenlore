@@ -57,6 +57,7 @@ export function MultiMemberSelect({
     query: useSpaceMembers ? "" : debouncedQuery,
     includeUsers: true,
     includeGroups: true,
+    preload: !useSpaceMembers,
   });
   const { data: spaceMembers } = useSpaceMembersInfiniteQuery(
     spaceId || "",
