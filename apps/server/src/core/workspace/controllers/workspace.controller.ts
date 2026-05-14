@@ -36,6 +36,7 @@ import { LicenseCheckService } from '../../../integrations/environment/license-c
 import { CheckHostnameDto } from '../dto/check-hostname.dto';
 import { RemoveWorkspaceUserDto } from '../dto/remove-workspace-user.dto';
 import { WorkspaceRepo } from '@wrenlore/db/repos/workspace/workspace.repo';
+import { ResetMemberMfaDto, UpdateMfaPolicyDto } from '../dto/mfa-admin.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('workspace')
@@ -109,6 +110,59 @@ export class WorkspaceController {
     }
 
     return updatedWorkspace;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa-policy')
+  async getMfaPolicy(
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    const ability = this.workspaceAbility.createForUser(user, workspace);
+    if (
+      ability.cannot(WorkspaceCaslAction.Manage, WorkspaceCaslSubject.Settings)
+    ) {
+      throw new ForbiddenException();
+    }
+
+    return this.workspaceService.getMfaPolicy();
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa-policy/update')
+  async updateMfaPolicy(
+    @Body() dto: UpdateMfaPolicyDto,
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    const ability = this.workspaceAbility.createForUser(user, workspace);
+    if (
+      ability.cannot(WorkspaceCaslAction.Manage, WorkspaceCaslSubject.Settings)
+    ) {
+      throw new ForbiddenException();
+    }
+
+    return this.workspaceService.updateMfaPolicy(
+      user,
+      dto.requireForLocalAccounts,
+    );
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('members/reset-mfa')
+  async resetMemberMfa(
+    @Body() dto: ResetMemberMfaDto,
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    const ability = this.workspaceAbility.createForUser(user, workspace);
+    if (
+      ability.cannot(WorkspaceCaslAction.Manage, WorkspaceCaslSubject.Member)
+    ) {
+      throw new ForbiddenException();
+    }
+
+    await this.workspaceService.resetMemberMfa(user, dto.userId, workspace.id);
   }
 
   @HttpCode(HttpStatus.OK)

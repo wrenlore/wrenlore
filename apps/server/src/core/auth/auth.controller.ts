@@ -62,6 +62,12 @@ export class AuthController {
       return;
     }
 
+    if (result.authToken) {
+      this.setAuthCookie(res, result.authToken);
+      const { authToken, ...response } = result;
+      return response;
+    }
+
     return result;
   }
 

@@ -251,6 +251,13 @@ export interface GroupUsers {
   userId: string;
 }
 
+export interface InstanceSettings {
+  createdAt: Generated<Timestamp>;
+  key: string;
+  updatedAt: Generated<Timestamp>;
+  value: Json;
+}
+
 export interface PageHistory {
   content: Json | null;
   contributorIds: Generated<string[] | null>;
@@ -490,6 +497,7 @@ export interface DB {
   fileTasks: FileTasks;
   groups: Groups;
   groupUsers: GroupUsers;
+  instanceSettings: InstanceSettings;
   notifications: Notifications;
   pageAccess: PageAccess;
   pagePermissions: PagePermissions;

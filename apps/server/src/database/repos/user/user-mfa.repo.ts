@@ -125,4 +125,16 @@ export class UserMfaRepo {
       .where('id', '=', id)
       .execute();
   }
+
+  async deleteByUserId(
+    userId: string,
+    workspaceId: string,
+    trx?: KyselyTransaction,
+  ) {
+    return dbOrTx(this.db, trx)
+      .deleteFrom('userMfa')
+      .where('userId', '=', userId)
+      .where('workspaceId', '=', workspaceId)
+      .execute();
+  }
 }

@@ -43,6 +43,8 @@ import {
   AUDIT_SERVICE,
   IAuditService,
 } from '../../../integrations/audit/audit.service';
+import { UserMfaRepo } from '@wrenlore/db/repos/user/user-mfa.repo';
+import { InstanceSettingRepo } from '@wrenlore/db/repos/instance-setting/instance-setting.repo';
 
 @Injectable()
 export class WorkspaceService {
@@ -58,6 +60,8 @@ export class WorkspaceService {
     private environmentService: EnvironmentService,
     private domainService: DomainService,
     private watcherRepo: WatcherRepo,
+    private userMfaRepo: UserMfaRepo,
+    private instanceSettingRepo: InstanceSettingRepo,
     @InjectKysely() private readonly db: KyselyDB,
     @InjectQueue(QueueName.ATTACHMENT_QUEUE) private attachmentQueue: Queue,
     @InjectQueue(QueueName.BILLING_QUEUE) private billingQueue: Queue,
@@ -498,6 +502,63 @@ export class WorkspaceService {
     pagination: PaginationOptions,
   ): Promise<CursorPaginationResult<User>> {
     return this.userRepo.getUsersPaginated(workspaceId, pagination);
+  }
+
+  async getMfaPolicy() {
+    return {
+      requireForLocalAccounts:
+        await this.instanceSettingRepo.isLocalMfaRequired(),
+    };
+  }
+
+  async updateMfaPolicy(authUser: User, requireForLocalAccounts: boolean) {
+    const previous = await this.instanceSettingRepo.isLocalMfaRequired();
+    await this.instanceSettingRepo.setLocalMfaRequired(requireForLocalAccounts);
+
+    if (previous !== requireForLocalAccounts) {
+      this.auditService.log({
+        event: AuditEvent.INSTANCE_MFA_POLICY_UPDATED,
+        resourceType: AuditResource.WORKSPACE,
+        resourceId: authUser.workspaceId,
+        changes: {
+          before: { requireForLocalAccounts: previous },
+          after: { requireForLocalAccounts },
+        },
+        metadata: { scope: 'instance', appliesTo: 'local_password_accounts' },
+      });
+    }
+
+    return { requireForLocalAccounts };
+  }
+
+  async resetMemberMfa(authUser: User, targetUserId: string, workspaceId: string) {
+    const targetUser = await this.userRepo.findById(targetUserId, workspaceId, {
+      includePassword: true,
+      includeUserMfa: true,
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('Workspace member not found');
+    }
+
+    if (!targetUser.password) {
+      throw new BadRequestException(
+        'Native MFA reset only applies to local password accounts',
+      );
+    }
+
+    await this.userMfaRepo.deleteByUserId(targetUser.id, workspaceId);
+
+    this.auditService.log({
+      event: AuditEvent.USER_MFA_RESET,
+      resourceType: AuditResource.USER,
+      resourceId: targetUser.id,
+      metadata: {
+        actorUserId: authUser.id,
+        targetUserId: targetUser.id,
+        scope: 'admin_reset',
+      },
+    });
   }
 
   async updateWorkspaceUserRole(

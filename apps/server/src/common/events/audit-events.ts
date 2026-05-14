@@ -83,6 +83,8 @@ export const AuditEvent = {
   USER_MFA_CHALLENGE_SUCCEEDED: 'user.mfa_challenge_succeeded',
   USER_MFA_CHALLENGE_FAILED: 'user.mfa_challenge_failed',
   USER_MFA_RECOVERY_CODE_USED: 'user.mfa_recovery_code_used',
+  USER_MFA_RESET: 'user.mfa_reset',
+  INSTANCE_MFA_POLICY_UPDATED: 'instance.mfa_policy_updated',
 
   // License
   LICENSE_ACTIVATED: 'license.activated',

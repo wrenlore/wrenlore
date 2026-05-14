@@ -28,7 +28,10 @@ describe('AuthService MFA login flow', () => {
   const workspaceId = 'workspace-id';
   const userId = 'user-id';
 
-  const createService = async (opts?: { mfaEnabled?: boolean }) => {
+  const createService = async (opts?: {
+    mfaEnabled?: boolean;
+    requireLocalMfa?: boolean;
+  }) => {
     const user = {
       id: userId,
       email: 'person@example.com',
@@ -84,6 +87,11 @@ describe('AuthService MFA login flow', () => {
       log: jest.fn(),
       setActorId: jest.fn(),
     };
+    const instanceSettingRepo = {
+      isLocalMfaRequired: jest
+        .fn()
+        .mockResolvedValue(opts?.requireLocalMfa === true),
+    };
     const db = {};
 
     const service = new AuthService(
@@ -96,6 +104,7 @@ describe('AuthService MFA login flow', () => {
       environmentService as any,
       userMfaRepo as any,
       mfaService,
+      instanceSettingRepo as any,
       db as any,
       auditService as any,
     );
@@ -107,6 +116,7 @@ describe('AuthService MFA login flow', () => {
       userMfaRepo,
       mfaService,
       auditService,
+      instanceSettingRepo,
     };
   };
 
@@ -119,6 +129,26 @@ describe('AuthService MFA login flow', () => {
         workspaceId,
       ),
     ).resolves.toBe('access-token');
+
+    expect(userRepo.updateLastLogin).toHaveBeenCalledWith(userId, workspaceId);
+    expect(tokenService.generateAccessToken).toHaveBeenCalled();
+    expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
+  });
+
+  it('requires MFA setup after password login when local MFA policy is enabled', async () => {
+    const { service, userRepo, tokenService } = await createService({
+      requireLocalMfa: true,
+    });
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toEqual({
+      requiresMfaSetup: true,
+      authToken: 'access-token',
+    });
 
     expect(userRepo.updateLastLogin).toHaveBeenCalledWith(userId, workspaceId);
     expect(tokenService.generateAccessToken).toHaveBeenCalled();

@@ -35,6 +35,10 @@ export interface IWorkspaceSettings {
   api?: IWorkspaceApiSettings;
 }
 
+export interface IMfaPolicy {
+  requireForLocalAccounts: boolean;
+}
+
 export interface IWorkspaceApiSettings {
   restrictToAdmins?: boolean;
 }

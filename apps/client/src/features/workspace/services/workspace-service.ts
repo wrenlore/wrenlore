@@ -8,6 +8,7 @@ import {
   IPublicWorkspace,
   IInvitationLink,
   IVersion,
+  IMfaPolicy,
 } from "../types/workspace.types";
 import { IPagination, QueryParams } from "@/lib/types.ts";
 import { ISetupWorkspace } from "@/features/auth/types/auth.types.ts";
@@ -54,8 +55,24 @@ export async function activateWorkspaceMember(data: {
   await api.post("/workspace/members/activate", data);
 }
 
+export async function resetWorkspaceMemberMfa(data: {
+  userId: string;
+}): Promise<void> {
+  await api.post("/workspace/members/reset-mfa", data);
+}
+
 export async function updateWorkspace(data: Partial<IWorkspace>) {
   const req = await api.post<IWorkspace>("/workspace/update", data);
+  return req.data;
+}
+
+export async function getMfaPolicy(): Promise<IMfaPolicy> {
+  const req = await api.post<IMfaPolicy>("/workspace/mfa-policy");
+  return req.data;
+}
+
+export async function updateMfaPolicy(data: IMfaPolicy): Promise<IMfaPolicy> {
+  const req = await api.post<IMfaPolicy>("/workspace/mfa-policy/update", data);
   return req.data;
 }
 

@@ -19,6 +19,9 @@ import {
   deleteWorkspaceMember,
   deactivateWorkspaceMember,
   activateWorkspaceMember,
+  resetWorkspaceMemberMfa,
+  getMfaPolicy,
+  updateMfaPolicy,
 } from "@/features/workspace/services/workspace-service";
 import { IPagination, QueryParams } from "@/lib/types.ts";
 import { notifications } from "@mantine/notifications";
@@ -28,6 +31,7 @@ import {
   IPublicWorkspace,
   IVersion,
   IWorkspace,
+  IMfaPolicy,
 } from "@/features/workspace/types/workspace.types.ts";
 import { IUser } from "@/features/user/types/user.types.ts";
 import { useTranslation } from "react-i18next";
@@ -56,6 +60,29 @@ export function useWorkspaceMembersQuery(
     queryKey: ["workspaceMembers", params],
     queryFn: () => getWorkspaceMembers(params),
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useMfaPolicyQuery(): UseQueryResult<IMfaPolicy, Error> {
+  return useQuery({
+    queryKey: ["mfa-policy"],
+    queryFn: () => getMfaPolicy(),
+  });
+}
+
+export function useUpdateMfaPolicyMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<IMfaPolicy, Error, IMfaPolicy>({
+    mutationFn: (data) => updateMfaPolicy(data),
+    onSuccess: () => {
+      notifications.show({ message: "MFA policy updated" });
+      queryClient.invalidateQueries({ queryKey: ["mfa-policy"] });
+    },
+    onError: (error) => {
+      const errorMessage = error["response"]?.data?.message;
+      notifications.show({ message: errorMessage, color: "red" });
+    },
   });
 }
 
@@ -121,6 +148,19 @@ export function useActivateWorkspaceMemberMutation() {
       queryClient.invalidateQueries({
         queryKey: ["workspaceMembers"],
       });
+    },
+    onError: (error) => {
+      const errorMessage = error["response"]?.data?.message;
+      notifications.show({ message: errorMessage, color: "red" });
+    },
+  });
+}
+
+export function useResetWorkspaceMemberMfaMutation() {
+  return useMutation<void, Error, { userId: string }>({
+    mutationFn: (data) => resetWorkspaceMemberMfa(data),
+    onSuccess: () => {
+      notifications.show({ message: "Member MFA reset" });
     },
     onError: (error) => {
       const errorMessage = error["response"]?.data?.message;

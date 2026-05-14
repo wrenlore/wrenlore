@@ -1,11 +1,18 @@
 import { Menu, ActionIcon, Text } from "@mantine/core";
 import React from "react";
-import { IconDots, IconTrash, IconUserOff, IconUserCheck } from "@tabler/icons-react";
+import {
+  IconDots,
+  IconKeyOff,
+  IconTrash,
+  IconUserCheck,
+  IconUserOff,
+} from "@tabler/icons-react";
 import { modals } from "@mantine/modals";
 import {
   useDeleteWorkspaceMemberMutation,
   useDeactivateWorkspaceMemberMutation,
   useActivateWorkspaceMemberMutation,
+  useResetWorkspaceMemberMfaMutation,
 } from "@/features/workspace/queries/workspace-query.ts";
 import { useTranslation } from "react-i18next";
 import useUserRole from "@/hooks/use-user-role.tsx";
@@ -19,6 +26,7 @@ export default function MemberActionMenu({ userId, deactivatedAt }: Props) {
   const deleteWorkspaceMemberMutation = useDeleteWorkspaceMemberMutation();
   const deactivateMutation = useDeactivateWorkspaceMemberMutation();
   const activateMutation = useActivateWorkspaceMemberMutation();
+  const resetMfaMutation = useResetWorkspaceMemberMfaMutation();
   const { isAdmin } = useUserRole();
 
   const isDeactivated = !!deactivatedAt;
@@ -72,6 +80,22 @@ export default function MemberActionMenu({ userId, deactivatedAt }: Props) {
       onConfirm: onRevoke,
     });
 
+  const openResetMfaModal = () =>
+    modals.openConfirmModal({
+      title: t("Reset member MFA"),
+      children: (
+        <Text size="sm">
+          {t(
+            "Reset MFA for this member? Their authenticator setup and recovery codes will be removed. If MFA is required, they must set it up again at next local password login.",
+          )}
+        </Text>
+      ),
+      centered: true,
+      labels: { confirm: t("Reset MFA"), cancel: t("Cancel") },
+      confirmProps: { color: "orange" },
+      onConfirm: () => resetMfaMutation.mutateAsync({ userId }),
+    });
+
   return (
     <>
       <Menu
@@ -101,6 +125,14 @@ export default function MemberActionMenu({ userId, deactivatedAt }: Props) {
             disabled={!isAdmin}
           >
             {isDeactivated ? t("Activate member") : t("Deactivate member")}
+          </Menu.Item>
+
+          <Menu.Item
+            onClick={openResetMfaModal}
+            leftSection={<IconKeyOff size={16} />}
+            disabled={!isAdmin}
+          >
+            {t("Reset MFA")}
           </Menu.Item>
 
           <Menu.Divider />

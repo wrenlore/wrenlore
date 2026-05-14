@@ -11,6 +11,7 @@ import AllowedDomains from "@/features/auth/sso/components/allowed-domains.tsx";
 import { useTranslation } from "react-i18next";
 import DisablePublicSharing from "@/wrenlore/security/components/disable-public-sharing.tsx";
 import TrashRetention from "@/wrenlore/security/components/trash-retention.tsx";
+import EnforceMfa from "@/wrenlore/security/components/enforce-mfa.tsx";
 
 export default function Security() {
   const { t } = useTranslation();
@@ -31,6 +32,9 @@ export default function Security() {
       <Divider my="lg" />
 
       <TrashRetention />
+      <Divider my="lg" />
+
+      <EnforceMfa />
       <Divider my="lg" />
 
       <Title order={4} my="lg">

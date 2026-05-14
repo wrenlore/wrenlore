@@ -41,6 +41,7 @@ import { EnvironmentService } from '../../../integrations/environment/environmen
 import { UserMfaRepo } from '@wrenlore/db/repos/user/user-mfa.repo';
 import { JwtType } from '../dto/jwt-payload';
 import { MfaService } from './mfa.service';
+import { InstanceSettingRepo } from '@wrenlore/db/repos/instance-setting/instance-setting.repo';
 
 @Injectable()
 export class AuthService {
@@ -54,6 +55,7 @@ export class AuthService {
     private environmentService: EnvironmentService,
     private userMfaRepo: UserMfaRepo,
     private mfaService: MfaService,
+    private instanceSettingRepo: InstanceSettingRepo,
     @InjectKysely() private readonly db: KyselyDB,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
   ) {}
@@ -90,6 +92,18 @@ export class AuthService {
       return {
         userHasMfa: true,
         mfaToken: await this.tokenService.generateMfaToken(user, workspaceId),
+      };
+    }
+
+    if (await this.instanceSettingRepo.isLocalMfaRequired()) {
+      const authToken = await this.completeLogin(
+        user,
+        workspaceId,
+        'password_mfa_setup_required',
+      );
+      return {
+        requiresMfaSetup: true,
+        authToken,
       };
     }
 

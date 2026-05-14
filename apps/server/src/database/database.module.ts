@@ -26,6 +26,7 @@ import { PageListener } from '@wrenlore/db/listeners/page.listener';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import * as postgres from 'postgres';
 import { normalizePostgresUrl } from '../common/helpers';
+import { InstanceSettingRepo } from './repos/instance-setting/instance-setting.repo';
 
 @Global()
 @Module({
@@ -82,6 +83,7 @@ import { normalizePostgresUrl } from '../common/helpers';
     ShareRepo,
     NotificationRepo,
     WatcherRepo,
+    InstanceSettingRepo,
     PageListener,
   ],
   exports: [
@@ -102,6 +104,7 @@ import { normalizePostgresUrl } from '../common/helpers';
     ShareRepo,
     NotificationRepo,
     WatcherRepo,
+    InstanceSettingRepo,
   ],
 })
 export class DatabaseModule implements OnApplicationBootstrap {
