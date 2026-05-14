@@ -14,6 +14,7 @@ interface MultiMemberSelectProps {
   value?: string[];
   onChange: (value: string[]) => void;
   spaceId?: string;
+  dropdownWithinPortal?: boolean;
 }
 
 const renderMultiSelectOption: MultiSelectProps["renderOption"] = ({
@@ -45,9 +46,11 @@ export function MultiMemberSelect({
   value,
   onChange,
   spaceId,
+  dropdownWithinPortal = true,
 }: MultiMemberSelectProps) {
   const { t } = useTranslation();
   const [searchValue, setSearchValue] = useState("");
+  const [dropdownOpened, setDropdownOpened] = useState(false);
   const [debouncedQuery] = useDebouncedValue(searchValue, 500);
   const useSpaceMembers = !!spaceId;
   const { data: suggestion } = useSearchSuggestionsQuery({
@@ -162,6 +165,11 @@ export function MultiMemberSelect({
       searchable
       searchValue={searchValue}
       onSearchChange={setSearchValue}
+      dropdownOpened={dropdownOpened}
+      onDropdownOpen={() => setDropdownOpened(true)}
+      onDropdownClose={() => setDropdownOpened(false)}
+      onOptionSubmit={() => setDropdownOpened(false)}
+      comboboxProps={{ withinPortal: dropdownWithinPortal }}
       filter={({ options }) => options}
       clearable
       variant="filled"

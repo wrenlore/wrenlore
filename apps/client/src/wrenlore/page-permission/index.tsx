@@ -242,6 +242,7 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
                 value={[]}
                 onChange={addSelectedMembers}
                 spaceId={page?.spaceId}
+                dropdownWithinPortal={false}
               />
               <Text size="xs" c="dimmed">
                 {t("You remain a page permission writer when restrictions are saved.")}
