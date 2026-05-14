@@ -28,6 +28,9 @@ export class UserController {
     @AuthUser() authUser: User,
     @AuthWorkspace() workspace: Workspace,
   ) {
+    const user = await this.userService.findById(authUser.id, workspace.id, {
+      includeUserMfa: true,
+    });
     const memberCount = await this.workspaceRepo.getActiveUserCount(
       workspace.id,
     );
@@ -39,7 +42,7 @@ export class UserController {
       memberCount,
     };
 
-    return { user: authUser, workspace: workspaceInfo };
+    return { user, workspace: workspaceInfo };
   }
 
   @HttpCode(HttpStatus.OK)

@@ -21,6 +21,15 @@ export interface IUser {
   fullPageWidth: boolean; // used for update
   pageEditMode: string; // used for update
   hasGeneratedPassword?: boolean;
+  mfa?: IUserMfa | null;
+}
+
+export interface IUserMfa {
+  id: string;
+  method: string;
+  confirmedAt?: string | null;
+  enabledAt?: string | null;
+  createdAt?: string | null;
 }
 
 export interface ICurrentUser {

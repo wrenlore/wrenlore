@@ -44,7 +44,12 @@ export default function useAuth() {
 
       // Check if MFA is required
       if (response?.userHasMfa) {
-        navigate(APP_ROUTE.AUTH.MFA_CHALLENGE + window.location.search);
+        if (response.mfaToken) {
+          sessionStorage.setItem("wrenlore:mfaToken", response.mfaToken);
+        }
+        navigate(APP_ROUTE.AUTH.MFA_CHALLENGE + window.location.search, {
+          state: { mfaToken: response?.mfaToken },
+        });
       } else if (response?.requiresMfaSetup) {
         navigate(APP_ROUTE.AUTH.MFA_SETUP_REQUIRED + window.location.search);
       } else {

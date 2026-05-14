@@ -2,9 +2,13 @@ import api from "@/lib/api-client";
 import {
   IChangePassword,
   ICollabToken,
+  ICompleteMfaLogin,
+  ICompleteMfaRecoveryLogin,
   IForgotPassword,
   ILogin,
   ILoginResponse,
+  IMfaRecoveryCodesResponse,
+  IMfaSetupStartResponse,
   IPasswordReset,
   ISetupWorkspace,
   IVerifyUserToken,
@@ -14,6 +18,51 @@ import { IWorkspace } from "@/features/workspace/types/workspace.types.ts";
 export async function login(data: ILogin): Promise<ILoginResponse> {
   const response = await api.post<ILoginResponse>("/auth/login", data);
   return response.data;
+}
+
+export async function startMfaSetup(): Promise<IMfaSetupStartResponse> {
+  const response = await api.post<IMfaSetupStartResponse>(
+    "/auth/mfa/setup/start",
+  );
+  return response.data;
+}
+
+export async function confirmMfaSetup(data: {
+  token: string;
+}): Promise<IMfaRecoveryCodesResponse> {
+  const response = await api.post<IMfaRecoveryCodesResponse>(
+    "/auth/mfa/setup/confirm",
+    data,
+  );
+  return response.data;
+}
+
+export async function disableMfa(data: {
+  currentPassword: string;
+}): Promise<void> {
+  await api.post<void>("/auth/mfa/disable", data);
+}
+
+export async function regenerateMfaRecoveryCodes(data: {
+  currentPassword: string;
+}): Promise<IMfaRecoveryCodesResponse> {
+  const response = await api.post<IMfaRecoveryCodesResponse>(
+    "/auth/mfa/recovery-codes/regenerate",
+    data,
+  );
+  return response.data;
+}
+
+export async function completeMfaLogin(
+  data: ICompleteMfaLogin,
+): Promise<void> {
+  await api.post<void>("/auth/mfa/challenge/totp", data);
+}
+
+export async function completeMfaRecoveryLogin(
+  data: ICompleteMfaRecoveryLogin,
+): Promise<void> {
+  await api.post<void>("/auth/mfa/challenge/recovery-code", data);
 }
 
 export async function logout(): Promise<void> {
@@ -51,4 +100,3 @@ export async function getCollabToken(): Promise<ICollabToken> {
   const req = await api.post<ICollabToken>("/auth/collab-token");
   return req.data;
 }
-

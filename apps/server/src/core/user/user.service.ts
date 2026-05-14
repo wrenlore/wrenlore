@@ -23,8 +23,12 @@ export class UserService {
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
   ) {}
 
-  async findById(userId: string, workspaceId: string) {
-    return this.userRepo.findById(userId, workspaceId);
+  async findById(
+    userId: string,
+    workspaceId: string,
+    opts?: { includeUserMfa?: boolean },
+  ) {
+    return this.userRepo.findById(userId, workspaceId, opts);
   }
 
   async update(

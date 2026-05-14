@@ -45,3 +45,24 @@ export interface ILoginResponse {
   mfaToken?: string;
   isMfaEnforced?: boolean;
 }
+
+export interface IMfaSetupStartResponse {
+  issuer: string;
+  accountLabel: string;
+  secret: string;
+  uri: string;
+}
+
+export interface IMfaRecoveryCodesResponse {
+  recoveryCodes: string[];
+}
+
+export interface ICompleteMfaLogin {
+  mfaToken: string;
+  token: string;
+}
+
+export interface ICompleteMfaRecoveryLogin {
+  mfaToken: string;
+  recoveryCode: string;
+}
