@@ -1,0 +1,67 @@
+services:
+  wrenlore:
+    image: wrenlore-app:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      APP_SECRET: ${APP_SECRET:-REPLACE_WITH_LONG_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wrenlore}:${POSTGRES_PASSWORD:-STRONG_DB_PASSWORD}@db:5432/${POSTGRES_DB:-wrenlore}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    volumes:
+      - wrenlore_storage:/app/data/storage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  db:
+    image: wrenlore-postgres:pgvector-local
+    build:
+      context: .
+      dockerfile: docker/postgres.Dockerfile
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wrenlore}
+      POSTGRES_USER: ${POSTGRES_USER:-wrenlore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-STRONG_DB_PASSWORD}
+    restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wrenlore} -d ${POSTGRES_DB:-wrenlore}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:8
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  wrenlore_storage:
+  db_data:
+  redis_data:

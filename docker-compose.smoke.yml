@@ -1,0 +1,11 @@
+services:
+  wrenlore:
+    environment:
+      APP_URL: ${SMOKE_APP_URL:-http://localhost:3050}
+      APP_SECRET: ${SMOKE_APP_SECRET:-wrenlore-smoke-local-secret-not-for-production}
+      MAIL_FROM_NAME: WrenLore
+      AI_DRIVER: ${SMOKE_AI_DRIVER:-ollama}
+      AI_COMPLETION_MODEL: ${SMOKE_AI_COMPLETION_MODEL:-gemma4:31b-cloud}
+      OLLAMA_API_URL: ${SMOKE_OLLAMA_API_URL:-http://host.docker.internal:11434}
+    ports: !override
+      - "${SMOKE_APP_PORT:-3050}:3000"

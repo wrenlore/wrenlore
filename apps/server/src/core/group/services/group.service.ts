@@ -1,0 +1,219 @@
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { CreateGroupDto, DefaultGroup } from '../dto/create-group.dto';
+import { PaginationOptions } from '@wrenlore/db/pagination/pagination-options';
+import { UpdateGroupDto } from '../dto/update-group.dto';
+import { KyselyDB, KyselyTransaction } from '@wrenlore/db/types/kysely.types';
+import { GroupRepo } from '@wrenlore/db/repos/group/group.repo';
+import { GroupUserRepo } from '@wrenlore/db/repos/group/group-user.repo';
+import { SpaceMemberRepo } from '@wrenlore/db/repos/space/space-member.repo';
+import { Group, InsertableGroup, User } from '@wrenlore/db/types/entity.types';
+import { CursorPaginationResult } from '@wrenlore/db/pagination/cursor-pagination';
+import { GroupUserService } from './group-user.service';
+import { WatcherRepo } from '@wrenlore/db/repos/watcher/watcher.repo';
+import { executeTx } from '@wrenlore/db/utils';
+import { InjectKysely } from 'nestjs-kysely';
+import { AuditEvent, AuditResource } from '../../../common/events/audit-events';
+import { diffAuditTrackedFields } from '../../../common/helpers';
+import {
+  AUDIT_SERVICE,
+  IAuditService,
+} from '../../../integrations/audit/audit.service';
+
+@Injectable()
+export class GroupService {
+  constructor(
+    private groupRepo: GroupRepo,
+    private groupUserRepo: GroupUserRepo,
+    private spaceMemberRepo: SpaceMemberRepo,
+    @Inject(forwardRef(() => GroupUserService))
+    private groupUserService: GroupUserService,
+    private readonly watcherRepo: WatcherRepo,
+    @InjectKysely() private readonly db: KyselyDB,
+    @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
+  ) {}
+
+  async getGroupInfo(groupId: string, workspaceId: string): Promise<Group> {
+    const group = await this.groupRepo.findById(groupId, workspaceId, {
+      includeMemberCount: true,
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    return group;
+  }
+
+  async createGroup(
+    authUser: User,
+    workspaceId: string,
+    createGroupDto: CreateGroupDto,
+    trx?: KyselyTransaction,
+  ): Promise<Group> {
+    const groupExists = await this.groupRepo.findByName(
+      createGroupDto.name,
+      workspaceId,
+    );
+    if (groupExists) {
+      throw new BadRequestException('Group name already exists');
+    }
+    const insertableGroup: InsertableGroup = {
+      name: createGroupDto.name,
+      description: createGroupDto.description,
+      isDefault: false,
+      creatorId: authUser.id,
+      workspaceId: workspaceId,
+    };
+
+    const createdGroup = await this.groupRepo.insertGroup(insertableGroup, trx);
+
+    if (createGroupDto?.userIds && createGroupDto.userIds.length > 0) {
+      await this.groupUserService.addUsersToGroupBatch(
+        createGroupDto.userIds,
+        createdGroup.id,
+        workspaceId,
+      );
+    }
+
+    this.auditService.log({
+      event: AuditEvent.GROUP_CREATED,
+      resourceType: AuditResource.GROUP,
+      resourceId: createdGroup.id,
+      changes: {
+        after: {
+          name: createdGroup.name,
+          description: createdGroup.description,
+        },
+      },
+    });
+
+    return createdGroup;
+  }
+
+  async updateGroup(
+    workspaceId: string,
+    updateGroupDto: UpdateGroupDto,
+  ): Promise<Group> {
+    const group = await this.groupRepo.findById(
+      updateGroupDto.groupId,
+      workspaceId,
+      { includeMemberCount: true },
+    );
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.isDefault) {
+      throw new BadRequestException('You cannot update a default group');
+    }
+
+    const groupBefore = { name: group.name, description: group.description };
+
+    if (updateGroupDto.name) {
+      const existingGroup = await this.groupRepo.findByName(
+        updateGroupDto.name,
+        workspaceId,
+      );
+
+      if (existingGroup && group.name !== existingGroup.name) {
+        throw new BadRequestException('Group name already exists');
+      }
+
+      group.name = updateGroupDto.name;
+    }
+
+    if (updateGroupDto.description) {
+      group.description = updateGroupDto.description;
+    }
+
+    await this.groupRepo.update(
+      {
+        name: updateGroupDto.name,
+        description: updateGroupDto.description,
+      },
+      group.id,
+      workspaceId,
+    );
+
+    const changes = diffAuditTrackedFields(
+      ['name', 'description'],
+      updateGroupDto,
+      groupBefore,
+      group,
+    );
+
+    if (changes) {
+      this.auditService.log({
+        event: AuditEvent.GROUP_UPDATED,
+        resourceType: AuditResource.GROUP,
+        resourceId: group.id,
+        changes,
+      });
+    }
+
+    return group;
+  }
+
+  async getWorkspaceGroups(
+    workspaceId: string,
+    paginationOptions: PaginationOptions,
+  ): Promise<CursorPaginationResult<Group>> {
+    return this.groupRepo.getGroupsPaginated(workspaceId, paginationOptions);
+  }
+
+  async deleteGroup(groupId: string, workspaceId: string): Promise<void> {
+    const group = await this.findAndValidateGroup(groupId, workspaceId);
+    if (group.isDefault) {
+      throw new BadRequestException('You cannot delete a default group');
+    }
+
+    const [userIds, spaceIds] = await Promise.all([
+      this.groupUserRepo.getUserIdsByGroupId(groupId),
+      this.spaceMemberRepo.getSpaceIdsByGroupId(groupId),
+    ]);
+
+    // TODO: use queue instead
+    await executeTx(this.db, async (trx) => {
+      await this.groupRepo.delete(groupId, workspaceId, { trx });
+
+      for (const spaceId of spaceIds) {
+        await this.watcherRepo.deleteByUsersWithoutSpaceAccess(
+          userIds,
+          spaceId,
+          { trx },
+        );
+      }
+    });
+
+    this.auditService.log({
+      event: AuditEvent.GROUP_DELETED,
+      resourceType: AuditResource.GROUP,
+      resourceId: groupId,
+      changes: {
+        before: {
+          name: group.name,
+          description: group.description,
+        },
+      },
+    });
+  }
+
+  async findAndValidateGroup(
+    groupId: string,
+    workspaceId: string,
+  ): Promise<Group> {
+    const group = await this.groupRepo.findById(groupId, workspaceId);
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    return group;
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@wrenlore/editor-ext",
+  "homepage": "https://github.com/wrenlore/wrenlore",
+  "private": true,
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --watch"
+  },
+  "main": "dist/index.js",
+  "module": "./src/index.ts",
+  "types": "dist/index.d.ts",
+  "dependencies": {}
+}

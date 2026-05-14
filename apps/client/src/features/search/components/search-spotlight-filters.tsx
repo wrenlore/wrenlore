@@ -1,0 +1,199 @@
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  Button,
+  Menu,
+  Text,
+  TextInput,
+  Divider,
+  ScrollArea,
+  Avatar,
+  Group,
+  Switch,
+  getDefaultZIndex,
+} from "@mantine/core";
+import {
+  IconChevronDown,
+  IconBuilding,
+  IconSearch,
+  IconCheck,
+} from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
+import { useDebouncedValue } from "@mantine/hooks";
+import { useGetSpacesQuery } from "@/features/space/queries/space-query";
+import classes from "./search-spotlight-filters.module.css";
+import { useAtom } from "jotai";
+import { workspaceAtom } from "@/features/user/atoms/current-user-atom.ts";
+
+interface SearchSpotlightFiltersProps {
+  onFiltersChange?: (filters: any) => void;
+  onAskClick?: () => void;
+  spaceId?: string;
+  isAiMode?: boolean;
+}
+
+export function SearchSpotlightFilters({
+  onFiltersChange,
+  onAskClick,
+  spaceId,
+  isAiMode = false,
+}: SearchSpotlightFiltersProps) {
+  const { t } = useTranslation();
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(
+    spaceId || null,
+  );
+  const [spaceSearchQuery, setSpaceSearchQuery] = useState("");
+  const [debouncedSpaceQuery] = useDebouncedValue(spaceSearchQuery, 300);
+  const [workspace] = useAtom(workspaceAtom);
+
+  const { data: spacesData } = useGetSpacesQuery({
+    limit: 100,
+    query: debouncedSpaceQuery,
+  });
+
+  const selectedSpaceData = useMemo(() => {
+    if (!spacesData?.items || !selectedSpaceId) return null;
+    return spacesData.items.find((space) => space.id === selectedSpaceId);
+  }, [spacesData?.items, selectedSpaceId]);
+
+  const availableSpaces = useMemo(() => {
+    const spaces = spacesData?.items || [];
+    if (!selectedSpaceId) return spaces;
+
+    // Sort to put selected space first
+    return [...spaces].sort((a, b) => {
+      if (a.id === selectedSpaceId) return -1;
+      if (b.id === selectedSpaceId) return 1;
+      return 0;
+    });
+  }, [spacesData?.items, selectedSpaceId]);
+
+  useEffect(() => {
+    if (onFiltersChange) {
+      onFiltersChange({
+        spaceId: selectedSpaceId,
+        contentType: "page",
+      });
+    }
+  }, []);
+
+  const handleSpaceSelect = (spaceId: string | null) => {
+    setSelectedSpaceId(spaceId);
+
+    if (onFiltersChange) {
+      onFiltersChange({
+        spaceId: spaceId,
+        contentType: "page",
+      });
+    }
+  };
+
+  return (
+    <div className={classes.filtersContainer}>
+      {workspace?.settings?.ai?.search === true && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            height: "32px",
+            paddingLeft: "8px",
+            paddingRight: "8px",
+          }}
+        >
+          <Switch
+            checked={isAiMode}
+            onChange={(event) => onAskClick()}
+            label={t("AI Answers")}
+            size="sm"
+            color="blue"
+            labelPosition="left"
+            styles={{
+              root: { display: "flex", alignItems: "center" },
+              label: { paddingRight: "8px", fontSize: "13px", fontWeight: 500 },
+            }}
+          />
+        </div>
+      )}
+
+      <Menu
+        shadow="md"
+        width={250}
+        position="bottom-start"
+        zIndex={getDefaultZIndex("max")}
+      >
+        <Menu.Target>
+          <Button
+            variant="subtle"
+            color="gray"
+            size="sm"
+            rightSection={<IconChevronDown size={14} />}
+            leftSection={<IconBuilding size={16} />}
+            className={classes.filterButton}
+            fw={500}
+          >
+            {selectedSpaceId
+              ? `${t("Space")}: ${selectedSpaceData?.name || t("Unknown")}`
+              : `${t("Space")}: ${t("All spaces")}`}
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <TextInput
+            placeholder={t("Find a space")}
+            data-autofocus
+            autoFocus
+            leftSection={<IconSearch size={16} />}
+            value={spaceSearchQuery}
+            onChange={(e) => setSpaceSearchQuery(e.target.value)}
+            size="sm"
+            variant="filled"
+            radius="sm"
+            styles={{ input: { marginBottom: 8 } }}
+          />
+
+          <ScrollArea.Autosize mah={280}>
+            <Menu.Item onClick={() => handleSpaceSelect(null)}>
+              <Group flex="1" gap="xs">
+                <Avatar
+                  color="initials"
+                  variant="filled"
+                  name={t("All spaces")}
+                  size={20}
+                />
+                <div style={{ flex: 1 }}>
+                  <Text size="sm" fw={500}>
+                    {t("All spaces")}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {t("Search in all your spaces")}
+                  </Text>
+                </div>
+                {!selectedSpaceId && <IconCheck size={20} />}
+              </Group>
+            </Menu.Item>
+
+            <Divider my="xs" />
+
+            {availableSpaces.map((space) => (
+              <Menu.Item
+                key={space.id}
+                onClick={() => handleSpaceSelect(space.id)}
+              >
+                <Group flex="1" gap="xs">
+                  <Avatar
+                    color="initials"
+                    variant="filled"
+                    name={space.name}
+                    size={20}
+                  />
+                  <Text size="sm" fw={500} style={{ flex: 1 }} truncate>
+                    {space.name}
+                  </Text>
+                  {selectedSpaceId === space.id && <IconCheck size={20} />}
+                </Group>
+              </Menu.Item>
+            ))}
+          </ScrollArea.Autosize>
+        </Menu.Dropdown>
+      </Menu>
+    </div>
+  );
+}
