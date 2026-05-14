@@ -78,6 +78,8 @@ export const AuditEvent = {
   USER_MFA_ENABLED: 'user.mfa_enabled',
   USER_MFA_DISABLED: 'user.mfa_disabled',
   USER_MFA_BACKUP_CODE_GENERATED: 'user.mfa_backup_code_generated',
+  USER_MFA_RECOVERY_CODES_REGENERATED:
+    'user.mfa_recovery_codes_regenerated',
 
   // License
   LICENSE_ACTIVATED: 'license.activated',

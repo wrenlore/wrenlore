@@ -7,6 +7,7 @@ import { SignupService } from './services/signup.service';
 import { TokenModule } from './token.module';
 import { MfaService } from './services/mfa.service';
 import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
+import { MfaManagementService } from './services/mfa-management.service';
 
 @Module({
   imports: [TokenModule, WorkspaceModule],
@@ -16,6 +17,7 @@ import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.se
     SignupService,
     JwtStrategy,
     MfaService,
+    MfaManagementService,
     AppSecretCryptoService,
   ],
   exports: [SignupService],

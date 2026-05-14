@@ -28,11 +28,18 @@ import {
   AUDIT_SERVICE,
   IAuditService,
 } from '../../integrations/audit/audit.service';
+import { MfaManagementService } from './services/mfa-management.service';
+import {
+  ConfirmMfaSetupDto,
+  DisableMfaDto,
+  RegenerateMfaRecoveryCodesDto,
+} from './dto/mfa.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
+    private mfaManagementService: MfaManagementService,
     private environmentService: EnvironmentService,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
   ) {}
@@ -110,6 +117,61 @@ export class AuthController {
     @AuthWorkspace() workspace: Workspace,
   ) {
     return this.authService.verifyUserToken(verifyUserTokenDto, workspace.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa/setup/start')
+  async startMfaSetup(
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    return this.mfaManagementService.startSetup(user.id, workspace.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa/setup/confirm')
+  async confirmMfaSetup(
+    @Body() dto: ConfirmMfaSetupDto,
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    return this.mfaManagementService.confirmSetup(
+      user.id,
+      workspace.id,
+      dto.token,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa/disable')
+  async disableMfa(
+    @Body() dto: DisableMfaDto,
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    return this.mfaManagementService.disable(
+      user.id,
+      workspace.id,
+      dto.currentPassword,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa/recovery-codes/regenerate')
+  async regenerateMfaRecoveryCodes(
+    @Body() dto: RegenerateMfaRecoveryCodesDto,
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    return this.mfaManagementService.regenerateRecoveryCodes(
+      user.id,
+      workspace.id,
+      dto.currentPassword,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
