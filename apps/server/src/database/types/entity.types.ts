@@ -45,7 +45,12 @@ export type UpdatableWorkspaceInvitation = Updateable<
 >;
 
 // User
-export type User = Selectable<Users>;
+export type User = Selectable<Users> & {
+  mfa?: Pick<
+    Selectable<_UserMFA>,
+    'id' | 'method' | 'confirmedAt' | 'enabledAt' | 'createdAt'
+  > | null;
+};
 export type InsertableUser = Insertable<Users>;
 export type UpdatableUser = Updateable<Omit<Users, 'id'>>;
 

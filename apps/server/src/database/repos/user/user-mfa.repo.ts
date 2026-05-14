@@ -52,6 +52,17 @@ export class UserMfaRepo {
       .executeTakeFirst();
   }
 
+  async findRecoveryCodesByMfaId(
+    userMfaId: string,
+    trx?: KyselyTransaction,
+  ) {
+    return dbOrTx(this.db, trx)
+      .selectFrom('userMfaRecoveryCodes')
+      .select(['id', 'codeHash', 'usedAt', 'createdAt'])
+      .where('userMfaId', '=', userMfaId)
+      .execute();
+  }
+
   async enableMfa(id: string, enabledAt = new Date(), trx?: KyselyTransaction) {
     return dbOrTx(this.db, trx)
       .updateTable('userMfa')

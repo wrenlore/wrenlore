@@ -38,6 +38,9 @@ import {
   IAuditService,
 } from '../../../integrations/audit/audit.service';
 import { EnvironmentService } from '../../../integrations/environment/environment.service';
+import { UserMfaRepo } from '@wrenlore/db/repos/user/user-mfa.repo';
+import { JwtType } from '../dto/jwt-payload';
+import { MfaService } from './mfa.service';
 
 @Injectable()
 export class AuthService {
@@ -49,6 +52,8 @@ export class AuthService {
     private mailService: MailService,
     private domainService: DomainService,
     private environmentService: EnvironmentService,
+    private userMfaRepo: UserMfaRepo,
+    private mfaService: MfaService,
     @InjectKysely() private readonly db: KyselyDB,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
   ) {}
@@ -56,6 +61,7 @@ export class AuthService {
   async login(loginDto: LoginDto, workspaceId: string) {
     const user = await this.userRepo.findByEmail(loginDto.email, workspaceId, {
       includePassword: true,
+      includeUserMfa: true,
     });
 
     const errorMessage = 'Email or password does not match';
@@ -80,6 +86,102 @@ export class AuthService {
       appSecret: this.environmentService.getAppSecret(),
     });
 
+    if (user.mfa?.enabledAt) {
+      return {
+        userHasMfa: true,
+        mfaToken: await this.tokenService.generateMfaToken(user, workspaceId),
+      };
+    }
+
+    return this.completeLogin(user, workspaceId, 'password');
+  }
+
+  async completeMfaLogin(
+    mfaToken: string,
+    token: string,
+  ): Promise<{ authToken: string }> {
+    const user = await this.getUserFromMfaToken(mfaToken, {
+      includePassword: false,
+    });
+    const mfa = await this.getEnabledMfaForLogin(user.id, user.workspaceId, {
+      includeTotpSecret: true,
+    });
+    const secret = this.mfaService.decryptTotpSecret(mfa.totpSecret);
+
+    if (!this.mfaService.verifyTotpToken(secret, token)) {
+      this.logMfaChallengeFailed(user.id, 'totp');
+      throw new UnauthorizedException('Invalid MFA token');
+    }
+
+    this.auditService.setActorId(user.id);
+    this.auditService.log({
+      event: AuditEvent.USER_MFA_CHALLENGE_SUCCEEDED,
+      resourceType: AuditResource.USER,
+      resourceId: user.id,
+      metadata: { method: 'totp' },
+    });
+
+    const authToken = await this.completeLogin(user, user.workspaceId, 'mfa');
+    return { authToken };
+  }
+
+  async completeMfaRecoveryLogin(
+    mfaToken: string,
+    recoveryCode: string,
+  ): Promise<{ authToken: string }> {
+    const user = await this.getUserFromMfaToken(mfaToken, {
+      includePassword: false,
+    });
+    const mfa = await this.getEnabledMfaForLogin(user.id, user.workspaceId);
+    const recoveryCodes = await this.userMfaRepo.findRecoveryCodesByMfaId(
+      mfa.id,
+    );
+    const matchingCode = await this.mfaService.findMatchingRecoveryCode(
+      recoveryCode,
+      recoveryCodes,
+    );
+
+    if (!matchingCode) {
+      this.logMfaChallengeFailed(user.id, 'recovery_code');
+      throw new UnauthorizedException('Invalid recovery code');
+    }
+
+    const consumedCode = await this.userMfaRepo.markRecoveryCodeUsed(
+      matchingCode.id,
+    );
+
+    if (!consumedCode) {
+      this.logMfaChallengeFailed(user.id, 'recovery_code');
+      throw new UnauthorizedException('Invalid recovery code');
+    }
+
+    this.auditService.setActorId(user.id);
+    this.auditService.log({
+      event: AuditEvent.USER_MFA_RECOVERY_CODE_USED,
+      resourceType: AuditResource.USER,
+      resourceId: user.id,
+      metadata: { recoveryCodeId: matchingCode.id },
+    });
+    this.auditService.log({
+      event: AuditEvent.USER_MFA_CHALLENGE_SUCCEEDED,
+      resourceType: AuditResource.USER,
+      resourceId: user.id,
+      metadata: { method: 'recovery_code' },
+    });
+
+    const authToken = await this.completeLogin(
+      user,
+      user.workspaceId,
+      'mfa_recovery_code',
+    );
+    return { authToken };
+  }
+
+  private async completeLogin(
+    user: User,
+    workspaceId: string,
+    source: string,
+  ): Promise<string> {
     user.lastLoginAt = new Date();
     await this.userRepo.updateLastLogin(user.id, workspaceId);
 
@@ -87,10 +189,57 @@ export class AuthService {
       event: AuditEvent.USER_LOGIN,
       resourceType: AuditResource.USER,
       resourceId: user.id,
-      metadata: { source: 'password' },
+      metadata: { source },
     });
 
     return this.tokenService.generateAccessToken(user);
+  }
+
+  private async getUserFromMfaToken(
+    mfaToken: string,
+    opts?: { includePassword?: boolean },
+  ) {
+    const payload = await this.tokenService.verifyJwt(
+      mfaToken,
+      JwtType.MFA_TOKEN,
+    );
+    const user = await this.userRepo.findById(payload.sub, payload.workspaceId, {
+      includePassword: opts?.includePassword,
+    });
+
+    if (!user || isUserDisabled(user)) {
+      throw new UnauthorizedException('Invalid MFA challenge');
+    }
+
+    return user;
+  }
+
+  private async getEnabledMfaForLogin(
+    userId: string,
+    workspaceId: string,
+    opts?: { includeTotpSecret?: boolean },
+  ) {
+    const mfa = await this.userMfaRepo.findByUserId(userId, workspaceId, opts);
+
+    if (!mfa?.enabledAt) {
+      throw new UnauthorizedException('MFA is not enabled');
+    }
+
+    if (opts?.includeTotpSecret && !mfa.totpSecret) {
+      throw new UnauthorizedException('MFA is not configured');
+    }
+
+    return mfa;
+  }
+
+  private logMfaChallengeFailed(userId: string, method: string) {
+    this.auditService.setActorId(userId);
+    this.auditService.log({
+      event: AuditEvent.USER_MFA_CHALLENGE_FAILED,
+      resourceType: AuditResource.USER,
+      resourceId: userId,
+      metadata: { method },
+    });
   }
 
   async register(createUserDto: CreateUserDto, workspaceId: string) {

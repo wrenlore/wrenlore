@@ -31,6 +31,8 @@ import {
 import { MfaManagementService } from './services/mfa-management.service';
 import {
   ConfirmMfaSetupDto,
+  CompleteMfaLoginDto,
+  CompleteMfaRecoveryLoginDto,
   DisableMfaDto,
   RegenerateMfaRecoveryCodesDto,
 } from './dto/mfa.dto';
@@ -53,8 +55,14 @@ export class AuthController {
   ) {
     validateSsoEnforcement(workspace);
 
-    const authToken = await this.authService.login(loginInput, workspace.id);
-    this.setAuthCookie(res, authToken);
+    const result = await this.authService.login(loginInput, workspace.id);
+
+    if (typeof result === 'string') {
+      this.setAuthCookie(res, result);
+      return;
+    }
+
+    return result;
   }
 
   @UseGuards(SetupGuard)
@@ -117,6 +125,32 @@ export class AuthController {
     @AuthWorkspace() workspace: Workspace,
   ) {
     return this.authService.verifyUserToken(verifyUserTokenDto, workspace.id);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa/challenge/totp')
+  async completeMfaLogin(
+    @Res({ passthrough: true }) res: FastifyReply,
+    @Body() dto: CompleteMfaLoginDto,
+  ) {
+    const result = await this.authService.completeMfaLogin(
+      dto.mfaToken,
+      dto.token,
+    );
+    this.setAuthCookie(res, result.authToken);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('mfa/challenge/recovery-code')
+  async completeMfaRecoveryLogin(
+    @Res({ passthrough: true }) res: FastifyReply,
+    @Body() dto: CompleteMfaRecoveryLoginDto,
+  ) {
+    const result = await this.authService.completeMfaRecoveryLogin(
+      dto.mfaToken,
+      dto.recoveryCode,
+    );
+    this.setAuthCookie(res, result.authToken);
   }
 
   @UseGuards(JwtAuthGuard)
