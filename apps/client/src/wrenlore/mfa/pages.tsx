@@ -2,8 +2,12 @@ import {
   Anchor,
   Box,
   Button,
+  Code,
   Container,
+  CopyButton,
   Group,
+  Image,
+  List,
   PasswordInput,
   SegmentedControl,
   Stack,
@@ -13,16 +17,19 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type React from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   completeMfaLogin,
   completeMfaRecoveryLogin,
+  confirmMfaSetup,
+  startMfaSetup,
 } from "@/features/auth/services/auth-service";
 import APP_ROUTE, { getPostLoginRedirect } from "@/lib/app-route";
 import classes from "@/features/auth/components/auth.module.css";
+import QRCode from "qrcode";
 
 export function MfaChallengePage() {
   const { t } = useTranslation();
@@ -153,5 +160,147 @@ export function MfaChallengePage() {
 }
 
 export function MfaSetupRequiredPage() {
-  return <Navigate to="/settings/account/profile" replace />;
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [setup, setSetup] = useState<Awaited<ReturnType<typeof startMfaSetup>> | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [token, setToken] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+
+  const startMutation = useMutation({
+    mutationFn: startMfaSetup,
+    onSuccess: setSetup,
+    onError: (err: any) => {
+      notifications.show({
+        color: "red",
+        message: err.response?.data?.message ?? t("Failed to start MFA setup"),
+      });
+    },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: confirmMfaSetup,
+    onSuccess: (data) => {
+      setRecoveryCodes(data.recoveryCodes);
+      notifications.show({ message: t("Multi-factor authentication enabled") });
+    },
+    onError: (err: any) => {
+      notifications.show({
+        color: "red",
+        message: err.response?.data?.message ?? t("Invalid authentication code"),
+      });
+    },
+  });
+
+  useEffect(() => {
+    startMutation.mutate();
+  }, []);
+
+  useEffect(() => {
+    if (!setup?.uri) return;
+    QRCode.toDataURL(setup.uri, { margin: 1, width: 180 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
+  }, [setup?.uri]);
+
+  const continueAfterSetup = () => navigate(getPostLoginRedirect());
+
+  return (
+    <Container size={460} className={classes.container}>
+      <Box p="xl" className={classes.containerBox}>
+        <Title order={2} ta="center" fw={500} mb="xs">
+          {t("Set up multi-factor authentication")}
+        </Title>
+        <Text size="sm" c="dimmed" ta="center" mb="lg">
+          {t(
+            "Your workspace requires MFA for local password accounts. Add an authenticator app to continue.",
+          )}
+        </Text>
+
+        {recoveryCodes.length > 0 ? (
+          <Stack gap="md">
+            <Text size="sm" c="dimmed">
+              {t(
+                "Save these recovery codes now. They are shown only once and can be used if you lose access to your authenticator app.",
+              )}
+            </Text>
+            <List spacing={4} size="sm">
+              {recoveryCodes.map((code) => (
+                <List.Item key={code}>
+                  <Code>{code}</Code>
+                </List.Item>
+              ))}
+            </List>
+            <Group justify="space-between">
+              <CopyButton value={recoveryCodes.join("\\n")}>
+                {({ copied, copy }) => (
+                  <Button variant="default" onClick={copy}>
+                    {copied ? t("Copied") : t("Copy codes")}
+                  </Button>
+                )}
+              </CopyButton>
+              <Button onClick={continueAfterSetup}>{t("Continue")}</Button>
+            </Group>
+          </Stack>
+        ) : (
+          <Stack gap="md">
+            <Text size="sm" c="dimmed">
+              {t(
+                "Scan the QR code with an authenticator app, then enter the 6-digit code to finish setup.",
+              )}
+            </Text>
+
+            {qrDataUrl && (
+              <Image
+                src={qrDataUrl}
+                alt={t("Authenticator QR code")}
+                w={180}
+                h={180}
+                fit="contain"
+                mx="auto"
+              />
+            )}
+
+            {setup?.secret && (
+              <Box>
+                <Text size="sm" fw={500} mb={4}>
+                  {t("Manual setup key")}
+                </Text>
+                <Group gap="xs">
+                  <Code style={{ wordBreak: "break-all" }}>{setup.secret}</Code>
+                  <CopyButton value={setup.secret}>
+                    {({ copied, copy }) => (
+                      <Button size="xs" variant="default" onClick={copy}>
+                        {copied ? t("Copied") : t("Copy")}
+                      </Button>
+                    )}
+                  </CopyButton>
+                </Group>
+              </Box>
+            )}
+
+            <TextInput
+              label={t("Authentication code")}
+              placeholder="123456"
+              value={token}
+              onChange={(event) => setToken(event.currentTarget.value)}
+              maxLength={12}
+              inputMode="numeric"
+              variant="filled"
+              data-autofocus
+            />
+
+            <Button
+              onClick={() => confirmMutation.mutate({ token })}
+              loading={startMutation.isPending || confirmMutation.isPending}
+              disabled={!setup || token.trim().length === 0}
+              fullWidth
+            >
+              {t("Confirm and continue")}
+            </Button>
+          </Stack>
+        )}
+      </Box>
+    </Container>
+  );
 }
