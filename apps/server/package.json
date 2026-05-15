@@ -49,7 +49,7 @@
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.1.14",
     "@nestjs/config": "^4.0.3",
-    "@nestjs/core": "^11.1.14",
+    "@nestjs/core": "^11.1.18",
     "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/jwt": "11.0.0",
     "@nestjs/mapped-types": "^2.1.0",
