@@ -137,7 +137,7 @@ importers:
         version: 3.17.1(@tiptap/core@3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1))
       '@tiptap/html':
         specifier: 3.17.1
-        version: 3.17.1(@tiptap/core@3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1))(@tiptap/pm@3.17.1)(happy-dom@20.1.0)
+        version: 3.17.1(@tiptap/core@3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1))(@tiptap/pm@3.17.1)(happy-dom@20.8.9)
       '@tiptap/pm':
         specifier: 3.17.1
         version: 3.17.1
@@ -582,8 +582,8 @@ importers:
         specifier: ^11.3.3
         version: 11.3.3
       happy-dom:
-        specifier: 20.1.0
-        version: 20.1.0
+        specifier: 20.8.9
+        version: 20.8.9
       ioredis:
         specifier: ^5.4.1
         version: 5.4.1
@@ -5260,9 +5260,6 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
-  '@types/node@20.19.19':
-    resolution: {integrity: sha512-pb1Uqj5WJP7wrcbLU7Ru4QtA0+3kAXrkutGiD26wUKzSMgNNaPARTUDQmElUXp64kh3cWdou3Q0C7qwwxqSFmg==}
-
   '@types/node@22.13.4':
     resolution: {integrity: sha512-ywP2X0DYtX3y08eFVx5fNIw7/uIv8hYUKgXoK8oayJlLnKcRfEYCxWMVE1XagUdVtCJlZT1AU4LXEABW+L1Peg==}
 
@@ -7405,8 +7402,8 @@ packages:
     engines: {node: '>=0.4.7'}
     hasBin: true
 
-  happy-dom@20.1.0:
-    resolution: {integrity: sha512-ebvqjBqzenBk2LjzNEAzoj7yhw7rW/R2/wVevMu6Mrq3MXtcI/RUz4+ozpcOcqVLEWPqLfg2v9EAU7fFXZUUJw==}
+  happy-dom@20.8.9:
+    resolution: {integrity: sha512-Tz23LR9T9jOGVZm2x1EPdXqwA37G/owYMxRwU0E4miurAtFsPMQ1d2Jc2okUaSjZqAFz2oEn3FLXC5a0a+siyA==}
     engines: {node: '>=20.0.0'}
 
   has-bigints@1.0.2:
@@ -13170,14 +13167,14 @@ snapshots:
       '@jest/test-result': 30.2.0
       '@jest/transform': 30.2.0
       '@jest/types': 30.2.0
-      '@types/node': 22.19.1
+      '@types/node': 22.13.4
       ansi-escapes: 4.3.2
       chalk: 4.1.2
       ci-info: 4.4.0
       exit-x: 0.2.2
       graceful-fs: 4.2.11
       jest-changed-files: 30.2.0
-      jest-config: 30.2.0(@types/node@22.19.1)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.5.25(@swc/helpers@0.5.5))(@types/node@22.13.4)(typescript@5.7.3))
+      jest-config: 30.2.0(@types/node@22.13.4)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.5.25(@swc/helpers@0.5.5))(@types/node@22.13.4)(typescript@5.7.3))
       jest-haste-map: 30.2.0
       jest-message-util: 30.2.0
       jest-regex-util: 30.0.1
@@ -13328,7 +13325,7 @@ snapshots:
       '@jest/schemas': 30.0.5
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 22.19.1
+      '@types/node': 22.13.4
       '@types/yargs': 17.0.35
       chalk: 4.1.2
 
@@ -15647,11 +15644,11 @@ snapshots:
       '@tiptap/core': 3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1)
       '@tiptap/pm': 3.17.1
 
-  '@tiptap/html@3.17.1(@tiptap/core@3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1))(@tiptap/pm@3.17.1)(happy-dom@20.1.0)':
+  '@tiptap/html@3.17.1(@tiptap/core@3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1))(@tiptap/pm@3.17.1)(happy-dom@20.8.9)':
     dependencies:
       '@tiptap/core': 3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1)
       '@tiptap/pm': 3.17.1
-      happy-dom: 20.1.0
+      happy-dom: 20.8.9
 
   '@tiptap/pm@3.17.1':
     dependencies:
@@ -15760,7 +15757,7 @@ snapshots:
 
   '@types/asn1@0.2.4':
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 22.13.4
 
   '@types/babel__core@7.20.5':
     dependencies:
@@ -16000,15 +15997,15 @@ snapshots:
 
   '@types/jsonfile@6.1.4':
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 22.13.4
 
   '@types/jsonwebtoken@9.0.6':
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 22.13.4
 
   '@types/jsonwebtoken@9.0.7':
     dependencies:
-      '@types/node': 22.19.1
+      '@types/node': 22.13.4
 
   '@types/katex@0.16.7': {}
 
@@ -16032,10 +16029,6 @@ snapshots:
   '@types/mime@3.0.4': {}
 
   '@types/ms@2.1.0': {}
-
-  '@types/node@20.19.19':
-    dependencies:
-      undici-types: 6.21.0
 
   '@types/node@22.13.4':
     dependencies:
@@ -16123,7 +16116,7 @@ snapshots:
     dependencies:
       '@types/cookiejar': 2.1.5
       '@types/methods': 1.1.4
-      '@types/node': 22.19.1
+      '@types/node': 22.13.4
 
   '@types/supertest@6.0.3':
     dependencies:
@@ -18527,11 +18520,12 @@ snapshots:
     optionalDependencies:
       uglify-js: 3.19.3
 
-  happy-dom@20.1.0:
+  happy-dom@20.8.9:
     dependencies:
-      '@types/node': 20.19.19
+      '@types/node': 22.19.1
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.1
+      entities: 7.0.1
       whatwg-mimetype: 3.0.0
       ws: 8.19.0
     transitivePeerDependencies:
@@ -19032,39 +19026,6 @@ snapshots:
       strip-json-comments: 3.1.1
     optionalDependencies:
       '@types/node': 22.13.4
-      ts-node: 10.9.2(@swc/core@1.5.25(@swc/helpers@0.5.5))(@types/node@22.13.4)(typescript@5.7.3)
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
-
-  jest-config@30.2.0(@types/node@22.19.1)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.5.25(@swc/helpers@0.5.5))(@types/node@22.13.4)(typescript@5.7.3)):
-    dependencies:
-      '@babel/core': 7.28.5
-      '@jest/get-type': 30.1.0
-      '@jest/pattern': 30.0.1
-      '@jest/test-sequencer': 30.2.0
-      '@jest/types': 30.2.0
-      babel-jest: 30.2.0(@babel/core@7.28.5)
-      chalk: 4.1.2
-      ci-info: 4.4.0
-      deepmerge: 4.3.1
-      glob: 10.5.0
-      graceful-fs: 4.2.11
-      jest-circus: 30.2.0(babel-plugin-macros@3.1.0)
-      jest-docblock: 30.2.0
-      jest-environment-node: 30.2.0
-      jest-regex-util: 30.0.1
-      jest-resolve: 30.2.0
-      jest-runner: 30.2.0
-      jest-util: 30.2.0
-      jest-validate: 30.2.0
-      micromatch: 4.0.8
-      parse-json: 5.2.0
-      pretty-format: 30.2.0
-      slash: 3.0.0
-      strip-json-comments: 3.1.1
-    optionalDependencies:
-      '@types/node': 22.19.1
       ts-node: 10.9.2(@swc/core@1.5.25(@swc/helpers@0.5.5))(@types/node@22.13.4)(typescript@5.7.3)
     transitivePeerDependencies:
       - babel-plugin-macros
