@@ -1,0 +1,70 @@
+name: DCO
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check commit sign-offs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify DCO sign-offs
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          git fetch --no-tags --prune origin "${BASE_SHA}"
+
+          failed=0
+          commits="$(git rev-list --reverse "${BASE_SHA}..${HEAD_SHA}")"
+
+          if [ -z "${commits}" ]; then
+            echo "No commits to check."
+            exit 0
+          fi
+
+          for commit in ${commits}; do
+            subject="$(git show -s --format=%s "${commit}")"
+            author_email="$(git show -s --format=%ae "${commit}")"
+            signoff_emails="$(
+              git show -s --format=%B "${commit}" |
+                git interpret-trailers --parse |
+                sed -nE 's/^Signed-off-by: .+ <([^>]+)>$/\1/p'
+            )"
+
+            if [ -z "${signoff_emails}" ]; then
+              echo "::error title=Missing DCO sign-off::${commit} ${subject}"
+              failed=1
+              continue
+            fi
+
+            if ! printf '%s\n' "${signoff_emails}" | grep -Fxqi "${author_email}"; then
+              echo "::error title=DCO sign-off email mismatch::${commit} ${subject}"
+              echo "Commit author email: ${author_email}"
+              echo "Signed-off-by emails:"
+              printf '%s\n' "${signoff_emails}"
+              failed=1
+            fi
+          done
+
+          if [ "${failed}" -ne 0 ]; then
+            echo
+            echo "Every commit in this pull request must include a Signed-off-by trailer."
+            echo "Use 'git commit -s', 'git commit --amend -s', or 'git rebase --signoff'."
+            exit 1
+          fi
+
+          echo "All commits include matching DCO sign-offs."

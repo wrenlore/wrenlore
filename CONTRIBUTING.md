@@ -33,7 +33,27 @@ By contributing, you confirm that:
 - the contribution does not include proprietary third-party code or materials unless WrenLore Foundation has confirmed in writing, before the contribution is submitted, that the material is authorised for inclusion under WrenLore's licence and distribution model;
 - the contribution is compatible with WrenLore's AGPL-3.0 licensing posture.
 
-External public contributions must not be accepted until formal contributor sign-off requirements, such as Developer Certificate of Origin sign-off or a lightweight contributor licence agreement, are in place.
+## Developer Certificate of Origin
+
+WrenLore requires Developer Certificate of Origin (DCO) sign-off on every commit in pull requests.
+
+Use `git commit -s` when creating commits. This adds a `Signed-off-by:` trailer to the commit message.
+
+The sign-off email must match the commit author email and the email associated with your GitHub identity for the contribution.
+
+To fix an existing commit, use:
+
+```bash
+git commit --amend -s
+```
+
+To fix a pull request with multiple commits, use:
+
+```bash
+git rebase --signoff origin/master
+```
+
+After signing off, push the updated branch to the pull request. Do not rewrite WrenLore public history.
 
 ## Before opening changes
 
