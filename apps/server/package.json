@@ -88,7 +88,7 @@
     "nestjs-cls": "^6.2.0",
     "nestjs-kysely": "^1.2.0",
     "nestjs-pino": "^4.5.0",
-    "nodemailer": "^7.0.12",
+    "nodemailer": "^8.0.5",
     "openid-client": "^5.7.1",
     "otpauth": "^9.4.1",
     "p-limit": "^6.2.0",

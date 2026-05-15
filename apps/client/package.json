@@ -32,7 +32,7 @@
     "file-saver": "^2.0.5",
     "highlightjs-sap-abap": "^0.3.0",
     "i18next": "^23.16.8",
-    "i18next-http-backend": "^2.7.3",
+    "i18next-http-backend": "^3.0.5",
     "jotai": "^2.16.2",
     "jotai-optics": "^0.4.0",
     "js-cookie": "^3.0.5",
