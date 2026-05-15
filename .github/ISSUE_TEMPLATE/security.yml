@@ -1,0 +1,19 @@
+name: Security report
+about: Do not use public issues for vulnerabilities
+labels: security
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not report suspected vulnerabilities in a public issue.
+
+        Use GitHub private vulnerability reporting if it is available on this repository. If not, contact the maintainers privately and include reproduction details with secrets and private data removed.
+
+        See SECURITY.md for the current security policy and reporting guidance.
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Public issue acknowledgement
+      options:
+        - label: I understand that suspected vulnerabilities should be reported privately, not in public issues.
+          required: true
