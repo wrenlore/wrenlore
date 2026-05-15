@@ -35,6 +35,7 @@ type SetupData = Awaited<ReturnType<typeof startMfaSetup>>;
 export function MfaSettings() {
   const { t } = useTranslation();
   const currentUser = useAtomValue(currentUserAtom);
+  const mfaAvailable = currentUser?.mfaPolicy?.enabled !== false;
   const enabled = Boolean(currentUser?.user?.mfa?.enabledAt);
   const [setupOpened, setupModal] = useDisclosure(false);
   const [disableOpened, disableModal] = useDisclosure(false);
@@ -52,7 +53,7 @@ export function MfaSettings() {
           </Text>
         </Box>
 
-        {enabled ? (
+        {!mfaAvailable ? null : enabled ? (
           <Group gap="xs" wrap="nowrap">
             <Button
               variant="default"
@@ -81,12 +82,22 @@ export function MfaSettings() {
         )}
       </Group>
 
-      <MfaSetupModal opened={setupOpened} onClose={setupModal.close} />
-      <DisableMfaModal opened={disableOpened} onClose={disableModal.close} />
-      <RegenerateRecoveryCodesModal
-        opened={recoveryOpened}
-        onClose={recoveryModal.close}
-      />
+      {!mfaAvailable && (
+        <Alert color="gray" variant="light">
+          {t("MFA is currently disabled by an administrator.")}
+        </Alert>
+      )}
+
+      {mfaAvailable && (
+        <>
+          <MfaSetupModal opened={setupOpened} onClose={setupModal.close} />
+          <DisableMfaModal opened={disableOpened} onClose={disableModal.close} />
+          <RegenerateRecoveryCodesModal
+            opened={recoveryOpened}
+            onClose={recoveryModal.close}
+          />
+        </>
+      )}
     </Stack>
   );
 }

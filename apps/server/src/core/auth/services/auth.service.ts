@@ -63,7 +63,6 @@ export class AuthService {
   async login(loginDto: LoginDto, workspaceId: string) {
     const user = await this.userRepo.findByEmail(loginDto.email, workspaceId, {
       includePassword: true,
-      includeUserMfa: true,
     });
 
     const errorMessage = 'Email or password does not match';
@@ -88,14 +87,20 @@ export class AuthService {
       appSecret: this.environmentService.getAppSecret(),
     });
 
-    if (user.mfa?.enabledAt) {
+    const mfaPolicy = await this.instanceSettingRepo.getMfaPolicy();
+    if (!mfaPolicy.enabled) {
+      return this.completeLogin(user, workspaceId, 'password');
+    }
+
+    const mfa = await this.userMfaRepo.findByUserId(user.id, workspaceId);
+    if (mfa?.enabledAt) {
       return {
         userHasMfa: true,
         mfaToken: await this.tokenService.generateMfaToken(user, workspaceId),
       };
     }
 
-    if (await this.instanceSettingRepo.isLocalMfaRequired()) {
+    if (mfaPolicy.requireForLocalAccounts) {
       const authToken = await this.completeLogin(
         user,
         workspaceId,
@@ -117,6 +122,7 @@ export class AuthService {
     const user = await this.getUserFromMfaToken(mfaToken, {
       includePassword: false,
     });
+    await this.assertNativeMfaEnabled();
     const mfa = await this.getEnabledMfaForLogin(user.id, user.workspaceId, {
       includeTotpSecret: true,
     });
@@ -146,6 +152,7 @@ export class AuthService {
     const user = await this.getUserFromMfaToken(mfaToken, {
       includePassword: false,
     });
+    await this.assertNativeMfaEnabled();
     const mfa = await this.getEnabledMfaForLogin(user.id, user.workspaceId);
     const recoveryCodes = await this.userMfaRepo.findRecoveryCodesByMfaId(
       mfa.id,
@@ -244,6 +251,12 @@ export class AuthService {
     }
 
     return mfa;
+  }
+
+  private async assertNativeMfaEnabled() {
+    if (!(await this.instanceSettingRepo.isMfaEnabled())) {
+      throw new BadRequestException('Native MFA is disabled');
+    }
   }
 
   private logMfaChallengeFailed(userId: string, method: string) {

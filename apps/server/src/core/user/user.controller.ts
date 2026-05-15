@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthWorkspace } from '../../common/decorators/auth-workspace.decorator';
 import { User, Workspace } from '@wrenlore/db/types/entity.types';
 import { WorkspaceRepo } from '@wrenlore/db/repos/workspace/workspace.repo';
+import { InstanceSettingRepo } from '@wrenlore/db/repos/instance-setting/instance-setting.repo';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -20,6 +21,7 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly workspaceRepo: WorkspaceRepo,
+    private readonly instanceSettingRepo: InstanceSettingRepo,
   ) {}
 
   @HttpCode(HttpStatus.OK)
@@ -41,8 +43,9 @@ export class UserController {
       ...rest,
       memberCount,
     };
+    const mfaPolicy = await this.instanceSettingRepo.getMfaPolicy();
 
-    return { user, workspace: workspaceInfo };
+    return { user, workspace: workspaceInfo, mfaPolicy };
   }
 
   @HttpCode(HttpStatus.OK)

@@ -35,6 +35,7 @@ import {
 } from "@/features/workspace/types/workspace.types.ts";
 import { IUser } from "@/features/user/types/user.types.ts";
 import { useTranslation } from "react-i18next";
+import { CURRENT_USER_QUERY_KEY } from "@/features/user/hooks/use-current-user";
 
 export function useWorkspaceQuery(): UseQueryResult<IWorkspace, Error> {
   return useQuery({
@@ -78,6 +79,7 @@ export function useUpdateMfaPolicyMutation() {
     onSuccess: () => {
       notifications.show({ message: "MFA policy updated" });
       queryClient.invalidateQueries({ queryKey: ["mfa-policy"] });
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
     },
     onError: (error) => {
       const errorMessage = error["response"]?.data?.message;

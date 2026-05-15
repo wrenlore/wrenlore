@@ -505,30 +505,37 @@ export class WorkspaceService {
   }
 
   async getMfaPolicy() {
-    return {
-      requireForLocalAccounts:
-        await this.instanceSettingRepo.isLocalMfaRequired(),
-    };
+    return this.instanceSettingRepo.getMfaPolicy();
   }
 
-  async updateMfaPolicy(authUser: User, requireForLocalAccounts: boolean) {
-    const previous = await this.instanceSettingRepo.isLocalMfaRequired();
-    await this.instanceSettingRepo.setLocalMfaRequired(requireForLocalAccounts);
+  async updateMfaPolicy(
+    authUser: User,
+    policyUpdate: { enabled?: boolean; requireForLocalAccounts: boolean },
+  ) {
+    const previous = await this.instanceSettingRepo.getMfaPolicy();
+    const next = {
+      enabled: policyUpdate.enabled ?? previous.enabled,
+      requireForLocalAccounts: policyUpdate.requireForLocalAccounts,
+    };
+    await this.instanceSettingRepo.setMfaPolicy(next);
 
-    if (previous !== requireForLocalAccounts) {
+    if (
+      previous.enabled !== next.enabled ||
+      previous.requireForLocalAccounts !== next.requireForLocalAccounts
+    ) {
       this.auditService.log({
         event: AuditEvent.INSTANCE_MFA_POLICY_UPDATED,
         resourceType: AuditResource.WORKSPACE,
         resourceId: authUser.workspaceId,
         changes: {
-          before: { requireForLocalAccounts: previous },
-          after: { requireForLocalAccounts },
+          before: previous,
+          after: next,
         },
         metadata: { scope: 'instance', appliesTo: 'local_password_accounts' },
       });
     }
 
-    return { requireForLocalAccounts };
+    return next;
   }
 
   async resetMemberMfa(authUser: User, targetUserId: string, workspaceId: string) {

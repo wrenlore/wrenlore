@@ -1,4 +1,7 @@
-import { IWorkspace } from "@/features/workspace/types/workspace.types";
+import {
+  IMfaPolicy,
+  IWorkspace,
+} from "@/features/workspace/types/workspace.types";
 
 export interface IUser {
   id: string;
@@ -35,6 +38,7 @@ export interface IUserMfa {
 export interface ICurrentUser {
   user: IUser;
   workspace: IWorkspace;
+  mfaPolicy?: IMfaPolicy;
 }
 
 export interface IUserSettings {

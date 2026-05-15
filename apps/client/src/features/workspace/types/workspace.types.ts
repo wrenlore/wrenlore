@@ -36,6 +36,7 @@ export interface IWorkspaceSettings {
 }
 
 export interface IMfaPolicy {
+  enabled: boolean;
   requireForLocalAccounts: boolean;
 }
 

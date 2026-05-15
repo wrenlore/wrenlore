@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { hashPassword } from '../../../common/helpers';
 import { MfaService } from './mfa.service';
 
@@ -31,23 +31,25 @@ describe('AuthService MFA login flow', () => {
   const createService = async (opts?: {
     mfaEnabled?: boolean;
     mfaRecord?: { id: string; enabledAt: Date | null; confirmedAt?: Date | null };
+    globalMfaEnabled?: boolean;
     requireLocalMfa?: boolean;
   }) => {
+    const mfaRecord =
+      opts?.mfaRecord ??
+      (opts?.mfaEnabled
+        ? {
+            id: 'mfa-id',
+            enabledAt: new Date(),
+            confirmedAt: new Date(),
+          }
+        : null);
     const user = {
       id: userId,
       email: 'person@example.com',
       workspaceId,
       password: await hashPassword('correct-password'),
       emailVerifiedAt: new Date(),
-      mfa:
-        opts?.mfaRecord ??
-        (opts?.mfaEnabled
-          ? {
-              id: 'mfa-id',
-              enabledAt: new Date(),
-              confirmedAt: new Date(),
-            }
-          : null),
+      mfa: mfaRecord,
     };
     const userRepo = {
       findByEmail: jest.fn().mockResolvedValue(user),
@@ -64,13 +66,16 @@ describe('AuthService MFA login flow', () => {
       }),
     };
     const userMfaRepo = {
-      findByUserId: jest.fn().mockResolvedValue({
-        id: 'mfa-id',
-        userId,
-        workspaceId,
-        enabledAt: new Date(),
-        totpSecret: 'encrypted-secret',
-      }),
+      findByUserId: jest.fn().mockResolvedValue(
+        mfaRecord
+          ? {
+              ...mfaRecord,
+              userId,
+              workspaceId,
+              totpSecret: 'encrypted-secret',
+            }
+          : null,
+      ),
       findRecoveryCodesByMfaId: jest.fn(),
       markRecoveryCodeUsed: jest.fn().mockResolvedValue({
         id: 'recovery-code-id',
@@ -90,10 +95,13 @@ describe('AuthService MFA login flow', () => {
       log: jest.fn(),
       setActorId: jest.fn(),
     };
+    const mfaPolicy = {
+      enabled: opts?.globalMfaEnabled !== false,
+      requireForLocalAccounts: opts?.requireLocalMfa === true,
+    };
     const instanceSettingRepo = {
-      isLocalMfaRequired: jest
-        .fn()
-        .mockResolvedValue(opts?.requireLocalMfa === true),
+      getMfaPolicy: jest.fn().mockResolvedValue(mfaPolicy),
+      isMfaEnabled: jest.fn().mockResolvedValue(mfaPolicy.enabled),
     };
     const db = {};
 
@@ -134,6 +142,41 @@ describe('AuthService MFA login flow', () => {
     ).resolves.toBe('access-token');
 
     expect(userRepo.updateLastLogin).toHaveBeenCalledWith(userId, workspaceId);
+    expect(tokenService.generateAccessToken).toHaveBeenCalled();
+    expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
+  });
+
+  it('logs in normally when global MFA is off even if user MFA is enabled', async () => {
+    const { service, tokenService, userMfaRepo } = await createService({
+      globalMfaEnabled: false,
+      mfaEnabled: true,
+    });
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toBe('access-token');
+
+    expect(tokenService.generateAccessToken).toHaveBeenCalled();
+    expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
+    expect(userMfaRepo.findByUserId).not.toHaveBeenCalled();
+  });
+
+  it('logs in normally when global MFA is off even if setup is required', async () => {
+    const { service, tokenService } = await createService({
+      globalMfaEnabled: false,
+      requireLocalMfa: true,
+    });
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toBe('access-token');
+
     expect(tokenService.generateAccessToken).toHaveBeenCalled();
     expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
   });
@@ -222,6 +265,26 @@ describe('AuthService MFA login flow', () => {
     expect(userRepo.updateLastLogin).not.toHaveBeenCalled();
   });
 
+  it('reactivates existing user MFA when global MFA is turned back on', async () => {
+    const { service, tokenService } = await createService({
+      globalMfaEnabled: true,
+      mfaEnabled: true,
+    });
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toEqual({
+      userHasMfa: true,
+      mfaToken: 'mfa-token',
+    });
+
+    expect(tokenService.generateMfaToken).toHaveBeenCalled();
+    expect(tokenService.generateAccessToken).not.toHaveBeenCalled();
+  });
+
   it('completes login with a valid TOTP token', async () => {
     const { service, tokenService, mfaService, auditService } =
       await createService({ mfaEnabled: true });
@@ -243,6 +306,19 @@ describe('AuthService MFA login flow', () => {
         metadata: { method: 'totp' },
       }),
     );
+  });
+
+  it('rejects MFA challenge completion when global MFA is disabled', async () => {
+    const { service, tokenService } = await createService({
+      globalMfaEnabled: false,
+      mfaEnabled: true,
+    });
+
+    await expect(
+      service.completeMfaLogin('mfa-token', '123456'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(tokenService.generateAccessToken).not.toHaveBeenCalled();
   });
 
   it('rejects invalid TOTP tokens without issuing a session', async () => {
