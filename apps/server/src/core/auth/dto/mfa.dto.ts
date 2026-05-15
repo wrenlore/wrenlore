@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class ConfirmMfaSetupDto {
   @IsNotEmpty()
@@ -8,14 +8,12 @@ export class ConfirmMfaSetupDto {
 
 export class DisableMfaDto {
   @IsNotEmpty()
-  @MinLength(8)
   @IsString()
   currentPassword: string;
 }
 
 export class RegenerateMfaRecoveryCodesDto {
   @IsNotEmpty()
-  @MinLength(8)
   @IsString()
   currentPassword: string;
 }

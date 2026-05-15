@@ -1,5 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
+import { validate } from 'class-validator';
 import { hashPassword } from '../../../common/helpers';
+import {
+  DisableMfaDto,
+  RegenerateMfaRecoveryCodesDto,
+} from '../dto/mfa.dto';
 import { MfaManagementService } from './mfa-management.service';
 
 describe('MfaManagementService', () => {
@@ -7,12 +12,12 @@ describe('MfaManagementService', () => {
   const userId = 'user-id';
   const trx = { trx: true };
 
-  const createService = async () => {
+  const createService = async (password = 'correct-password') => {
     const user = {
       id: userId,
       workspaceId,
       email: 'person@example.com',
-      password: await hashPassword('correct-password'),
+      password: await hashPassword(password),
     };
     const userRepo = {
       findById: jest.fn().mockResolvedValue(user),
@@ -61,6 +66,17 @@ describe('MfaManagementService', () => {
 
     return { service, userRepo, userMfaRepo, mfaService, auditService };
   };
+
+  it('does not reject existing short current passwords at DTO validation', async () => {
+    const disableDto = new DisableMfaDto();
+    disableDto.currentPassword = 'short';
+
+    const regenerateDto = new RegenerateMfaRecoveryCodesDto();
+    regenerateDto.currentPassword = 'short';
+
+    await expect(validate(disableDto)).resolves.toHaveLength(0);
+    await expect(validate(regenerateDto)).resolves.toHaveLength(0);
+  });
 
   it('starts setup by storing an encrypted pending secret without enabling MFA', async () => {
     const { service, userMfaRepo, mfaService } = await createService();
@@ -138,7 +154,8 @@ describe('MfaManagementService', () => {
   });
 
   it('requires the current password before disabling MFA', async () => {
-    const { service, userMfaRepo, auditService } = await createService();
+    const { service, userMfaRepo, auditService } =
+      await createService('short');
     userMfaRepo.findByUserId.mockResolvedValue({
       id: 'mfa-id',
       enabledAt: new Date(),
@@ -149,7 +166,7 @@ describe('MfaManagementService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(userMfaRepo.deleteByUserId).not.toHaveBeenCalled();
 
-    await service.disable(userId, workspaceId, 'correct-password');
+    await service.disable(userId, workspaceId, 'short');
     expect(userMfaRepo.deleteByUserId).toHaveBeenCalledWith(
       userId,
       workspaceId,
