@@ -4,7 +4,6 @@ import {
   Button,
   Code,
   Container,
-  CopyButton,
   Group,
   Image,
   List,
@@ -30,6 +29,7 @@ import {
 import APP_ROUTE, { getPostLoginRedirect } from "@/lib/app-route";
 import classes from "@/features/auth/components/auth.module.css";
 import QRCode from "qrcode";
+import { CopyButton } from "@/components/common/copy-button";
 
 export function MfaChallengePage() {
   const { t } = useTranslation();
