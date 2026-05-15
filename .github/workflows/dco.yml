@@ -42,8 +42,7 @@ jobs:
             author_email="$(git show -s --format=%ae "${commit}")"
             signoff_lines="$(
               git show -s --format=%B "${commit}" |
-                git interpret-trailers --parse |
-                sed -nE 's/^Signed-off-by: (.+)$/\1/p'
+                sed -nE 's/^[[:space:]]*Signed-off-by:[[:space:]]*(.+)$/\1/Ip'
             )"
             signoff_emails="$(printf '%s\n' "${signoff_lines}" | sed -nE 's/^.+ <([^>]+)>$/\1/p')"
 
