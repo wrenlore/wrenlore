@@ -43,6 +43,7 @@ overrides:
   immutable: 4.3.8
   nanoid: 5.0.9
   underscore: 1.13.8
+  uuid: 11.1.1
 
 patchedDependencies:
   '@tiptap/core':
@@ -219,7 +220,7 @@ importers:
         specifier: 5.1.2
         version: 5.1.2
       uuid:
-        specifier: ^11.1.1
+        specifier: 11.1.1
         version: 11.1.1
       y-indexeddb:
         specifier: ^9.0.12
@@ -10145,21 +10146,8 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
-  uuid@10.0.0:
-    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
-    hasBin: true
-
-  uuid@11.1.0:
-    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
-    hasBin: true
-
   uuid@11.1.1:
     resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
-    hasBin: true
-
-  uuid@14.0.0:
-    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -14762,7 +14750,7 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1)
       '@tiptap/pm': 3.17.1
-      uuid: 10.0.0
+      uuid: 11.1.1
 
   '@tiptap/extension-youtube@3.17.1(@tiptap/core@3.17.1(patch_hash=efe36d923d71b90e115d2d468ea1ddaf04a78c2e43c811a1a4b667989c39ea00)(@tiptap/pm@3.17.1))':
     dependencies:
@@ -16093,7 +16081,7 @@ snapshots:
       node-abort-controller: 3.1.1
       semver: 7.7.4
       tslib: 2.8.1
-      uuid: 11.1.0
+      uuid: 11.1.1
     transitivePeerDependencies:
       - supports-color
 
@@ -18583,7 +18571,7 @@ snapshots:
       asn1: 0.2.6
       debug: 4.4.0
       strict-event-emitter-types: 2.0.0
-      uuid: 11.1.0
+      uuid: 11.1.1
       whatwg-url: 14.2.0
     transitivePeerDependencies:
       - supports-color
@@ -18822,7 +18810,7 @@ snapshots:
       roughjs: 4.6.6
       stylis: 4.4.0
       ts-dedent: 2.2.0
-      uuid: 14.0.0
+      uuid: 11.1.1
 
   methods@1.1.2: {}
 
@@ -21128,13 +21116,7 @@ snapshots:
 
   utils-merge@1.0.1: {}
 
-  uuid@10.0.0: {}
-
-  uuid@11.1.0: {}
-
   uuid@11.1.1: {}
-
-  uuid@14.0.0: {}
 
   v8-compile-cache-lib@3.0.1: {}
 
