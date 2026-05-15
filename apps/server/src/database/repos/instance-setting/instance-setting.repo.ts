@@ -6,12 +6,10 @@ import { KyselyDB } from '@wrenlore/db/types/kysely.types';
 export const MFA_POLICY_SETTING_KEY = 'mfa_policy';
 
 export type MfaPolicy = {
-  enabled: boolean;
   requireForLocalAccounts: boolean;
 };
 
 export const DEFAULT_MFA_POLICY: MfaPolicy = {
-  enabled: true,
   requireForLocalAccounts: false,
 };
 
@@ -27,20 +25,15 @@ export class InstanceSettingRepo {
       .executeTakeFirst();
 
     return {
-      enabled: row?.value?.['enabled'] !== false,
       requireForLocalAccounts:
+        row?.value?.['enabled'] !== false &&
         row?.value?.['requireForLocalAccounts'] === true,
     };
   }
 
   async isLocalMfaRequired(): Promise<boolean> {
     const policy = await this.getMfaPolicy();
-    return policy.enabled && policy.requireForLocalAccounts;
-  }
-
-  async isMfaEnabled(): Promise<boolean> {
-    const policy = await this.getMfaPolicy();
-    return policy.enabled;
+    return policy.requireForLocalAccounts;
   }
 
   async setMfaPolicy(policy: MfaPolicy) {

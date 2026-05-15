@@ -87,8 +87,8 @@ export class AuthService {
       appSecret: this.environmentService.getAppSecret(),
     });
 
-    const mfaPolicy = await this.instanceSettingRepo.getMfaPolicy();
-    if (!mfaPolicy.enabled) {
+    const mfaRequired = await this.instanceSettingRepo.isLocalMfaRequired();
+    if (!mfaRequired) {
       return this.completeLogin(user, workspaceId, 'password');
     }
 
@@ -100,19 +100,15 @@ export class AuthService {
       };
     }
 
-    if (mfaPolicy.requireForLocalAccounts) {
-      const authToken = await this.completeLogin(
-        user,
-        workspaceId,
-        'password_mfa_setup_required',
-      );
-      return {
-        requiresMfaSetup: true,
-        authToken,
-      };
-    }
-
-    return this.completeLogin(user, workspaceId, 'password');
+    const authToken = await this.completeLogin(
+      user,
+      workspaceId,
+      'password_mfa_setup_required',
+    );
+    return {
+      requiresMfaSetup: true,
+      authToken,
+    };
   }
 
   async completeMfaLogin(
@@ -254,7 +250,7 @@ export class AuthService {
   }
 
   private async assertNativeMfaEnabled() {
-    if (!(await this.instanceSettingRepo.isMfaEnabled())) {
+    if (!(await this.instanceSettingRepo.isLocalMfaRequired())) {
       throw new BadRequestException('Native MFA is disabled');
     }
   }

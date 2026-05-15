@@ -142,10 +142,10 @@ export class WorkspaceController {
       throw new ForbiddenException();
     }
 
-    return this.workspaceService.updateMfaPolicy(user, {
-      enabled: dto.enabled,
-      requireForLocalAccounts: dto.requireForLocalAccounts,
-    });
+    return this.workspaceService.updateMfaPolicy(
+      user,
+      dto.requireForLocalAccounts,
+    );
   }
 
   @HttpCode(HttpStatus.OK)

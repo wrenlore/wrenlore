@@ -16,6 +16,7 @@ import {
   IAuditService,
 } from '../../../integrations/audit/audit.service';
 import { MfaService } from './mfa.service';
+import { InstanceSettingRepo } from '@wrenlore/db/repos/instance-setting/instance-setting.repo';
 
 const MFA_ISSUER = 'WrenLore';
 
@@ -25,11 +26,13 @@ export class MfaManagementService {
     private readonly userRepo: UserRepo,
     private readonly userMfaRepo: UserMfaRepo,
     private readonly mfaService: MfaService,
+    private readonly instanceSettingRepo: InstanceSettingRepo,
     @InjectKysely() private readonly db: KyselyDB,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
   ) {}
 
   async startSetup(userId: string, workspaceId: string) {
+    await this.assertMfaRequired();
     const user = await this.getLocalPasswordUser(userId, workspaceId);
     const existingMfa = await this.userMfaRepo.findByUserId(
       userId,
@@ -71,6 +74,7 @@ export class MfaManagementService {
   }
 
   async confirmSetup(userId: string, workspaceId: string, token: string) {
+    await this.assertMfaRequired();
     await this.getLocalPasswordUser(userId, workspaceId);
     const mfa = await this.getPendingMfa(userId, workspaceId);
     const secret = this.mfaService.decryptTotpSecret(mfa.totpSecret);
@@ -106,15 +110,7 @@ export class MfaManagementService {
 
   async disable(userId: string, workspaceId: string, currentPassword: string) {
     await this.verifyCurrentPassword(userId, workspaceId, currentPassword);
-    await this.getEnabledMfa(userId, workspaceId);
-    await this.userMfaRepo.deleteByUserId(userId, workspaceId);
-
-    this.auditService.log({
-      event: AuditEvent.USER_MFA_DISABLED,
-      resourceType: AuditResource.USER,
-      resourceId: userId,
-      metadata: { method: 'totp' },
-    });
+    throw new BadRequestException('MFA is controlled by an administrator');
   }
 
   async regenerateRecoveryCodes(
@@ -122,6 +118,7 @@ export class MfaManagementService {
     workspaceId: string,
     currentPassword: string,
   ) {
+    await this.assertMfaRequired();
     await this.verifyCurrentPassword(userId, workspaceId, currentPassword);
     const mfa = await this.getEnabledMfa(userId, workspaceId);
     const recoveryCodes = this.mfaService.generateRecoveryCodes();
@@ -157,6 +154,12 @@ export class MfaManagementService {
     }
 
     return mfa;
+  }
+
+  private async assertMfaRequired() {
+    if (!(await this.instanceSettingRepo.isLocalMfaRequired())) {
+      throw new BadRequestException('Native MFA is disabled');
+    }
   }
 
   private async getEnabledMfa(userId: string, workspaceId: string) {

@@ -508,21 +508,12 @@ export class WorkspaceService {
     return this.instanceSettingRepo.getMfaPolicy();
   }
 
-  async updateMfaPolicy(
-    authUser: User,
-    policyUpdate: { enabled?: boolean; requireForLocalAccounts: boolean },
-  ) {
+  async updateMfaPolicy(authUser: User, requireForLocalAccounts: boolean) {
     const previous = await this.instanceSettingRepo.getMfaPolicy();
-    const next = {
-      enabled: policyUpdate.enabled ?? previous.enabled,
-      requireForLocalAccounts: policyUpdate.requireForLocalAccounts,
-    };
+    const next = { requireForLocalAccounts };
     await this.instanceSettingRepo.setMfaPolicy(next);
 
-    if (
-      previous.enabled !== next.enabled ||
-      previous.requireForLocalAccounts !== next.requireForLocalAccounts
-    ) {
+    if (previous.requireForLocalAccounts !== next.requireForLocalAccounts) {
       this.auditService.log({
         event: AuditEvent.INSTANCE_MFA_POLICY_UPDATED,
         resourceType: AuditResource.WORKSPACE,

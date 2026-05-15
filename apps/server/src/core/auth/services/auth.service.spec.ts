@@ -31,7 +31,6 @@ describe('AuthService MFA login flow', () => {
   const createService = async (opts?: {
     mfaEnabled?: boolean;
     mfaRecord?: { id: string; enabledAt: Date | null; confirmedAt?: Date | null };
-    globalMfaEnabled?: boolean;
     requireLocalMfa?: boolean;
   }) => {
     const mfaRecord =
@@ -96,12 +95,13 @@ describe('AuthService MFA login flow', () => {
       setActorId: jest.fn(),
     };
     const mfaPolicy = {
-      enabled: opts?.globalMfaEnabled !== false,
       requireForLocalAccounts: opts?.requireLocalMfa === true,
     };
     const instanceSettingRepo = {
       getMfaPolicy: jest.fn().mockResolvedValue(mfaPolicy),
-      isMfaEnabled: jest.fn().mockResolvedValue(mfaPolicy.enabled),
+      isLocalMfaRequired: jest
+        .fn()
+        .mockResolvedValue(mfaPolicy.requireForLocalAccounts),
     };
     const db = {};
 
@@ -146,9 +146,8 @@ describe('AuthService MFA login flow', () => {
     expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
   });
 
-  it('logs in normally when global MFA is off even if user MFA is enabled', async () => {
+  it('logs in normally when MFA is not required even if user MFA is enrolled', async () => {
     const { service, tokenService, userMfaRepo } = await createService({
-      globalMfaEnabled: false,
       mfaEnabled: true,
     });
 
@@ -162,23 +161,6 @@ describe('AuthService MFA login flow', () => {
     expect(tokenService.generateAccessToken).toHaveBeenCalled();
     expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
     expect(userMfaRepo.findByUserId).not.toHaveBeenCalled();
-  });
-
-  it('logs in normally when global MFA is off even if setup is required', async () => {
-    const { service, tokenService } = await createService({
-      globalMfaEnabled: false,
-      requireLocalMfa: true,
-    });
-
-    await expect(
-      service.login(
-        { email: 'person@example.com', password: 'correct-password' },
-        workspaceId,
-      ),
-    ).resolves.toBe('access-token');
-
-    expect(tokenService.generateAccessToken).toHaveBeenCalled();
-    expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
   });
 
   it('does not require a challenge for disabled MFA when local MFA policy is off', async () => {
@@ -245,8 +227,9 @@ describe('AuthService MFA login flow', () => {
     expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
   });
 
-  it('requires an MFA challenge after password login for MFA-enabled users', async () => {
+  it('requires an MFA challenge after password login for enrolled users when MFA is required', async () => {
     const { service, userRepo, tokenService } = await createService({
+      requireLocalMfa: true,
       mfaEnabled: true,
     });
 
@@ -265,9 +248,9 @@ describe('AuthService MFA login flow', () => {
     expect(userRepo.updateLastLogin).not.toHaveBeenCalled();
   });
 
-  it('reactivates existing user MFA when global MFA is turned back on', async () => {
+  it('reactivates existing user MFA when MFA becomes required again', async () => {
     const { service, tokenService } = await createService({
-      globalMfaEnabled: true,
+      requireLocalMfa: true,
       mfaEnabled: true,
     });
 
@@ -287,7 +270,7 @@ describe('AuthService MFA login flow', () => {
 
   it('completes login with a valid TOTP token', async () => {
     const { service, tokenService, mfaService, auditService } =
-      await createService({ mfaEnabled: true });
+      await createService({ requireLocalMfa: true, mfaEnabled: true });
 
     await expect(
       service.completeMfaLogin('mfa-token', '123456'),
@@ -308,9 +291,8 @@ describe('AuthService MFA login flow', () => {
     );
   });
 
-  it('rejects MFA challenge completion when global MFA is disabled', async () => {
+  it('rejects MFA challenge completion when MFA is not required', async () => {
     const { service, tokenService } = await createService({
-      globalMfaEnabled: false,
       mfaEnabled: true,
     });
 
@@ -323,7 +305,7 @@ describe('AuthService MFA login flow', () => {
 
   it('rejects invalid TOTP tokens without issuing a session', async () => {
     const { service, tokenService, mfaService, auditService } =
-      await createService({ mfaEnabled: true });
+      await createService({ requireLocalMfa: true, mfaEnabled: true });
     jest.spyOn(mfaService, 'verifyTotpToken').mockReturnValue(false);
 
     await expect(
@@ -341,6 +323,7 @@ describe('AuthService MFA login flow', () => {
 
   it('completes login once with an unused recovery code and consumes it', async () => {
     const { service, userMfaRepo, mfaService } = await createService({
+      requireLocalMfa: true,
       mfaEnabled: true,
     });
     const codeHash = await mfaService.hashRecoveryCode(

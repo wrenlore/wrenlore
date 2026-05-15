@@ -55,16 +55,27 @@ describe('MfaManagementService', () => {
     const auditService = {
       log: jest.fn(),
     };
+    const instanceSettingRepo = {
+      isLocalMfaRequired: jest.fn().mockResolvedValue(true),
+    };
 
     const service = new MfaManagementService(
       userRepo as any,
       userMfaRepo as any,
       mfaService as any,
+      instanceSettingRepo as any,
       db as any,
       auditService as any,
     );
 
-    return { service, userRepo, userMfaRepo, mfaService, auditService };
+    return {
+      service,
+      userRepo,
+      userMfaRepo,
+      mfaService,
+      auditService,
+      instanceSettingRepo,
+    };
   };
 
   it('does not reject existing short current passwords at DTO validation', async () => {
@@ -153,9 +164,8 @@ describe('MfaManagementService', () => {
     );
   });
 
-  it('requires the current password before disabling MFA', async () => {
-    const { service, userMfaRepo, auditService } =
-      await createService('short');
+  it('does not allow users to disable required MFA themselves', async () => {
+    const { service, userMfaRepo } = await createService('short');
     userMfaRepo.findByUserId.mockResolvedValue({
       id: 'mfa-id',
       enabledAt: new Date(),
@@ -166,18 +176,20 @@ describe('MfaManagementService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(userMfaRepo.deleteByUserId).not.toHaveBeenCalled();
 
-    await service.disable(userId, workspaceId, 'short');
-    expect(userMfaRepo.deleteByUserId).toHaveBeenCalledWith(
-      userId,
-      workspaceId,
+    await expect(
+      service.disable(userId, workspaceId, 'short'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(userMfaRepo.deleteByUserId).not.toHaveBeenCalled();
+  });
+
+  it('rejects setup while native MFA is not required', async () => {
+    const { service, userMfaRepo, instanceSettingRepo } = await createService();
+    instanceSettingRepo.isLocalMfaRequired.mockResolvedValue(false);
+
+    await expect(service.startSetup(userId, workspaceId)).rejects.toBeInstanceOf(
+      BadRequestException,
     );
-    expect(auditService.log).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'user.mfa_disabled',
-        resourceType: 'user',
-        resourceId: userId,
-      }),
-    );
+    expect(userMfaRepo.insertTotpMfa).not.toHaveBeenCalled();
   });
 
   it('replaces old recovery code hashes when regenerating codes', async () => {
