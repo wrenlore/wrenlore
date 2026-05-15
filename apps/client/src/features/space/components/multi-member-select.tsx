@@ -13,8 +13,17 @@ import { ISpaceMember } from "@/features/space/types/space.types.ts";
 interface MultiMemberSelectProps {
   value?: string[];
   onChange: (value: string[]) => void;
+  onMembersChange?: (members: MultiMemberOption[]) => void;
   spaceId?: string;
   dropdownWithinPortal?: boolean;
+}
+
+export interface MultiMemberOption {
+  value: string;
+  label: string;
+  email?: string;
+  avatarUrl?: string | null;
+  type: "user" | "group";
 }
 
 const renderMultiSelectOption: MultiSelectProps["renderOption"] = ({
@@ -45,6 +54,7 @@ const renderMultiSelectOption: MultiSelectProps["renderOption"] = ({
 export function MultiMemberSelect({
   value,
   onChange,
+  onMembersChange,
   spaceId,
   dropdownWithinPortal = true,
 }: MultiMemberSelectProps) {
@@ -63,7 +73,9 @@ export function MultiMemberSelect({
     spaceId || "",
     debouncedQuery,
   );
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<
+    { group: string; items: MultiMemberOption[] }[]
+  >([]);
 
   useEffect(() => {
     if (useSpaceMembers) return;
@@ -75,17 +87,17 @@ export function MultiMemberSelect({
         label: user.name,
         email: user.email,
         avatarUrl: user.avatarUrl,
-        type: "user",
+        type: "user" as const,
       }));
 
       const groupItems = (suggestion?.groups ?? []).map((group: IGroup) => ({
         value: `group-${group.id}`,
         label: group.name,
-        type: "group",
+        type: "group" as const,
       }));
 
       // Create fresh data structure based on current search results
-      const newData = [];
+      const newData: { group: string; items: MultiMemberOption[] }[] = [];
 
       if (userItems && userItems.length > 0) {
         newData.push({
@@ -121,7 +133,7 @@ export function MultiMemberSelect({
         label: user.name,
         email: user.email,
         avatarUrl: user.avatarUrl,
-        type: "user",
+        type: "user" as const,
       }));
 
     const groupItems = members
@@ -132,10 +144,10 @@ export function MultiMemberSelect({
       .map((group) => ({
         value: `group-${group.id}`,
         label: group.name,
-        type: "group",
+        type: "group" as const,
       }));
 
-    const newData = [];
+    const newData: { group: string; items: MultiMemberOption[] }[] = [];
 
     if (userItems.length > 0) {
       newData.push({
@@ -174,7 +186,14 @@ export function MultiMemberSelect({
       filter={({ options }) => options}
       clearable
       variant="filled"
-      onChange={onChange}
+      onChange={(nextValue) => {
+        onChange(nextValue);
+        onMembersChange?.(
+          data
+            .flatMap((group) => group.items)
+            .filter((item) => nextValue.includes(item.value)),
+        );
+      }}
       maxValues={50}
     />
   );

@@ -19,7 +19,10 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { usePageQuery } from "@/features/page/queries/page-query";
 import { extractPageSlugId } from "@/lib";
-import { MultiMemberSelect } from "@/features/space/components/multi-member-select";
+import {
+  MultiMemberSelect,
+} from "@/features/space/components/multi-member-select";
+import type { MultiMemberOption } from "@/features/space/components/multi-member-select";
 
 type PagePermissionRole = "reader" | "writer";
 type PagePermissionMemberType = "user" | "group";
@@ -146,6 +149,7 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
   const isRestricted =
     permissionInfo?.restricted || permissionInfo?.inherited || false;
   const canManage = !readOnly && permissionInfo?.canEdit === true;
+  const creatorId = page?.creatorId;
 
   const roleOptions = useMemo(
     () => [
@@ -155,20 +159,35 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
     [t],
   );
 
-  const addSelectedMembers = (values: string[]) => {
+  const memberLabel = (member: PagePermissionMember) =>
+    member.name || member.email || member.id;
+
+  const isCreator = (member: PagePermissionMember) =>
+    member.type === "user" && member.id === creatorId;
+
+  const addSelectedMembers = (
+    values: string[],
+    selectedOptions: MultiMemberOption[] = [],
+  ) => {
     setMembers((current) => {
       const byKey = new Map(
         current.map((member) => [`${member.type}-${member.id}`, member]),
+      );
+      const selectedByValue = new Map(
+        selectedOptions.map((option) => [option.value, option]),
       );
 
       for (const value of values) {
         const [type, ...idParts] = value.split("-");
         const id = idParts.join("-");
         if ((type === "user" || type === "group") && id) {
+          const option = selectedByValue.get(value);
           byKey.set(value, {
             id,
             type,
-            role: "reader",
+            name: option?.label,
+            email: option?.email,
+            role: type === "user" && id === creatorId ? "writer" : "reader",
           });
         }
       }
@@ -178,6 +197,8 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
   };
 
   const updateRole = (member: PagePermissionMember, role: PagePermissionRole) => {
+    if (isCreator(member)) return;
+
     setMembers((current) =>
       current.map((item) =>
         item.id === member.id && item.type === member.type
@@ -188,6 +209,8 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
   };
 
   const removeMember = (member: PagePermissionMember) => {
+    if (isCreator(member)) return;
+
     setMembers((current) =>
       current.filter(
         (item) => item.id !== member.id || item.type !== member.type,
@@ -197,7 +220,12 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
 
   const saveRestriction = () => {
     if (!pageId) return;
-    setPermissionsMutation.mutate({ pageId, members });
+    setPermissionsMutation.mutate({
+      pageId,
+      members: members.map((member) =>
+        isCreator(member) ? { ...member, role: "writer" } : member,
+      ),
+    });
   };
 
   const clearRestriction = () => {
@@ -240,7 +268,13 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
             <>
               <MultiMemberSelect
                 value={[]}
-                onChange={addSelectedMembers}
+                onChange={() => undefined}
+                onMembersChange={(selectedOptions) =>
+                  addSelectedMembers(
+                    selectedOptions.map((option) => option.value),
+                    selectedOptions,
+                  )
+                }
                 spaceId={page?.spaceId}
                 dropdownWithinPortal={false}
               />
@@ -260,18 +294,26 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
                 >
                   <div style={{ minWidth: 0 }}>
                     <Text size="sm" lineClamp={1}>
-                      {member.name || member.email || member.id}
+                      {memberLabel(member)}
                     </Text>
                     <Text size="xs" c="dimmed">
-                      {member.type === "group" ? t("Group") : t("User")}
+                      {isCreator(member)
+                        ? t("Creator")
+                        : member.type === "group"
+                          ? t("Group")
+                          : t("User")}
                     </Text>
                   </div>
                   <Group gap={4} wrap="nowrap">
                     <Select
                       size="xs"
                       data={roleOptions}
-                      value={member.role}
-                      disabled={!canManage || permissionInfo?.inherited}
+                      value={isCreator(member) ? "writer" : member.role}
+                      disabled={
+                        !canManage ||
+                        permissionInfo?.inherited ||
+                        isCreator(member)
+                      }
                       onChange={(role) =>
                         updateRole(member, role as PagePermissionRole)
                       }
@@ -282,6 +324,7 @@ function PageAccessPopover({ readOnly }: { readOnly: boolean }) {
                         <ActionIcon
                           variant="subtle"
                           color="red"
+                          disabled={isCreator(member)}
                           onClick={() => removeMember(member)}
                         >
                           <IconTrash size={16} />
