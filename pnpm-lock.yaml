@@ -589,14 +589,14 @@ importers:
         specifier: 9.0.3
         version: 9.0.3
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.2
+        specifier: ^0.28.17
+        version: 0.28.17
       kysely-migration-cli:
         specifier: ^0.4.2
         version: 0.4.2
       kysely-postgres-js:
         specifier: ^3.0.0
-        version: 3.0.0(kysely@0.28.2)(postgres@3.4.8)
+        version: 3.0.0(kysely@0.28.17)(postgres@3.4.8)
       ldapts:
         specifier: ^7.4.0
         version: 7.4.0
@@ -620,7 +620,7 @@ importers:
         version: 6.2.0(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.14)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       nestjs-kysely:
         specifier: ^1.2.0
-        version: 1.2.0(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.14)(kysely@0.28.2)(reflect-metadata@0.2.2)
+        version: 1.2.0(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.14)(kysely@0.28.17)(reflect-metadata@0.2.2)
       nestjs-pino:
         specifier: ^4.5.0
         version: 4.5.0(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.1)(rxjs@7.8.2)
@@ -765,7 +765,7 @@ importers:
         version: 30.2.0(@types/node@22.13.4)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.5.25(@swc/helpers@0.5.5))(@types/node@22.13.4)(typescript@5.7.3))
       kysely-codegen:
         specifier: ^0.20.0
-        version: 0.20.0(kysely@0.28.2)(pg@8.16.3)(typescript@5.7.3)
+        version: 0.20.0(kysely@0.28.17)(pg@8.16.3)(typescript@5.7.3)
       prettier:
         specifier: ^3.5.1
         version: 3.5.1
@@ -7955,9 +7955,9 @@ packages:
       postgres:
         optional: true
 
-  kysely@0.28.2:
-    resolution: {integrity: sha512-4YAVLoF0Sf0UTqlhgQMFU9iQECdah7n+13ANkiuVfRvlK+uI0Etbgd7bVP36dKlG+NXWbhGua8vnGt+sdhvT7A==}
-    engines: {node: '>=18.0.0'}
+  kysely@0.28.17:
+    resolution: {integrity: sha512-nbD8lB9EB3wNdMhOCdx5Li8DxnLbvKByylRLcJ1h+4SkrowVeECAyZlyiKMThF7xFdRz0jSQ2MoJr+wXux2y0Q==}
+    engines: {node: '>=20.0.0'}
 
   langium@3.3.1:
     resolution: {integrity: sha512-QJv/h939gDpvT+9SiLVlY7tZC3xB2qK57v0J04Sh9wpMb6MP1q8gB21L3WIo8T5P1MSMg3Ep14L7KkDCFG3y4w==}
@@ -19041,14 +19041,14 @@ snapshots:
 
   kolorist@1.8.0: {}
 
-  kysely-codegen@0.20.0(kysely@0.28.2)(pg@8.16.3)(typescript@5.7.3):
+  kysely-codegen@0.20.0(kysely@0.28.17)(pg@8.16.3)(typescript@5.7.3):
     dependencies:
       chalk: 4.1.2
       cosmiconfig: 9.0.0(typescript@5.7.3)
       diff: 8.0.3
       dotenv: 17.2.4
       dotenv-expand: 12.0.3
-      kysely: 0.28.2
+      kysely: 0.28.17
       micromatch: 4.0.8
       minimist: 1.2.8
       pluralize: 8.0.0
@@ -19063,13 +19063,13 @@ snapshots:
       '@commander-js/extra-typings': 11.1.0(commander@11.1.0)
       commander: 11.1.0
 
-  kysely-postgres-js@3.0.0(kysely@0.28.2)(postgres@3.4.8):
+  kysely-postgres-js@3.0.0(kysely@0.28.17)(postgres@3.4.8):
     dependencies:
-      kysely: 0.28.2
+      kysely: 0.28.17
     optionalDependencies:
       postgres: 3.4.8
 
-  kysely@0.28.2: {}
+  kysely@0.28.17: {}
 
   langium@3.3.1:
     dependencies:
@@ -19475,11 +19475,11 @@ snapshots:
       reflect-metadata: 0.2.2
       rxjs: 7.8.2
 
-  nestjs-kysely@1.2.0(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.14)(kysely@0.28.2)(reflect-metadata@0.2.2):
+  nestjs-kysely@1.2.0(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.14)(kysely@0.28.17)(reflect-metadata@0.2.2):
     dependencies:
       '@nestjs/common': 11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.1.14(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/websockets@11.1.14)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      kysely: 0.28.2
+      kysely: 0.28.17
       reflect-metadata: 0.2.2
 
   nestjs-pino@4.5.0(@nestjs/common@11.1.14(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.1)(rxjs@7.8.2):
