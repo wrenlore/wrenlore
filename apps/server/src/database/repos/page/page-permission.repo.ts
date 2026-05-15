@@ -750,7 +750,9 @@ export class PagePermissionRepo {
   async filterAccessiblePageIdsWithPermissions(
     pageIds: string[],
     userId: string,
-  ): Promise<Array<{ id: string; canEdit: boolean }>> {
+  ): Promise<
+    Array<{ id: string; canEdit: boolean; hasAnyRestriction: boolean }>
+  > {
     if (pageIds.length === 0) return [];
 
     const results = await this.db
@@ -782,6 +784,21 @@ export class PagePermissionRepo {
       )
       .selectFrom('pages')
       .select('pages.id')
+      .select((eb) =>
+        eb
+          .exists(
+            eb
+              .selectFrom('allAncestors')
+              .innerJoin(
+                'pageAccess',
+                'pageAccess.pageId',
+                'allAncestors.ancestorId',
+              )
+              .select('pageAccess.id')
+              .whereRef('allAncestors.pageId', '=', 'pages.id'),
+          )
+          .as('hasAnyRestriction'),
+      )
       .select((eb) =>
         eb
           .case()
@@ -870,7 +887,11 @@ export class PagePermissionRepo {
       )
       .execute();
 
-    return results.map((r) => ({ id: r.id, canEdit: Boolean(r.canEdit) }));
+    return results.map((r) => ({
+      id: r.id,
+      canEdit: Boolean(r.canEdit),
+      hasAnyRestriction: Boolean(r.hasAnyRestriction),
+    }));
   }
 
   /**

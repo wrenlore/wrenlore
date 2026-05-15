@@ -17,6 +17,7 @@ describe('PageController page permissions', () => {
 
   const createController = () => {
     const pageService = {
+      getSidebarPages: jest.fn().mockResolvedValue({ items: [], meta: {} }),
       getPagePermissionInfo: jest.fn().mockResolvedValue({ restricted: true }),
       setPagePermissions: jest.fn().mockResolvedValue({
         restricted: true,
@@ -34,6 +35,12 @@ describe('PageController page permissions', () => {
       validateCanView: jest.fn().mockResolvedValue(undefined),
       validateCanEdit: jest.fn().mockResolvedValue(undefined),
     };
+    const spaceAbility = {
+      createForUser: jest.fn().mockResolvedValue({
+        can: jest.fn().mockReturnValue(false),
+        cannot: jest.fn().mockReturnValue(true),
+      }),
+    };
     const auditService = {
       log: jest.fn(),
     };
@@ -42,7 +49,7 @@ describe('PageController page permissions', () => {
       pageService as any,
       pageRepo as any,
       {} as any,
-      {} as any,
+      spaceAbility as any,
       pageAccessService as any,
       auditService as any,
     );
@@ -101,5 +108,26 @@ describe('PageController page permissions', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(pageService.clearPagePermissions).not.toHaveBeenCalled();
+  });
+
+  it('lets the sidebar service filter explicit page access when the user lacks space read access', async () => {
+    const { controller, pageService } = createController();
+
+    await expect(
+      controller.getSidebarPages(
+        { spaceId: 'space-id', pageId: undefined } as any,
+        { limit: 20 } as any,
+        user,
+      ),
+    ).resolves.toEqual({ items: [], meta: {} });
+
+    expect(pageService.getSidebarPages).toHaveBeenCalledWith(
+      'space-id',
+      { limit: 20 },
+      undefined,
+      user.id,
+      false,
+      false,
+    );
   });
 });

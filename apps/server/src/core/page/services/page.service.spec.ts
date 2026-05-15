@@ -2,6 +2,10 @@ jest.mock('@wrenlore/editor-ext', () => ({
   markdownToHtml: jest.fn(),
 }));
 
+jest.mock('@wrenlore/db/pagination/cursor-pagination', () => ({
+  executeWithCursorPagination: jest.fn(),
+}));
+
 jest.mock('../../../common/helpers/prosemirror/utils', () => ({
   createYdocFromJson: jest.fn(),
   getAttachmentIds: jest.fn(() => []),
@@ -21,6 +25,7 @@ jest.mock('../../../collaboration/collaboration.gateway', () => ({
 }));
 
 import { PageService } from './page.service';
+import { executeWithCursorPagination } from '@wrenlore/db/pagination/cursor-pagination';
 
 describe('PageService page permissions', () => {
   const page = {
@@ -31,6 +36,10 @@ describe('PageService page permissions', () => {
   const authUser = { id: 'author-id' } as any;
 
   const createService = () => {
+    const queryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+    };
     const trx = {
       deleteFrom: jest.fn().mockReturnValue({
         where: jest.fn().mockReturnThis(),
@@ -38,6 +47,7 @@ describe('PageService page permissions', () => {
       }),
     };
     const db = {
+      selectFrom: jest.fn().mockReturnValue(queryBuilder),
       transaction: jest.fn().mockReturnValue({
         execute: jest.fn((callback) => callback(trx)),
       }),
@@ -55,10 +65,13 @@ describe('PageService page permissions', () => {
       getPagePermissionsPaginated: jest.fn().mockResolvedValue({
         items: [{ id: 'author-id', type: 'user', role: 'writer' }],
       }),
+      hasRestrictedPagesInSpace: jest.fn().mockResolvedValue(false),
+      filterAccessiblePageIdsWithPermissions: jest.fn().mockResolvedValue([]),
+      getParentIdsWithAccessibleChildren: jest.fn().mockResolvedValue([]),
     };
 
     const service = new PageService(
-      {} as any,
+      { withHasChildren: jest.fn().mockReturnValue('hasChildren') } as any,
       pagePermissionRepo as any,
       {} as any,
       db as any,
@@ -115,5 +128,49 @@ describe('PageService page permissions', () => {
     await service.clearPagePermissions(page, authUser.id);
 
     expect(pagePermissionRepo.deletePageAccess).toHaveBeenCalledWith(page.id);
+  });
+
+  it('shows explicit restricted-page readers and writers in the sidebar without leaking unrestricted pages when space read is missing', async () => {
+    const { service, pagePermissionRepo } = createService();
+    (executeWithCursorPagination as jest.Mock).mockResolvedValueOnce({
+      items: [
+        { id: 'reader-page-id', hasChildren: false },
+        { id: 'writer-page-id', hasChildren: false },
+        { id: 'unrestricted-page-id', hasChildren: false },
+      ],
+      meta: {},
+    });
+    pagePermissionRepo.hasRestrictedPagesInSpace.mockResolvedValue(true);
+    pagePermissionRepo.filterAccessiblePageIdsWithPermissions.mockResolvedValue([
+      {
+        id: 'reader-page-id',
+        canEdit: false,
+        hasAnyRestriction: true,
+      },
+      {
+        id: 'writer-page-id',
+        canEdit: true,
+        hasAnyRestriction: true,
+      },
+      {
+        id: 'unrestricted-page-id',
+        canEdit: true,
+        hasAnyRestriction: false,
+      },
+    ]);
+
+    const result = await service.getSidebarPages(
+      'space-id',
+      { limit: 20 } as any,
+      undefined,
+      'user-id',
+      false,
+      false,
+    );
+
+    expect(result.items).toEqual([
+      { id: 'reader-page-id', hasChildren: false, canEdit: false },
+      { id: 'writer-page-id', hasChildren: false, canEdit: true },
+    ]);
   });
 });

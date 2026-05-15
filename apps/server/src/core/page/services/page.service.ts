@@ -360,6 +360,7 @@ export class PageService {
     pageId?: string,
     userId?: string,
     spaceCanEdit?: boolean,
+    spaceCanRead = true,
   ): Promise<CursorPaginationResult<Partial<Page> & { hasChildren: boolean }>> {
     let query = this.db
       .selectFrom('pages')
@@ -407,10 +408,12 @@ export class PageService {
         await this.pagePermissionRepo.hasRestrictedPagesInSpace(spaceId);
 
       if (!hasRestrictions) {
-        result.items = result.items.map((p: any) => ({
-          ...p,
-          canEdit: spaceCanEdit ?? true,
-        }));
+        result.items = spaceCanRead
+          ? result.items.map((p: any) => ({
+              ...p,
+              canEdit: spaceCanEdit ?? true,
+            }))
+          : [];
       } else {
         const pageIds = result.items.map((p: any) => p.id);
 
@@ -420,16 +423,24 @@ export class PageService {
             userId,
           );
 
-        const permissionMap = new Map(
-          accessiblePages.map((p) => [p.id, p.canEdit]),
-        );
+        const permissionMap = new Map(accessiblePages.map((p) => [p.id, p]));
 
         result.items = result.items
-          .filter((p: any) => permissionMap.has(p.id))
-          .map((p: any) => ({
-            ...p,
-            canEdit: permissionMap.get(p.id) && (spaceCanEdit ?? true),
-          }));
+          .filter((p: any) => {
+            const permission = permissionMap.get(p.id);
+            return Boolean(
+              permission && (spaceCanRead || permission.hasAnyRestriction),
+            );
+          })
+          .map((p: any) => {
+            const permission = permissionMap.get(p.id);
+            return {
+              ...p,
+              canEdit: permission?.hasAnyRestriction
+                ? permission.canEdit
+                : spaceCanEdit ?? true,
+            };
+          });
 
         const pagesWithChildren = result.items.filter(
           (p: any) => p.hasChildren,

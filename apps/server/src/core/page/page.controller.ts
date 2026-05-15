@@ -498,9 +498,10 @@ export class PageController {
     }
 
     const ability = await this.spaceAbility.createForUser(user, spaceId);
-    if (ability.cannot(SpaceCaslAction.Read, SpaceCaslSubject.Page)) {
-      throw new ForbiddenException();
-    }
+    const spaceCanRead = ability.can(
+      SpaceCaslAction.Read,
+      SpaceCaslSubject.Page,
+    );
 
     const spaceCanEdit = ability.can(
       SpaceCaslAction.Edit,
@@ -513,6 +514,7 @@ export class PageController {
       dto.pageId,
       user.id,
       spaceCanEdit,
+      spaceCanRead,
     );
   }
 
