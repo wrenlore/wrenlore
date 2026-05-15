@@ -1,7 +1,7 @@
 {
   "name": "wrenlore",
   "homepage": "https://github.com/wrenlore/wrenlore",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "build": "nx run-many -t build",
