@@ -45,11 +45,14 @@ export type UpdatableWorkspaceInvitation = Updateable<
 >;
 
 // User
+type UserMfaJson = Pick<Selectable<_UserMFA>, 'id' | 'method'> & {
+  confirmedAt: string;
+  enabledAt: string;
+  createdAt: string;
+};
+
 export type User = Selectable<Users> & {
-  mfa?: Pick<
-    Selectable<_UserMFA>,
-    'id' | 'method' | 'confirmedAt' | 'enabledAt' | 'createdAt'
-  > | null;
+  mfa?: UserMfaJson | null;
 };
 export type InsertableUser = Insertable<Users>;
 export type UpdatableUser = Updateable<Omit<Users, 'id'>>;
