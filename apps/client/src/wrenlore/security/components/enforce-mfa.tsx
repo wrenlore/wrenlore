@@ -20,10 +20,10 @@ export default function EnforceMfa() {
   return (
     <ResponsiveSettingsRow>
       <ResponsiveSettingsContent>
-        <Text size="md">{t("Require native MFA for local password users")}</Text>
+        <Text size="md">{t("Require MFA for local password users")}</Text>
         <Text size="sm" c="dimmed">
           {t(
-            "When enabled, every local password user must set up MFA and complete an MFA challenge at login.",
+            "When enabled, local username/password users must set up MFA before continuing. SSO users manage MFA at their identity provider.",
           )}
         </Text>
       </ResponsiveSettingsContent>
