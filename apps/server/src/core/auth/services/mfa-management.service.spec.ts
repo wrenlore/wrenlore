@@ -138,7 +138,7 @@ describe('MfaManagementService', () => {
   });
 
   it('requires the current password before disabling MFA', async () => {
-    const { service, userMfaRepo } = await createService();
+    const { service, userMfaRepo, auditService } = await createService();
     userMfaRepo.findByUserId.mockResolvedValue({
       id: 'mfa-id',
       enabledAt: new Date(),
@@ -153,6 +153,13 @@ describe('MfaManagementService', () => {
     expect(userMfaRepo.deleteByUserId).toHaveBeenCalledWith(
       userId,
       workspaceId,
+    );
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'user.mfa_disabled',
+        resourceType: 'user',
+        resourceId: userId,
+      }),
     );
   });
 

@@ -28,6 +28,7 @@ import {
   startMfaSetup,
 } from "@/features/auth/services/auth-service";
 import { currentUserAtom } from "@/features/user/atoms/current-user-atom";
+import { CURRENT_USER_QUERY_KEY } from "@/features/user/hooks/use-current-user";
 
 type SetupData = Awaited<ReturnType<typeof startMfaSetup>>;
 
@@ -119,7 +120,7 @@ function MfaSetupModal({
     mutationFn: confirmMfaSetup,
     onSuccess: async (data) => {
       setRecoveryCodes(data.recoveryCodes);
-      await queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      await queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
       notifications.show({ message: t("Multi-factor authentication enabled") });
     },
     onError: (err: any) => {
@@ -247,7 +248,7 @@ function DisableMfaModal({
   const mutation = useMutation({
     mutationFn: disableMfa,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      await queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
       notifications.show({ message: t("Multi-factor authentication disabled") });
       setCurrentPassword("");
       onClose();
@@ -301,13 +302,15 @@ function RegenerateRecoveryCodesModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [currentPassword, setCurrentPassword] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
 
   const mutation = useMutation({
     mutationFn: regenerateMfaRecoveryCodes,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setRecoveryCodes(data.recoveryCodes);
+      await queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
       notifications.show({ message: t("Recovery codes regenerated") });
     },
     onError: (err: any) => {
