@@ -268,6 +268,64 @@ describe('AuthService MFA login flow', () => {
     expect(tokenService.generateAccessToken).not.toHaveBeenCalled();
   });
 
+  it('routes stale existing MFA enrollment to setup when MFA becomes required again', async () => {
+    const {
+      service,
+      tokenService,
+      mfaService,
+      instanceSettingRepo,
+      userMfaRepo,
+    } = await createService({
+      mfaEnabled: true,
+    });
+    instanceSettingRepo.isLocalMfaRequired
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+    jest.spyOn(mfaService, 'decryptTotpSecret').mockImplementation(() => {
+      throw new Error('invalid encrypted secret');
+    });
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toBe('access-token');
+    expect(userMfaRepo.findByUserId).not.toHaveBeenCalled();
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toEqual({
+      requiresMfaSetup: true,
+      authToken: 'access-token',
+    });
+
+    expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
+  });
+
+  it('does not return a raw server error for an unusable MFA secret during challenge', async () => {
+    const { service, tokenService, mfaService, auditService } =
+      await createService({ requireLocalMfa: true, mfaEnabled: true });
+    jest.spyOn(mfaService, 'decryptTotpSecret').mockImplementation(() => {
+      throw new Error('invalid encrypted secret');
+    });
+
+    await expect(
+      service.completeMfaLogin('mfa-token', '123456'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(tokenService.generateAccessToken).not.toHaveBeenCalled();
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'user.mfa_challenge_failed',
+        metadata: { method: 'totp_unusable' },
+      }),
+    );
+  });
+
   it('completes login with a valid TOTP token', async () => {
     const { service, tokenService, mfaService, auditService } =
       await createService({ requireLocalMfa: true, mfaEnabled: true });

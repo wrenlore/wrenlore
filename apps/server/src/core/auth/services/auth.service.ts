@@ -92,8 +92,8 @@ export class AuthService {
       return this.completeLogin(user, workspaceId, 'password');
     }
 
-    const mfa = await this.userMfaRepo.findByUserId(user.id, workspaceId);
-    if (mfa?.enabledAt) {
+    const mfa = await this.getChallengeReadyMfaForLogin(user.id, workspaceId);
+    if (mfa) {
       return {
         userHasMfa: true,
         mfaToken: await this.tokenService.generateMfaToken(user, workspaceId),
@@ -122,9 +122,23 @@ export class AuthService {
     const mfa = await this.getEnabledMfaForLogin(user.id, user.workspaceId, {
       includeTotpSecret: true,
     });
-    const secret = this.mfaService.decryptTotpSecret(mfa.totpSecret);
+    let secret: string;
 
-    if (!this.mfaService.verifyTotpToken(secret, token)) {
+    try {
+      secret = this.mfaService.decryptTotpSecret(mfa.totpSecret);
+    } catch {
+      this.logMfaChallengeFailed(user.id, 'totp_unusable');
+      throw new UnauthorizedException('MFA setup is invalid');
+    }
+
+    let tokenIsValid = false;
+    try {
+      tokenIsValid = this.mfaService.verifyTotpToken(secret, token);
+    } catch {
+      tokenIsValid = false;
+    }
+
+    if (!tokenIsValid) {
       this.logMfaChallengeFailed(user.id, 'totp');
       throw new UnauthorizedException('Invalid MFA token');
     }
@@ -244,6 +258,27 @@ export class AuthService {
 
     if (opts?.includeTotpSecret && !mfa.totpSecret) {
       throw new UnauthorizedException('MFA is not configured');
+    }
+
+    return mfa;
+  }
+
+  private async getChallengeReadyMfaForLogin(
+    userId: string,
+    workspaceId: string,
+  ) {
+    const mfa = await this.userMfaRepo.findByUserId(userId, workspaceId, {
+      includeTotpSecret: true,
+    });
+
+    if (!mfa?.enabledAt || !mfa.totpSecret) {
+      return null;
+    }
+
+    try {
+      this.mfaService.decryptTotpSecret(mfa.totpSecret);
+    } catch {
+      return null;
     }
 
     return mfa;
