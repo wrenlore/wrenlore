@@ -38,26 +38,38 @@ jobs:
 
           for commit in ${commits}; do
             subject="$(git show -s --format=%s "${commit}")"
+            author_name="$(git show -s --format=%an "${commit}")"
             author_email="$(git show -s --format=%ae "${commit}")"
-            signoff_emails="$(
+            signoff_lines="$(
               git show -s --format=%B "${commit}" |
                 git interpret-trailers --parse |
-                sed -nE 's/^Signed-off-by: .+ <([^>]+)>$/\1/p'
+                sed -nE 's/^Signed-off-by: (.+)$/\1/p'
             )"
+            signoff_emails="$(printf '%s\n' "${signoff_lines}" | sed -nE 's/^.+ <([^>]+)>$/\1/p')"
 
-            if [ -z "${signoff_emails}" ]; then
+            if [ -z "${signoff_lines}" ]; then
               echo "::error title=Missing DCO sign-off::${commit} ${subject}"
               failed=1
               continue
             fi
 
-            if ! printf '%s\n' "${signoff_emails}" | grep -Fxqi "${author_email}"; then
-              echo "::error title=DCO sign-off email mismatch::${commit} ${subject}"
-              echo "Commit author email: ${author_email}"
-              echo "Signed-off-by emails:"
-              printf '%s\n' "${signoff_emails}"
-              failed=1
+            if printf '%s\n' "${signoff_emails}" | grep -Fxqi "${author_email}"; then
+              continue
             fi
+
+            # Dependabot signs commits as dependabot[bot] <support@github.com>
+            # while the commit author email is its GitHub noreply address.
+            if [ "${author_name}" = "dependabot[bot]" ] && \
+              [ "${author_email}" = "49699333+dependabot[bot]@users.noreply.github.com" ] && \
+              printf '%s\n' "${signoff_lines}" | grep -Fxi "dependabot[bot] <support@github.com>" >/dev/null; then
+              continue
+            fi
+
+            echo "::error title=DCO sign-off email mismatch::${commit} ${subject}"
+            echo "Commit author: ${author_name} <${author_email}>"
+            echo "Signed-off-by lines:"
+            printf '%s\n' "${signoff_lines}"
+            failed=1
           done
 
           if [ "${failed}" -ne 0 ]; then
