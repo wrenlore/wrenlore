@@ -106,9 +106,8 @@ export class MfaManagementService {
 
   async disable(userId: string, workspaceId: string, currentPassword: string) {
     await this.verifyCurrentPassword(userId, workspaceId, currentPassword);
-    const mfa = await this.getEnabledMfa(userId, workspaceId);
-
-    await this.userMfaRepo.deleteById(mfa.id);
+    await this.getEnabledMfa(userId, workspaceId);
+    await this.userMfaRepo.deleteByUserId(userId, workspaceId);
 
     this.auditService.log({
       event: AuditEvent.USER_MFA_DISABLED,

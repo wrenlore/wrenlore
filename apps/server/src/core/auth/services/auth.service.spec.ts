@@ -30,6 +30,7 @@ describe('AuthService MFA login flow', () => {
 
   const createService = async (opts?: {
     mfaEnabled?: boolean;
+    mfaRecord?: { id: string; enabledAt: Date | null; confirmedAt?: Date | null };
     requireLocalMfa?: boolean;
   }) => {
     const user = {
@@ -38,13 +39,15 @@ describe('AuthService MFA login flow', () => {
       workspaceId,
       password: await hashPassword('correct-password'),
       emailVerifiedAt: new Date(),
-      mfa: opts?.mfaEnabled
-        ? {
-            id: 'mfa-id',
-            enabledAt: new Date(),
-            confirmedAt: new Date(),
-          }
-        : null,
+      mfa:
+        opts?.mfaRecord ??
+        (opts?.mfaEnabled
+          ? {
+              id: 'mfa-id',
+              enabledAt: new Date(),
+              confirmedAt: new Date(),
+            }
+          : null),
     };
     const userRepo = {
       findByEmail: jest.fn().mockResolvedValue(user),
@@ -131,6 +134,50 @@ describe('AuthService MFA login flow', () => {
     ).resolves.toBe('access-token');
 
     expect(userRepo.updateLastLogin).toHaveBeenCalledWith(userId, workspaceId);
+    expect(tokenService.generateAccessToken).toHaveBeenCalled();
+    expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
+  });
+
+  it('does not require a challenge for disabled MFA when local MFA policy is off', async () => {
+    const { service, tokenService } = await createService({
+      mfaRecord: {
+        id: 'mfa-id',
+        enabledAt: null,
+        confirmedAt: null,
+      },
+    });
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toBe('access-token');
+
+    expect(tokenService.generateAccessToken).toHaveBeenCalled();
+    expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
+  });
+
+  it('routes disabled MFA users to setup, not challenge, when local MFA policy is on', async () => {
+    const { service, tokenService } = await createService({
+      requireLocalMfa: true,
+      mfaRecord: {
+        id: 'mfa-id',
+        enabledAt: null,
+        confirmedAt: null,
+      },
+    });
+
+    await expect(
+      service.login(
+        { email: 'person@example.com', password: 'correct-password' },
+        workspaceId,
+      ),
+    ).resolves.toEqual({
+      requiresMfaSetup: true,
+      authToken: 'access-token',
+    });
+
     expect(tokenService.generateAccessToken).toHaveBeenCalled();
     expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
   });

@@ -21,6 +21,7 @@ describe('MfaManagementService', () => {
       findByUserId: jest.fn(),
       insertTotpMfa: jest.fn().mockResolvedValue({ id: 'mfa-id' }),
       deleteById: jest.fn(),
+      deleteByUserId: jest.fn(),
       enableMfa: jest.fn(),
       deleteRecoveryCodesByMfaId: jest.fn(),
       insertRecoveryCodeHashes: jest.fn(),
@@ -146,10 +147,13 @@ describe('MfaManagementService', () => {
     await expect(
       service.disable(userId, workspaceId, 'wrong-password'),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(userMfaRepo.deleteById).not.toHaveBeenCalled();
+    expect(userMfaRepo.deleteByUserId).not.toHaveBeenCalled();
 
     await service.disable(userId, workspaceId, 'correct-password');
-    expect(userMfaRepo.deleteById).toHaveBeenCalledWith('mfa-id');
+    expect(userMfaRepo.deleteByUserId).toHaveBeenCalledWith(
+      userId,
+      workspaceId,
+    );
   });
 
   it('replaces old recovery code hashes when regenerating codes', async () => {

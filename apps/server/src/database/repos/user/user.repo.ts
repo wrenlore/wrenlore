@@ -202,7 +202,10 @@ export class UserRepo {
           'userMfa.enabledAt',
           'userMfa.createdAt',
         ])
-        .whereRef('userMfa.userId', '=', 'users.id'),
+        .whereRef('userMfa.userId', '=', 'users.id')
+        .whereRef('userMfa.workspaceId', '=', 'users.workspaceId')
+        .where('userMfa.enabledAt', 'is not', null)
+        .where('userMfa.confirmedAt', 'is not', null),
     ).as('mfa');
   }
 }
