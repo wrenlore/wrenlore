@@ -55,3 +55,9 @@ export interface AiProviderHealth {
   details?: Record<string, any>;
   error?: string;
 }
+
+export interface AiDiscoveredModel {
+  modelId: string;
+  name: string;
+  details?: Record<string, any>;
+}

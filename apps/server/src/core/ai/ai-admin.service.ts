@@ -11,6 +11,7 @@ import {
   CreateAiProviderDto,
   DeleteAiModelDto,
   DeleteAiProviderDto,
+  DiscoverAiModelsDto,
   ListAiModelsDto,
   ProviderHealthCheckDto,
   UpdateAiModelDto,
@@ -19,22 +20,39 @@ import {
 } from './dto/ai-admin.dto';
 import { AI_TASK_CLASSES } from './ai.constants';
 import { AiProviderGatewayService } from './ai-provider-gateway.service';
+import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
 
 @Injectable()
 export class AiAdminService {
   constructor(
     @InjectKysely() private readonly db: KyselyDB,
     private readonly providerGateway: AiProviderGatewayService,
+    private readonly cryptoService: AppSecretCryptoService,
   ) {}
 
   async listProviders(workspaceId: string) {
-    return this.db
+    const providers = await this.db
       .selectFrom('aiProviders')
-      .selectAll()
+      .select([
+        'id',
+        'name',
+        'type',
+        'baseUrl',
+        'encryptedApiKey',
+        'isEnabled',
+        'capabilityFlags',
+        'creatorId',
+        'workspaceId',
+        'createdAt',
+        'updatedAt',
+        'deletedAt',
+      ])
       .where('workspaceId', '=', workspaceId)
       .where('deletedAt', 'is', null)
       .orderBy('createdAt', 'asc')
       .execute();
+
+    return providers.map((provider) => this.toProviderAdminResponse(provider));
   }
 
   async createProvider(
@@ -42,15 +60,23 @@ export class AiAdminService {
     userId: string,
     dto: CreateAiProviderDto,
   ) {
-    this.assertProviderConfigShape(dto.type, dto.baseUrl, dto.apiKeyEnvVar);
+    this.assertProviderConfigShape(
+      dto.type,
+      dto.baseUrl,
+      dto.apiKeyEnvVar,
+      dto.apiKey,
+    );
 
-    return this.db
+    const provider = await this.db
       .insertInto('aiProviders')
       .values({
         name: dto.name,
         type: dto.type,
         baseUrl: dto.baseUrl,
         apiKeyEnvVar: dto.apiKeyEnvVar,
+        encryptedApiKey: dto.apiKey
+          ? this.cryptoService.encrypt(dto.apiKey)
+          : null,
         isEnabled: dto.isEnabled ?? true,
         capabilityFlags: dto.capabilityFlags ?? {},
         creatorId: userId,
@@ -58,6 +84,8 @@ export class AiAdminService {
       })
       .returningAll()
       .executeTakeFirst();
+
+    return this.toProviderAdminResponse(provider);
   }
 
   async updateProvider(workspaceId: string, dto: UpdateAiProviderDto) {
@@ -72,8 +100,18 @@ export class AiAdminService {
       typeof dto.apiKeyEnvVar !== 'undefined'
         ? dto.apiKeyEnvVar
         : provider.apiKeyEnvVar;
+    const encryptedApiKey = dto.clearApiKey
+      ? null
+      : dto.apiKey
+        ? this.cryptoService.encrypt(dto.apiKey)
+        : provider.encryptedApiKey;
 
-    this.assertProviderConfigShape(provider.type, baseUrl, apiKeyEnvVar);
+    this.assertProviderConfigShape(
+      provider.type,
+      baseUrl,
+      apiKeyEnvVar,
+      encryptedApiKey,
+    );
 
     const updateData: Record<string, any> = {
       updatedAt: new Date(),
@@ -88,6 +126,9 @@ export class AiAdminService {
     if (typeof dto.apiKeyEnvVar !== 'undefined') {
       updateData.apiKeyEnvVar = dto.apiKeyEnvVar;
     }
+    if (dto.clearApiKey || typeof dto.apiKey !== 'undefined') {
+      updateData.encryptedApiKey = encryptedApiKey;
+    }
     if (typeof dto.isEnabled !== 'undefined') {
       updateData.isEnabled = dto.isEnabled;
     }
@@ -95,7 +136,7 @@ export class AiAdminService {
       updateData.capabilityFlags = dto.capabilityFlags;
     }
 
-    return this.db
+    const updated = await this.db
       .updateTable('aiProviders')
       .set(updateData)
       .where('id', '=', dto.providerId)
@@ -103,6 +144,8 @@ export class AiAdminService {
       .where('deletedAt', 'is', null)
       .returningAll()
       .executeTakeFirst();
+
+    return this.toProviderAdminResponse(updated);
   }
 
   async deleteProvider(workspaceId: string, dto: DeleteAiProviderDto) {
@@ -145,6 +188,27 @@ export class AiAdminService {
     }
 
     return query.execute();
+  }
+
+  async discoverModels(workspaceId: string, dto: DiscoverAiModelsDto) {
+    const provider = await this.findProviderById(workspaceId, dto.providerId);
+    if (!provider) {
+      throw new NotFoundException('AI provider not found');
+    }
+
+    if (!provider.isEnabled) {
+      throw new BadRequestException(
+        'AI provider must be enabled before model discovery can run.',
+      );
+    }
+
+    const models = await this.providerGateway.discoverModels(provider);
+    return {
+      providerId: provider.id,
+      providerName: provider.name,
+      providerType: provider.type,
+      models,
+    };
   }
 
   async createModel(
@@ -400,11 +464,12 @@ export class AiAdminService {
     type: string,
     baseUrl?: string,
     apiKeyEnvVar?: string,
+    apiKey?: string,
   ) {
     if (type === 'openai') {
-      if (!apiKeyEnvVar) {
+      if (!apiKey && !apiKeyEnvVar) {
         throw new BadRequestException(
-          'OpenAI providers require an API key environment variable reference.',
+          'OpenAI providers require an API key.',
         );
       }
       return;
@@ -427,5 +492,13 @@ export class AiAdminService {
     }
 
     throw new BadRequestException(`Unsupported provider type "${type}".`);
+  }
+
+  private toProviderAdminResponse(provider: any) {
+    const { encryptedApiKey, apiKeyEnvVar, ...safeProvider } = provider;
+    return {
+      ...safeProvider,
+      hasApiKey: Boolean(encryptedApiKey),
+    };
   }
 }

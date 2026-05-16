@@ -36,6 +36,7 @@ import {
   CreateAiProviderDto,
   DeleteAiModelDto,
   DeleteAiProviderDto,
+  DiscoverAiModelsDto,
   ListAiModelsDto,
   ProviderHealthCheckDto,
   UpdateAiModelDto,
@@ -184,6 +185,17 @@ export class AiController {
   ) {
     this.assertCanManageAiSettings(user, workspace);
     return this.adminService.listModels(workspace.id, dto);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('admin/models/discover')
+  async discoverModels(
+    @Body() dto: DiscoverAiModelsDto,
+    @AuthWorkspace() workspace: Workspace,
+    @AuthUser() user: User,
+  ) {
+    this.assertCanManageAiSettings(user, workspace);
+    return this.adminService.discoverModels(workspace.id, dto);
   }
 
   @HttpCode(HttpStatus.OK)

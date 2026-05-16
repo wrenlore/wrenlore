@@ -5,6 +5,7 @@ import { AiAdminService } from './ai-admin.service';
 import { AiTaskRouterService } from './ai-task-router.service';
 import { AiProviderGatewayService } from './ai-provider-gateway.service';
 import { SearchModule } from '../search/search.module';
+import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
 
 @Module({
   imports: [SearchModule],
@@ -14,6 +15,7 @@ import { SearchModule } from '../search/search.module';
     AiAdminService,
     AiTaskRouterService,
     AiProviderGatewayService,
+    AppSecretCryptoService,
   ],
 })
 export class AiModule {}

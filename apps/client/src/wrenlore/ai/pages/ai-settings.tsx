@@ -7,6 +7,7 @@ import { getAppName } from "@/lib/config";
 import { workspaceAtom } from "@/features/user/atoms/current-user-atom";
 import { updateWorkspace } from "@/features/workspace/services/workspace-service";
 import { queryClient } from "@/main";
+import { AiProviderAdmin } from "@/wrenlore/ai/components/admin/ai-provider-admin";
 
 export default function AiSettings() {
   const { t } = useTranslation();
@@ -42,10 +43,8 @@ export default function AiSettings() {
           onChange={(event) => updateAiSetting("generative", event.currentTarget.checked)}
         />
         <Divider />
-        <Alert variant="light" color="gray">
-          <Text fw={500}>{t("Provider and model administration")}</Text>
-          <Text size="sm">{t("Planned WrenLore-native admin module.")}</Text>
-        </Alert>
+        <AiProviderAdmin />
+        <Divider />
         <Alert variant="light" color="gray">
           <Text fw={500}>MCP</Text>
           <Text size="sm">{t("Planned WrenLore-native module. No MCP controls are active in this build.")}</Text>
