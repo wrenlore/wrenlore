@@ -84,7 +84,6 @@ interface ModelFormState {
   providerId: string;
   name: string;
   modelId: string;
-  isEnabled: boolean;
   defaultTaskClasses: AiTaskClass[];
 }
 
@@ -104,7 +103,6 @@ function emptyModelForm(providerId = ""): ModelFormState {
     providerId,
     name: "",
     modelId: "",
-    isEnabled: true,
     defaultTaskClasses: [],
   };
 }
@@ -322,7 +320,6 @@ export function AiProviderAdmin() {
     const payload = {
       name: modelForm.name.trim(),
       modelId: modelForm.modelId.trim(),
-      isEnabled: modelForm.isEnabled,
       defaultTaskClasses: modelForm.defaultTaskClasses,
     };
 
@@ -347,7 +344,6 @@ export function AiProviderAdmin() {
       providerId: model.providerId,
       name: model.name,
       modelId: model.modelId,
-      isEnabled: model.isEnabled,
       defaultTaskClasses: [],
     });
     setSelectedDiscoveredModel(null);
@@ -686,19 +682,7 @@ export function AiProviderAdmin() {
             }
           />
           </Grid.Col>
-          <Grid.Col span={{ base: 6, md: 2 }}>
-          <Switch
-            label="Enabled"
-            checked={modelForm.isEnabled}
-            onChange={(event) =>
-              setModelForm((current) => ({
-                ...current,
-                isEnabled: event.currentTarget.checked,
-              }))
-            }
-          />
-          </Grid.Col>
-          <Grid.Col span={{ base: 6, md: 2 }}>
+          <Grid.Col span={{ base: 12, md: 2 }}>
           <Button
             fullWidth
             onClick={saveModel}
@@ -716,7 +700,7 @@ export function AiProviderAdmin() {
               disabled={!modelForm.providerId}
               loading={discoveredModelsQuery.isFetching}
             >
-              Refresh discovered models
+              Refresh discovered
             </Button>
           </Grid.Col>
         </Grid>
