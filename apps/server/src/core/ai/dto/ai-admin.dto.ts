@@ -137,6 +137,11 @@ export class ListAiModelsDto {
   providerId?: string;
 }
 
+export class DiscoverAiModelsDto {
+  @IsUUID()
+  providerId: string;
+}
+
 export class UpsertAiTaskRouteItemDto {
   @IsIn(AI_TASK_CLASSES)
   taskClass: (typeof AI_TASK_CLASSES)[number];

@@ -6,6 +6,7 @@ import {
   createAiProvider,
   deleteAiModel,
   deleteAiProvider,
+  discoverAiModels,
   listAiModels,
   listAiProviders,
   listAiTaskRoutes,
@@ -26,6 +27,8 @@ const AI_ADMIN_KEYS = {
   providers: ["wren-ai-admin", "providers"] as const,
   models: (providerId?: string) =>
     ["wren-ai-admin", "models", providerId ?? "all"] as const,
+  discoveredModels: (providerId?: string) =>
+    ["wren-ai-admin", "discovered-models", providerId ?? "none"] as const,
   routes: ["wren-ai-admin", "task-routes"] as const,
 };
 
@@ -46,6 +49,15 @@ export function useAiModelsQuery(providerId?: string) {
   return useQuery({
     queryKey: AI_ADMIN_KEYS.models(providerId),
     queryFn: () => listAiModels({ providerId }),
+  });
+}
+
+export function useDiscoveredAiModelsQuery(providerId?: string) {
+  return useQuery({
+    queryKey: AI_ADMIN_KEYS.discoveredModels(providerId),
+    queryFn: () => discoverAiModels(providerId as string),
+    enabled: Boolean(providerId),
+    retry: false,
   });
 }
 

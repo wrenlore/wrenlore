@@ -11,6 +11,7 @@ import {
   CreateAiProviderDto,
   DeleteAiModelDto,
   DeleteAiProviderDto,
+  DiscoverAiModelsDto,
   ListAiModelsDto,
   ProviderHealthCheckDto,
   UpdateAiModelDto,
@@ -145,6 +146,27 @@ export class AiAdminService {
     }
 
     return query.execute();
+  }
+
+  async discoverModels(workspaceId: string, dto: DiscoverAiModelsDto) {
+    const provider = await this.findProviderById(workspaceId, dto.providerId);
+    if (!provider) {
+      throw new NotFoundException('AI provider not found');
+    }
+
+    if (!provider.isEnabled) {
+      throw new BadRequestException(
+        'AI provider must be enabled before model discovery can run.',
+      );
+    }
+
+    const models = await this.providerGateway.discoverModels(provider);
+    return {
+      providerId: provider.id,
+      providerName: provider.name,
+      providerType: provider.type,
+      models,
+    };
   }
 
   async createModel(

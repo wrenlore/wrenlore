@@ -2,6 +2,7 @@ import api from "@/lib/api-client";
 import {
   AiModel,
   AiProvider,
+  AiDiscoveredModelsResponse,
   AiProviderHealthResponse,
   AiTaskRoute,
   CreateAiModelPayload,
@@ -46,6 +47,16 @@ export async function listAiModels(params?: {
   const req = await api.post<AiModel[]>(
     "/wren-ai/admin/models/list",
     params ?? {},
+  );
+  return req.data;
+}
+
+export async function discoverAiModels(
+  providerId: string,
+): Promise<AiDiscoveredModelsResponse> {
+  const req = await api.post<AiDiscoveredModelsResponse>(
+    "/wren-ai/admin/models/discover",
+    { providerId },
   );
   return req.data;
 }

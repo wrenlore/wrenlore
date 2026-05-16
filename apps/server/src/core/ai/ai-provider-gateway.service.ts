@@ -10,6 +10,7 @@ import {
 } from './ai.constants';
 import {
   AiGenerateRequest,
+  AiDiscoveredModel,
   AiGeneratedEmbeddings,
   AiGeneratedText,
   AiProviderHealth,
@@ -159,6 +160,55 @@ export class AiProviderGatewayService {
         error: err instanceof Error ? err.message : 'Unknown provider error',
       };
     }
+  }
+
+  async discoverModels(provider: {
+    id: string;
+    name: string;
+    type: string;
+    baseUrl: string | null;
+    apiKeyEnvVar: string | null;
+  }): Promise<AiDiscoveredModel[]> {
+    if (provider.type === 'ollama') {
+      const baseUrl = this.getProviderBaseUrl(provider.type, provider.baseUrl);
+      const payload = await this.requestJson(this.joinUrl(baseUrl, '/api/tags'), {
+        method: 'GET',
+        headers: this.ollamaHeaders(provider.apiKeyEnvVar),
+      });
+
+      return this.uniqueModels(
+        (Array.isArray(payload?.models) ? payload.models : [])
+          .map((model: any) => model?.name)
+          .filter((name: any) => typeof name === 'string' && name.length > 0)
+          .map((name: string) => ({
+            modelId: name,
+            name,
+          })),
+      );
+    }
+
+    const baseUrl = this.getProviderBaseUrl(provider.type, provider.baseUrl);
+    const apiKey = this.resolveApiKey(provider.type, provider.apiKeyEnvVar);
+    const payload = await this.requestJson(this.joinUrl(baseUrl, '/models'), {
+      method: 'GET',
+      headers: this.openAiLikeHeaders(apiKey),
+    });
+
+    const rows = Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.models)
+        ? payload.models
+        : [];
+
+    return this.uniqueModels(
+      rows
+        .map((model: any) => model?.id ?? model?.name)
+        .filter((modelId: any) => typeof modelId === 'string' && modelId.length > 0)
+        .map((modelId: string) => ({
+          modelId,
+          name: modelId,
+        })),
+    );
   }
 
   private async generateOpenAiLikeText(
@@ -613,5 +663,18 @@ export class AiProviderGatewayService {
 
   private roundLatency(started: number): number {
     return Math.round((performance.now() - started) * 100) / 100;
+  }
+
+  private uniqueModels(models: AiDiscoveredModel[]): AiDiscoveredModel[] {
+    const seen = new Set<string>();
+    const unique: AiDiscoveredModel[] = [];
+
+    for (const model of models) {
+      if (seen.has(model.modelId)) continue;
+      seen.add(model.modelId);
+      unique.push(model);
+    }
+
+    return unique;
   }
 }

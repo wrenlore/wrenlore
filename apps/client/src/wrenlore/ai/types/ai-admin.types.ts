@@ -52,6 +52,19 @@ export interface AiTaskRoute {
   providerType: AiProviderType;
 }
 
+export interface AiDiscoveredModel {
+  modelId: string;
+  name: string;
+  details?: Record<string, unknown>;
+}
+
+export interface AiDiscoveredModelsResponse {
+  providerId: string;
+  providerName: string;
+  providerType: AiProviderType;
+  models: AiDiscoveredModel[];
+}
+
 export interface AiProviderHealthCheck {
   providerId: string;
   providerName: string;

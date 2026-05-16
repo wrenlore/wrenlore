@@ -5,6 +5,7 @@ import {
   Button,
   Code,
   Divider,
+  Grid,
   Group,
   Loader,
   MultiSelect,
@@ -34,6 +35,7 @@ import {
   useCreateAiProviderMutation,
   useDeleteAiModelMutation,
   useDeleteAiProviderMutation,
+  useDiscoveredAiModelsQuery,
   useUpdateAiModelMutation,
   useUpdateAiProviderMutation,
   useUpsertAiTaskRoutesMutation,
@@ -161,6 +163,11 @@ export function AiProviderAdmin() {
   const [healthProviderId, setHealthProviderId] = useState<string | null>(null);
   const [healthModelId, setHealthModelId] = useState<string | null>(null);
   const [healthChecks, setHealthChecks] = useState<AiProviderHealthCheck[]>([]);
+  const [selectedDiscoveredModel, setSelectedDiscoveredModel] = useState<
+    string | null
+  >(null);
+
+  const discoveredModelsQuery = useDiscoveredAiModelsQuery(modelForm.providerId);
 
   useEffect(() => {
     if (!modelForm.providerId && providers.length > 0) {
@@ -184,11 +191,6 @@ export function AiProviderAdmin() {
     label: providerLabel(provider),
   }));
 
-  const modelOptions = models.map((model) => ({
-    value: model.id,
-    label: modelLabel(model),
-  }));
-
   const enabledModelOptions = models
     .filter((model) => model.isEnabled)
     .map((model) => ({
@@ -204,6 +206,17 @@ export function AiProviderAdmin() {
         label: modelLabel(model),
       }));
   }, [healthProviderId, models]);
+
+  const discoveredModelOptions =
+    discoveredModelsQuery.data?.models.map((model) => ({
+      value: model.modelId,
+      label: model.name === model.modelId ? model.modelId : `${model.name} (${model.modelId})`,
+    })) ?? [];
+
+  const discoveryError = discoveredModelsQuery.error
+    ? ((discoveredModelsQuery.error as any)?.response?.data?.message ??
+      discoveredModelsQuery.error.message)
+    : null;
 
   function changeProviderType(type: AiProviderType) {
     setProviderForm((current) => ({
@@ -302,6 +315,7 @@ export function AiProviderAdmin() {
       });
     }
     setModelForm(emptyModelForm(modelForm.providerId));
+    setSelectedDiscoveredModel(null);
   }
 
   function editModel(model: AiModel) {
@@ -313,6 +327,21 @@ export function AiProviderAdmin() {
       isEnabled: model.isEnabled,
       defaultTaskClasses: [],
     });
+    setSelectedDiscoveredModel(null);
+  }
+
+  function selectDiscoveredModel(modelId: string | null) {
+    setSelectedDiscoveredModel(modelId);
+    const discovered = discoveredModelsQuery.data?.models.find(
+      (model) => model.modelId === modelId,
+    );
+    if (!discovered) return;
+
+    setModelForm((current) => ({
+      ...current,
+      name: discovered.name || discovered.modelId,
+      modelId: discovered.modelId,
+    }));
   }
 
   function confirmDeleteModel(model: AiModel) {
@@ -383,70 +412,79 @@ export function AiProviderAdmin() {
             New provider
           </Button>
         </Group>
-        <Group align="flex-end">
-          <TextInput
-            label="Name"
-            value={providerForm.name}
-            onChange={(event) =>
-              setProviderForm((current) => ({
-                ...current,
-                name: event.currentTarget.value,
-              }))
-            }
-            style={{ flex: 1 }}
-          />
-          <Select
-            label="Type"
-            data={AI_PROVIDER_TYPES.map((type) => ({
-              value: type,
-              label: PROVIDER_TYPE_LABELS[type],
-            }))}
-            value={providerForm.type}
-            disabled={Boolean(providerForm.id)}
-            onChange={(value) => changeProviderType(value as AiProviderType)}
-            w={220}
-          />
-          <TextInput
-            label="Base URL"
-            placeholder={DEFAULT_BASE_URLS[providerForm.type]}
-            value={providerForm.baseUrl}
-            onChange={(event) =>
-              setProviderForm((current) => ({
-                ...current,
-                baseUrl: event.currentTarget.value,
-              }))
-            }
-            style={{ flex: 1 }}
-          />
-          <TextInput
-            label="API key env var"
-            placeholder="OPENAI_API_KEY"
-            value={providerForm.apiKeyEnvVar}
-            onChange={(event) =>
-              setProviderForm((current) => ({
-                ...current,
-                apiKeyEnvVar: event.currentTarget.value,
-              }))
-            }
-            w={220}
-          />
-          <Switch
-            label="Enabled"
-            checked={providerForm.isEnabled}
-            onChange={(event) =>
-              setProviderForm((current) => ({
-                ...current,
-                isEnabled: event.currentTarget.checked,
-              }))
-            }
-          />
-          <Button
-            onClick={saveProvider}
-            loading={createProvider.isPending || updateProvider.isPending}
-          >
-            {providerForm.id ? "Update" : "Create"}
-          </Button>
-        </Group>
+        <Grid align="flex-end">
+          <Grid.Col span={{ base: 12, md: 4 }}>
+            <TextInput
+              label="Name"
+              value={providerForm.name}
+              onChange={(event) =>
+                setProviderForm((current) => ({
+                  ...current,
+                  name: event.currentTarget.value,
+                }))
+              }
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 2 }}>
+            <Select
+              label="Type"
+              data={AI_PROVIDER_TYPES.map((type) => ({
+                value: type,
+                label: PROVIDER_TYPE_LABELS[type],
+              }))}
+              value={providerForm.type}
+              disabled={Boolean(providerForm.id)}
+              onChange={(value) => changeProviderType(value as AiProviderType)}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <TextInput
+              label="Base URL"
+              placeholder={DEFAULT_BASE_URLS[providerForm.type]}
+              value={providerForm.baseUrl}
+              onChange={(event) =>
+                setProviderForm((current) => ({
+                  ...current,
+                  baseUrl: event.currentTarget.value,
+                }))
+              }
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 5 }}>
+            <TextInput
+              label="API key env var"
+              placeholder="OPENAI_API_KEY"
+              value={providerForm.apiKeyEnvVar}
+              onChange={(event) =>
+                setProviderForm((current) => ({
+                  ...current,
+                  apiKeyEnvVar: event.currentTarget.value,
+                }))
+              }
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 6, md: 2 }}>
+            <Switch
+              label="Enabled"
+              checked={providerForm.isEnabled}
+              onChange={(event) =>
+                setProviderForm((current) => ({
+                  ...current,
+                  isEnabled: event.currentTarget.checked,
+                }))
+              }
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 6, md: 2 }}>
+            <Button
+              fullWidth
+              onClick={saveProvider}
+              loading={createProvider.isPending || updateProvider.isPending}
+            >
+              {providerForm.id ? "Update" : "Create"}
+            </Button>
+          </Grid.Col>
+        </Grid>
         <Text size="xs" c="dimmed">
           Use environment variable names only. Raw API keys are not stored here.
         </Text>
@@ -514,20 +552,48 @@ export function AiProviderAdmin() {
         <Text size="sm" c="dimmed">
           Register model names and task defaults for the configured providers.
         </Text>
-        <Group align="flex-end">
-          <Select
-            label="Provider"
-            data={providerOptions}
-            value={modelForm.providerId || null}
-            disabled={Boolean(modelForm.id)}
-            onChange={(value) =>
-              setModelForm((current) => ({
-                ...current,
-                providerId: value ?? "",
-              }))
-            }
-            style={{ flex: 1 }}
-          />
+        <Grid align="flex-end">
+          <Grid.Col span={{ base: 12, md: 4 }}>
+            <Select
+              label="Provider"
+              data={providerOptions}
+              value={modelForm.providerId || null}
+              disabled={Boolean(modelForm.id)}
+              onChange={(value) => {
+                setSelectedDiscoveredModel(null);
+                setModelForm((current) => ({
+                  ...current,
+                  providerId: value ?? "",
+                }));
+              }}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 8 }}>
+            <Select
+              label="Discovered model"
+              placeholder={
+                discoveredModelsQuery.isLoading
+                  ? "Loading provider models"
+                  : discoveredModelOptions.length > 0
+                    ? "Select a provider model"
+                    : "No discovered models; manual entry remains available"
+              }
+              data={discoveredModelOptions}
+              value={selectedDiscoveredModel}
+              clearable
+              searchable
+              disabled={
+                !modelForm.providerId ||
+                discoveredModelsQuery.isLoading ||
+                discoveredModelOptions.length === 0
+              }
+              rightSection={
+                discoveredModelsQuery.isLoading ? <Loader size={14} /> : null
+              }
+              onChange={selectDiscoveredModel}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 4 }}>
           <TextInput
             label="Name"
             value={modelForm.name}
@@ -537,8 +603,9 @@ export function AiProviderAdmin() {
                 name: event.currentTarget.value,
               }))
             }
-            style={{ flex: 1 }}
           />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 4 }}>
           <TextInput
             label="Model ID"
             value={modelForm.modelId}
@@ -548,8 +615,9 @@ export function AiProviderAdmin() {
                 modelId: event.currentTarget.value,
               }))
             }
-            style={{ flex: 1 }}
           />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 4 }}>
           <MultiSelect
             label="Default tasks"
             data={taskClassOptions()}
@@ -560,8 +628,9 @@ export function AiProviderAdmin() {
                 defaultTaskClasses: value as AiTaskClass[],
               }))
             }
-            style={{ flex: 1 }}
           />
+          </Grid.Col>
+          <Grid.Col span={{ base: 6, md: 2 }}>
           <Switch
             label="Enabled"
             checked={modelForm.isEnabled}
@@ -572,14 +641,44 @@ export function AiProviderAdmin() {
               }))
             }
           />
+          </Grid.Col>
+          <Grid.Col span={{ base: 6, md: 2 }}>
           <Button
+            fullWidth
             onClick={saveModel}
             disabled={providers.length === 0}
             loading={createModel.isPending || updateModel.isPending}
           >
             {modelForm.id ? "Update" : "Create"}
           </Button>
-        </Group>
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 3 }}>
+            <Button
+              fullWidth
+              variant="light"
+              onClick={() => discoveredModelsQuery.refetch()}
+              disabled={!modelForm.providerId}
+              loading={discoveredModelsQuery.isFetching}
+            >
+              Refresh discovered models
+            </Button>
+          </Grid.Col>
+        </Grid>
+        {discoveryError ? (
+          <Alert color="yellow" variant="light">
+            <Text size="sm">
+              Model discovery failed: {discoveryError}. Manual model entry is
+              still available.
+            </Text>
+          </Alert>
+        ) : modelForm.providerId &&
+          !discoveredModelsQuery.isLoading &&
+          discoveredModelOptions.length === 0 ? (
+          <Alert color="gray" variant="light">
+            No models were discovered for this provider. You can still enter a
+            model name and ID manually.
+          </Alert>
+        ) : null}
         {providers.length === 0 ? (
           <Alert color="gray" variant="light">
             Create a provider before adding models.
