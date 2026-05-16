@@ -134,6 +134,21 @@ function modelLabel(model: AiModel) {
   return `${model.name} (${model.modelId}) - ${provider}`;
 }
 
+function isLocalhostUrl(value?: string | null) {
+  if (!value) return false;
+
+  try {
+    const url = new URL(value);
+    return url.hostname === "127.0.0.1" || url.hostname === "localhost";
+  } catch {
+    return false;
+  }
+}
+
+function isLocalOllamaProvider(provider?: AiProvider | null) {
+  return provider?.type === "ollama" && isLocalhostUrl(provider.baseUrl);
+}
+
 export function AiProviderAdmin() {
   const providersQuery = useAiProvidersQuery();
   const modelsQuery = useAiModelsQuery();
@@ -168,6 +183,9 @@ export function AiProviderAdmin() {
   >(null);
 
   const discoveredModelsQuery = useDiscoveredAiModelsQuery(modelForm.providerId);
+  const selectedModelProvider = providers.find(
+    (provider) => provider.id === modelForm.providerId,
+  );
 
   useEffect(() => {
     if (!modelForm.providerId && providers.length > 0) {
@@ -217,6 +235,12 @@ export function AiProviderAdmin() {
     ? ((discoveredModelsQuery.error as any)?.response?.data?.message ??
       discoveredModelsQuery.error.message)
     : null;
+
+  const providerFormUsesLocalOllama =
+    providerForm.type === "ollama" && isLocalhostUrl(providerForm.baseUrl);
+  const modelDiscoveryUsesLocalOllama = isLocalOllamaProvider(
+    selectedModelProvider,
+  );
 
   function changeProviderType(type: AiProviderType) {
     setProviderForm((current) => ({
@@ -488,6 +512,16 @@ export function AiProviderAdmin() {
         <Text size="xs" c="dimmed">
           Use environment variable names only. Raw API keys are not stored here.
         </Text>
+        {providerFormUsesLocalOllama ? (
+          <Alert color="yellow" variant="light">
+            <Text size="sm">
+              If WrenLore runs in Docker and Ollama runs on the host, localhost
+              points at the WrenLore container. Use
+              http://host.docker.internal:11434 where available, or your host
+              LAN/Tailscale IP.
+            </Text>
+          </Alert>
+        ) : null}
         <Table.ScrollContainer minWidth={760}>
           <Table verticalSpacing="sm">
             <Table.Thead>
@@ -505,7 +539,17 @@ export function AiProviderAdmin() {
                 <Table.Tr key={provider.id}>
                   <Table.Td>{provider.name}</Table.Td>
                   <Table.Td>{PROVIDER_TYPE_LABELS[provider.type]}</Table.Td>
-                  <Table.Td>{provider.baseUrl ?? "Default"}</Table.Td>
+                  <Table.Td>
+                    <Stack gap={2}>
+                      <Text size="sm">{provider.baseUrl ?? "Default"}</Text>
+                      {isLocalOllamaProvider(provider) ? (
+                        <Text size="xs" c="yellow">
+                          Docker installs may need host.docker.internal or a host
+                          IP instead of localhost.
+                        </Text>
+                      ) : null}
+                    </Stack>
+                  </Table.Td>
                   <Table.Td>{provider.apiKeyEnvVar ?? "None"}</Table.Td>
                   <Table.Td>
                     <Switch
@@ -670,6 +714,14 @@ export function AiProviderAdmin() {
               Model discovery failed: {discoveryError}. Manual model entry is
               still available.
             </Text>
+            {modelDiscoveryUsesLocalOllama ? (
+              <Text size="sm" mt={4}>
+                This Ollama provider uses localhost. If WrenLore runs in Docker
+                and Ollama runs on the host, use
+                http://host.docker.internal:11434 where available, or your host
+                LAN/Tailscale IP.
+              </Text>
+            ) : null}
           </Alert>
         ) : modelForm.providerId &&
           !discoveredModelsQuery.isLoading &&
