@@ -25,6 +25,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('type', sql`ai_provider_type`, (col) => col.notNull())
     .addColumn('base_url', 'varchar')
     .addColumn('api_key_env_var', 'varchar')
+    .addColumn('encrypted_api_key', 'text')
     .addColumn('is_enabled', 'boolean', (col) =>
       col.defaultTo(true).notNull(),
     )

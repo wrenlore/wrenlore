@@ -6,7 +6,9 @@ describe('AiProviderGatewayService model discovery', () => {
   let fetchMock: jest.Mock;
 
   beforeEach(() => {
-    service = new AiProviderGatewayService();
+    service = new AiProviderGatewayService({
+      decrypt: jest.fn((value: string) => value.replace(/^encrypted:/, '')),
+    } as any);
     fetchMock = jest.fn();
     global.fetch = fetchMock;
   });
@@ -36,6 +38,7 @@ describe('AiProviderGatewayService model discovery', () => {
       type: 'ollama',
       baseUrl: 'http://127.0.0.1:11434',
       apiKeyEnvVar: null,
+      encryptedApiKey: null,
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -61,7 +64,8 @@ describe('AiProviderGatewayService model discovery', () => {
       name: 'OpenAI',
       type: 'openai',
       baseUrl: 'https://api.openai.com/v1',
-      apiKeyEnvVar: 'OPENAI_API_KEY',
+      apiKeyEnvVar: null,
+      encryptedApiKey: 'encrypted:test-key',
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -87,6 +91,7 @@ describe('AiProviderGatewayService model discovery', () => {
         type: 'openai',
         baseUrl: 'https://api.openai.com/v1',
         apiKeyEnvVar: null,
+        encryptedApiKey: null,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });

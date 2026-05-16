@@ -20,7 +20,7 @@ export interface AiProvider {
   name: string;
   type: AiProviderType;
   baseUrl: string | null;
-  apiKeyEnvVar: string | null;
+  hasApiKey: boolean;
   isEnabled: boolean;
   capabilityFlags?: Record<string, unknown>;
   createdAt?: string;
@@ -84,7 +84,7 @@ export interface CreateAiProviderPayload {
   name: string;
   type: AiProviderType;
   baseUrl?: string;
-  apiKeyEnvVar?: string;
+  apiKey?: string;
   isEnabled?: boolean;
 }
 
@@ -92,7 +92,8 @@ export interface UpdateAiProviderPayload {
   providerId: string;
   name?: string;
   baseUrl?: string;
-  apiKeyEnvVar?: string;
+  apiKey?: string;
+  clearApiKey?: boolean;
   isEnabled?: boolean;
 }
 

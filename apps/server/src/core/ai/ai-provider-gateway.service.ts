@@ -8,6 +8,7 @@ import {
   AI_DEFAULT_OLLAMA_BASE_URL,
   AI_DEFAULT_OPENAI_BASE_URL,
 } from './ai.constants';
+import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
 import {
   AiGenerateRequest,
   AiDiscoveredModel,
@@ -20,6 +21,8 @@ import {
 
 @Injectable()
 export class AiProviderGatewayService {
+  constructor(private readonly cryptoService: AppSecretCryptoService) {}
+
   async generateText(
     route: AiResolvedRoute,
     dto: AiGenerateRequest,
@@ -62,6 +65,7 @@ export class AiProviderGatewayService {
       type: string;
       baseUrl: string | null;
       apiKeyEnvVar: string | null;
+      encryptedApiKey?: string | null;
     },
     opts?: {
       modelId?: string;
@@ -116,7 +120,11 @@ export class AiProviderGatewayService {
       }
 
       const baseUrl = this.getProviderBaseUrl(provider.type, provider.baseUrl);
-      const apiKey = this.resolveApiKey(provider.type, provider.apiKeyEnvVar);
+      const apiKey = this.resolveApiKey(
+        provider.type,
+        provider.apiKeyEnvVar,
+        provider.encryptedApiKey,
+      );
       const headers = this.openAiLikeHeaders(apiKey);
 
       if (opts?.modelId) {
@@ -167,13 +175,14 @@ export class AiProviderGatewayService {
     name: string;
     type: string;
     baseUrl: string | null;
-    apiKeyEnvVar: string | null;
+      apiKeyEnvVar: string | null;
+      encryptedApiKey?: string | null;
   }): Promise<AiDiscoveredModel[]> {
     if (provider.type === 'ollama') {
       const baseUrl = this.getProviderBaseUrl(provider.type, provider.baseUrl);
       const payload = await this.requestJson(this.joinUrl(baseUrl, '/api/tags'), {
         method: 'GET',
-        headers: this.ollamaHeaders(provider.apiKeyEnvVar),
+        headers: this.ollamaHeaders(provider.apiKeyEnvVar, provider.encryptedApiKey),
       });
 
       return this.uniqueModels(
@@ -188,7 +197,11 @@ export class AiProviderGatewayService {
     }
 
     const baseUrl = this.getProviderBaseUrl(provider.type, provider.baseUrl);
-    const apiKey = this.resolveApiKey(provider.type, provider.apiKeyEnvVar);
+    const apiKey = this.resolveApiKey(
+      provider.type,
+      provider.apiKeyEnvVar,
+      provider.encryptedApiKey,
+    );
     const payload = await this.requestJson(this.joinUrl(baseUrl, '/models'), {
       method: 'GET',
       headers: this.openAiLikeHeaders(apiKey),
@@ -222,6 +235,7 @@ export class AiProviderGatewayService {
     const apiKey = this.resolveApiKey(
       route.provider.type,
       route.provider.apiKeyEnvVar,
+      route.provider.encryptedApiKey,
     );
     const payload = await this.requestJson(
       this.joinUrl(baseUrl, '/chat/completions'),
@@ -255,7 +269,10 @@ export class AiProviderGatewayService {
 
     const payload = await this.requestJson(this.joinUrl(baseUrl, '/api/chat'), {
       method: 'POST',
-      headers: this.ollamaHeaders(route.provider.apiKeyEnvVar),
+      headers: this.ollamaHeaders(
+        route.provider.apiKeyEnvVar,
+        route.provider.encryptedApiKey,
+      ),
       body: JSON.stringify({
         model: route.model.modelId,
         messages: this.toMessages(dto),
@@ -282,6 +299,7 @@ export class AiProviderGatewayService {
     const apiKey = this.resolveApiKey(
       route.provider.type,
       route.provider.apiKeyEnvVar,
+      route.provider.encryptedApiKey,
     );
 
     const response = await fetch(this.joinUrl(baseUrl, '/chat/completions'), {
@@ -352,7 +370,10 @@ export class AiProviderGatewayService {
 
     const response = await fetch(this.joinUrl(baseUrl, '/api/chat'), {
       method: 'POST',
-      headers: this.ollamaHeaders(route.provider.apiKeyEnvVar),
+      headers: this.ollamaHeaders(
+        route.provider.apiKeyEnvVar,
+        route.provider.encryptedApiKey,
+      ),
       body: JSON.stringify({
         model: route.model.modelId,
         messages: this.toMessages(dto),
@@ -413,6 +434,7 @@ export class AiProviderGatewayService {
     const apiKey = this.resolveApiKey(
       route.provider.type,
       route.provider.apiKeyEnvVar,
+      route.provider.encryptedApiKey,
     );
 
     const payload = await this.requestJson(this.joinUrl(baseUrl, '/embeddings'), {
@@ -450,7 +472,10 @@ export class AiProviderGatewayService {
       route.provider.type,
       route.provider.baseUrl,
     );
-    const headers = this.ollamaHeaders(route.provider.apiKeyEnvVar);
+    const headers = this.ollamaHeaders(
+      route.provider.apiKeyEnvVar,
+      route.provider.encryptedApiKey,
+    );
 
     try {
       const payload = await this.requestJson(this.joinUrl(baseUrl, '/api/embed'), {
@@ -532,13 +557,20 @@ export class AiProviderGatewayService {
     return headers;
   }
 
-  private ollamaHeaders(apiKeyEnvVar?: string | null): Record<string, string> {
+  private ollamaHeaders(
+    apiKeyEnvVar?: string | null,
+    encryptedApiKey?: string | null,
+  ): Record<string, string> {
     const headers: Record<string, string> = {
       'content-type': 'application/json',
     };
 
-    if (apiKeyEnvVar) {
-      const apiKey = this.resolveApiKey('openai-compatible', apiKeyEnvVar);
+    if (apiKeyEnvVar || encryptedApiKey) {
+      const apiKey = this.resolveApiKey(
+        'openai-compatible',
+        apiKeyEnvVar,
+        encryptedApiKey,
+      );
       headers.authorization = `Bearer ${apiKey}`;
     }
 
@@ -563,10 +595,18 @@ export class AiProviderGatewayService {
     return baseUrl;
   }
 
-  private resolveApiKey(type: string, apiKeyEnvVar: string | null): string {
+  private resolveApiKey(
+    type: string,
+    apiKeyEnvVar: string | null,
+    encryptedApiKey?: string | null,
+  ): string {
+    if (encryptedApiKey) {
+      return this.cryptoService.decrypt(encryptedApiKey);
+    }
+
     if (!apiKeyEnvVar && type === 'openai') {
       throw new BadRequestException(
-        'OpenAI providers must reference an API key environment variable.',
+        'OpenAI providers must have an API key configured.',
       );
     }
 

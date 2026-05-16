@@ -63,6 +63,7 @@ export interface AiProviders {
   createdAt: Generated<Timestamp>;
   creatorId: string | null;
   deletedAt: Timestamp | null;
+  encryptedApiKey: string | null;
   id: Generated<string>;
   isEnabled: Generated<boolean>;
   name: string;

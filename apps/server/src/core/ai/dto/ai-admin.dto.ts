@@ -10,12 +10,9 @@ import {
   IsString,
   IsUrl,
   IsUUID,
-  Matches,
   ValidateNested,
 } from 'class-validator';
 import { AI_PROVIDER_TYPES, AI_TASK_CLASSES } from '../ai.constants';
-
-const ENV_VAR_REFERENCE_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
 
 export class CreateAiProviderDto {
   @IsNotEmpty()
@@ -31,8 +28,11 @@ export class CreateAiProviderDto {
 
   @IsOptional()
   @IsString()
-  @Matches(ENV_VAR_REFERENCE_PATTERN)
   apiKeyEnvVar?: string;
+
+  @IsOptional()
+  @IsString()
+  apiKey?: string;
 
   @IsOptional()
   @IsBoolean()
@@ -57,8 +57,15 @@ export class UpdateAiProviderDto {
 
   @IsOptional()
   @IsString()
-  @Matches(ENV_VAR_REFERENCE_PATTERN)
   apiKeyEnvVar?: string;
+
+  @IsOptional()
+  @IsString()
+  apiKey?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  clearApiKey?: boolean;
 
   @IsOptional()
   @IsBoolean()

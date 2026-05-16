@@ -9,6 +9,7 @@ import {
   Group,
   Loader,
   MultiSelect,
+  PasswordInput,
   Select,
   Stack,
   Switch,
@@ -74,7 +75,9 @@ interface ProviderFormState {
   name: string;
   type: AiProviderType;
   baseUrl: string;
-  apiKeyEnvVar: string;
+  apiKey: string;
+  hasApiKey: boolean;
+  clearApiKey: boolean;
   isEnabled: boolean;
 }
 
@@ -92,7 +95,9 @@ function emptyProviderForm(type: AiProviderType = "ollama"): ProviderFormState {
     name: "",
     type,
     baseUrl: DEFAULT_BASE_URLS[type] ?? "",
-    apiKeyEnvVar: type === "openai" ? "OPENAI_API_KEY" : "",
+    apiKey: "",
+    hasApiKey: false,
+    clearApiKey: false,
     isEnabled: true,
   };
 }
@@ -251,10 +256,6 @@ export function AiProviderAdmin() {
         Object.values(DEFAULT_BASE_URLS).includes(current.baseUrl)
           ? DEFAULT_BASE_URLS[type] ?? ""
           : current.baseUrl,
-      apiKeyEnvVar:
-        type === "openai" && !current.apiKeyEnvVar
-          ? "OPENAI_API_KEY"
-          : current.apiKeyEnvVar,
     }));
   }
 
@@ -267,7 +268,8 @@ export function AiProviderAdmin() {
     const payload = {
       name: providerForm.name.trim(),
       baseUrl: optionalValue(providerForm.baseUrl),
-      apiKeyEnvVar: optionalValue(providerForm.apiKeyEnvVar),
+      apiKey: optionalValue(providerForm.apiKey),
+      clearApiKey: providerForm.clearApiKey,
       isEnabled: providerForm.isEnabled,
     };
 
@@ -291,7 +293,9 @@ export function AiProviderAdmin() {
       name: provider.name,
       type: provider.type,
       baseUrl: provider.baseUrl ?? "",
-      apiKeyEnvVar: provider.apiKeyEnvVar ?? "",
+      apiKey: "",
+      hasApiKey: provider.hasApiKey,
+      clearApiKey: false,
       isEnabled: provider.isEnabled,
     });
   }
@@ -475,18 +479,46 @@ export function AiProviderAdmin() {
             />
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 5 }}>
-            <TextInput
-              label="API key env var"
-              placeholder="OPENAI_API_KEY"
-              value={providerForm.apiKeyEnvVar}
+            <PasswordInput
+              label="API key / token"
+              description={
+                providerForm.hasApiKey && !providerForm.clearApiKey
+                  ? "API key configured. Enter a new value to replace it."
+                  : "Paste a provider API key or token. It is stored encrypted and is not shown again."
+              }
+              placeholder={
+                providerForm.hasApiKey && !providerForm.clearApiKey
+                  ? "••••••••"
+                  : "sk-..."
+              }
+              value={providerForm.apiKey}
               onChange={(event) =>
                 setProviderForm((current) => ({
                   ...current,
-                  apiKeyEnvVar: event.currentTarget.value,
+                  apiKey: event.currentTarget.value,
+                  clearApiKey: false,
                 }))
               }
             />
           </Grid.Col>
+          {providerForm.hasApiKey ? (
+            <Grid.Col span={{ base: 12, md: 2 }}>
+              <Button
+                fullWidth
+                variant={providerForm.clearApiKey ? "filled" : "light"}
+                color={providerForm.clearApiKey ? "red" : "gray"}
+                onClick={() =>
+                  setProviderForm((current) => ({
+                    ...current,
+                    apiKey: "",
+                    clearApiKey: !current.clearApiKey,
+                  }))
+                }
+              >
+                {providerForm.clearApiKey ? "Key will be cleared" : "Clear key"}
+              </Button>
+            </Grid.Col>
+          ) : null}
           <Grid.Col span={{ base: 6, md: 2 }}>
             <Switch
               label="Enabled"
@@ -510,7 +542,8 @@ export function AiProviderAdmin() {
           </Grid.Col>
         </Grid>
         <Text size="xs" c="dimmed">
-          Use environment variable names only. Raw API keys are not stored here.
+          API keys are stored server-side encrypted and are never returned to the
+          browser after save. Local Ollama can be used without a key.
         </Text>
         {providerFormUsesLocalOllama ? (
           <Alert color="yellow" variant="light">
@@ -529,7 +562,7 @@ export function AiProviderAdmin() {
                 <Table.Th>Name</Table.Th>
                 <Table.Th>Type</Table.Th>
                 <Table.Th>Base URL</Table.Th>
-                <Table.Th>API key env var</Table.Th>
+                <Table.Th>API key</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th />
               </Table.Tr>
@@ -550,7 +583,9 @@ export function AiProviderAdmin() {
                       ) : null}
                     </Stack>
                   </Table.Td>
-                  <Table.Td>{provider.apiKeyEnvVar ?? "None"}</Table.Td>
+                  <Table.Td>
+                    {provider.hasApiKey ? "Configured / ••••••••" : "None"}
+                  </Table.Td>
                   <Table.Td>
                     <Switch
                       size="sm"
