@@ -22,7 +22,6 @@ import { notifications } from "@mantine/notifications";
 import {
   IconActivityHeartbeat,
   IconEdit,
-  IconPlus,
   IconRefresh,
   IconTrash,
 } from "@tabler/icons-react";
@@ -78,7 +77,6 @@ interface ProviderFormState {
   apiKey: string;
   hasApiKey: boolean;
   clearApiKey: boolean;
-  isEnabled: boolean;
 }
 
 interface ModelFormState {
@@ -98,7 +96,6 @@ function emptyProviderForm(type: AiProviderType = "ollama"): ProviderFormState {
     apiKey: "",
     hasApiKey: false,
     clearApiKey: false,
-    isEnabled: true,
   };
 }
 
@@ -270,7 +267,6 @@ export function AiProviderAdmin() {
       baseUrl: optionalValue(providerForm.baseUrl),
       apiKey: optionalValue(providerForm.apiKey),
       clearApiKey: providerForm.clearApiKey,
-      isEnabled: providerForm.isEnabled,
     };
 
     if (providerForm.id) {
@@ -296,7 +292,6 @@ export function AiProviderAdmin() {
       apiKey: "",
       hasApiKey: provider.hasApiKey,
       clearApiKey: false,
-      isEnabled: provider.isEnabled,
     });
   }
 
@@ -429,16 +424,10 @@ export function AiProviderAdmin() {
           <div>
             <Text fw={600}>Providers</Text>
             <Text size="sm" c="dimmed">
-              Configure provider endpoints and environment variable references.
+              Configure provider endpoints and API keys. Enable or disable saved
+              providers from the provider list.
             </Text>
           </div>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            variant="light"
-            onClick={() => setProviderForm(emptyProviderForm(providerForm.type))}
-          >
-            New provider
-          </Button>
         </Group>
         <Grid align="flex-end">
           <Grid.Col span={{ base: 12, md: 4 }}>
@@ -519,19 +508,7 @@ export function AiProviderAdmin() {
               </Button>
             </Grid.Col>
           ) : null}
-          <Grid.Col span={{ base: 6, md: 2 }}>
-            <Switch
-              label="Enabled"
-              checked={providerForm.isEnabled}
-              onChange={(event) =>
-                setProviderForm((current) => ({
-                  ...current,
-                  isEnabled: event.currentTarget.checked,
-                }))
-              }
-            />
-          </Grid.Col>
-          <Grid.Col span={{ base: 6, md: 2 }}>
+          <Grid.Col span={{ base: 12, md: 2 }}>
             <Button
               fullWidth
               onClick={saveProvider}
