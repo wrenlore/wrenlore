@@ -1,15 +1,11 @@
-import { Kysely } from 'kysely';
+import { Kysely, sql } from 'kysely';
 
 export async function up(db: Kysely<any>): Promise<void> {
-  await db.schema
-    .alterTable('ai_providers')
-    .addColumn('encrypted_api_key', 'text')
-    .execute();
+  await sql`ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS encrypted_api_key text`.execute(
+    db,
+  );
 }
 
-export async function down(db: Kysely<any>): Promise<void> {
-  await db.schema
-    .alterTable('ai_providers')
-    .dropColumn('encrypted_api_key')
-    .execute();
+export async function down(_db: Kysely<any>): Promise<void> {
+  // No-op: encrypted_api_key is owned by the base AI platform migration.
 }
