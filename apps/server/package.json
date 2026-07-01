@@ -166,6 +166,11 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
+      "^nanoid$": "<rootDir>/test/mocks/nanoid.ts",
+      "^image-dimensions$": "<rootDir>/test/mocks/image-dimensions.ts",
+      "^happy-dom$": "<rootDir>/test/mocks/happy-dom.ts",
+      "^src/(.*)$": "<rootDir>/$1",
+      "^(\\.{1,2}/.*)\\.js$": "$1",
       "^@wrenlore/db/(.*)$": "<rootDir>/database/$1",
       "^@wrenlore/transactional/(.*)$": "<rootDir>/integrations/transactional/$1"
     }
