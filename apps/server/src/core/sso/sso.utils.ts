@@ -1,4 +1,8 @@
 export const SAML_PROVIDER_TYPE = 'saml' as const;
+export const SAML_HTTP_POST_BINDING =
+  'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' as const;
+export const SAML_DEFAULT_NAME_ID_FORMAT =
+  'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress' as const;
 
 export function buildSamlEntityId(baseUrl: string, providerId: string): string {
   return `${baseUrl}/api/sso/saml/${providerId}/login`;
@@ -9,6 +13,83 @@ export function buildSamlCallbackUrl(
   providerId: string,
 ): string {
   return `${baseUrl}/api/sso/saml/${providerId}/callback`;
+}
+
+export function normalizeSamlAcsUrl(acsUrl: string): string {
+  const parsed = new URL(acsUrl);
+  if (parsed.search || parsed.hash) {
+    throw new Error('SAML ACS URL cannot contain a query string or fragment.');
+  }
+
+  return parsed.toString();
+}
+
+export function canonicalizeSamlAcsUrl(acsUrl: string): string {
+  const parsed = new URL(normalizeSamlAcsUrl(acsUrl));
+  parsed.pathname = normalizeSamlAcsPath(parsed.pathname);
+  return parsed.toString().replace(/\/$/, parsed.pathname === '/' ? '/' : '');
+}
+
+export function normalizeSamlAcsPath(path: string): string {
+  const withLeadingSlash = path.startsWith('/') ? path : `/${path}`;
+  if (withLeadingSlash === '/') {
+    return withLeadingSlash;
+  }
+
+  return withLeadingSlash.replace(/\/+$/, '');
+}
+
+export function getSamlAcsPath(acsUrl: string): string {
+  return normalizeSamlAcsPath(new URL(acsUrl).pathname);
+}
+
+export function buildRequestPublicUrl(req: any): string {
+  const protocol = req.protocol ?? 'https';
+  const host = req.headers?.['x-forwarded-host'] ?? req.headers?.host;
+  const forwardedHost = Array.isArray(host) ? host[0] : host;
+  const pathname = normalizeSamlAcsPath(
+    (req.originalUrl ?? req.url ?? '/').split(/[?#]/, 1)[0],
+  );
+
+  return normalizeSamlAcsUrl(`${protocol}://${forwardedHost}${pathname}`);
+}
+
+export function buildSamlMetadata(options: {
+  entityId: string;
+  acsUrl: string;
+  acsBinding?: string | null;
+  sloUrl?: string | null;
+  nameIdFormat?: string | null;
+}): string {
+  const binding = options.acsBinding ?? SAML_HTTP_POST_BINDING;
+  const nameIdFormat = options.nameIdFormat ?? SAML_DEFAULT_NAME_ID_FORMAT;
+  const slo = options.sloUrl
+    ? `<SingleLogoutService Binding="${escapeXml(binding)}" Location="${escapeXml(options.sloUrl)}"/>`
+    : '';
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    `<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="${escapeXml(options.entityId)}">`,
+    '<SPSSODescriptor AuthnRequestsSigned="false" WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">',
+    slo,
+    `<NameIDFormat>${escapeXml(nameIdFormat)}</NameIDFormat>`,
+    `<AssertionConsumerService Binding="${escapeXml(binding)}" Location="${escapeXml(options.acsUrl)}" index="0" isDefault="true"/>`,
+    '</SPSSODescriptor>',
+    '</EntityDescriptor>',
+  ].join('');
+}
+
+function escapeXml(value: string): string {
+  return value.replace(/[<>&"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&apos;',
+    };
+    return entities[character];
+  });
 }
 
 export function normalizeSamlCertificate(certificate: string): string {

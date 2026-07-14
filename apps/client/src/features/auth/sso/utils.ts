@@ -37,3 +37,8 @@ export function buildSamlEntityId(providerId: string): string {
   const domain = getAppUrl();
   return `${domain}/api/sso/${SSO_PROVIDER.SAML}/${providerId}/login`;
 }
+
+export function buildSamlMetadataUrl(providerId: string): string {
+  const domain = getAppUrl();
+  return `${domain}/api/sso/${SSO_PROVIDER.SAML}/${providerId}/metadata`;
+}

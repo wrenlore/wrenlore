@@ -18,10 +18,7 @@ import { WorkspaceService } from '../workspace/services/workspace.service';
 import { TokenService } from '../auth/services/token.service';
 import { EnvironmentService } from '../../integrations/environment/environment.service';
 import { DomainService } from '../../integrations/environment/domain.service';
-import {
-  AuditEvent,
-  AuditResource,
-} from '../../common/events/audit-events';
+import { AuditEvent, AuditResource } from '../../common/events/audit-events';
 import {
   AUDIT_SERVICE,
   IAuditService,
@@ -32,17 +29,21 @@ import { ProviderIdDto } from './dto/provider-id.dto';
 import {
   buildSamlCallbackUrl,
   buildSamlEntityId,
+  buildRequestPublicUrl,
+  buildSamlMetadata,
+  canonicalizeSamlAcsUrl,
+  getSamlAcsPath,
+  normalizeSamlAcsUrl,
   normalizeSamlCertificate,
+  SAML_DEFAULT_NAME_ID_FORMAT,
+  SAML_HTTP_POST_BINDING,
   SAML_PROVIDER_TYPE,
 } from './sso.utils';
 import { AuthProvider, User, Workspace } from '@wrenlore/db/types/entity.types';
 import { executeTx } from '@wrenlore/db/utils';
 import * as passport from 'passport';
 import { MultiSamlStrategy } from '@node-saml/passport-saml';
-import {
-  isUserDisabled,
-  nanoIdGen,
-} from '../../common/helpers';
+import { isUserDisabled, nanoIdGen } from '../../common/helpers';
 import { FastifyReply } from 'fastify';
 
 type SamlCacheEntry = {
@@ -194,6 +195,15 @@ export class SsoService implements OnModuleInit {
     const nextIsEnabled =
       typeof dto.isEnabled !== 'undefined' ? dto.isEnabled : provider.isEnabled;
 
+    let nextSpAcsUrl = provider.spAcsUrl;
+    if (typeof dto.spAcsUrl !== 'undefined') {
+      try {
+        nextSpAcsUrl = dto.spAcsUrl ? normalizeSamlAcsUrl(dto.spAcsUrl) : null;
+      } catch (error) {
+        throw new BadRequestException((error as Error).message);
+      }
+    }
+
     if (nextIsEnabled && (!nextSamlUrl || !nextSamlCertificate)) {
       throw new BadRequestException(
         'SAML URL and certificate are required before enabling the provider.',
@@ -214,6 +224,38 @@ export class SsoService implements OnModuleInit {
 
     if (typeof dto.samlCertificate !== 'undefined') {
       updateData.samlCertificate = nextSamlCertificate;
+    }
+
+    if (typeof dto.spEntityId !== 'undefined') {
+      updateData.spEntityId = dto.spEntityId || null;
+    }
+
+    if (typeof dto.spAcsUrl !== 'undefined') {
+      updateData.spAcsUrl = nextSpAcsUrl;
+      updateData.spAcsUrlKey = nextSpAcsUrl
+        ? canonicalizeSamlAcsUrl(nextSpAcsUrl)
+        : null;
+      updateData.spAcsPath = nextSpAcsUrl ? getSamlAcsPath(nextSpAcsUrl) : null;
+    }
+
+    if (typeof dto.spAcsBinding !== 'undefined') {
+      updateData.spAcsBinding = dto.spAcsBinding || null;
+    }
+
+    if (typeof dto.spSloUrl !== 'undefined') {
+      updateData.spSloUrl = dto.spSloUrl || null;
+    }
+
+    if (typeof dto.nameIdFormat !== 'undefined') {
+      updateData.nameIdFormat = dto.nameIdFormat || null;
+    }
+
+    if (typeof dto.idpEntityId !== 'undefined') {
+      updateData.idpEntityId = dto.idpEntityId || null;
+    }
+
+    if (typeof dto.idpSloUrl !== 'undefined') {
+      updateData.idpSloUrl = dto.idpSloUrl || null;
     }
 
     if (typeof dto.allowSignup !== 'undefined') {
@@ -245,6 +287,8 @@ export class SsoService implements OnModuleInit {
         before: {
           name: provider.name,
           samlUrl: provider.samlUrl,
+          spEntityId: provider.spEntityId,
+          spAcsUrl: provider.spAcsUrl,
           isEnabled: provider.isEnabled,
           allowSignup: provider.allowSignup,
           groupSync: provider.groupSync,
@@ -252,6 +296,8 @@ export class SsoService implements OnModuleInit {
         after: {
           name: updated.name,
           samlUrl: updated.samlUrl,
+          spEntityId: updated.spEntityId,
+          spAcsUrl: updated.spAcsUrl,
           isEnabled: updated.isEnabled,
           allowSignup: updated.allowSignup,
           groupSync: updated.groupSync,
@@ -364,9 +410,13 @@ export class SsoService implements OnModuleInit {
       let resolvedUser: User | undefined;
 
       if (existingLink) {
-        resolvedUser = await this.userRepo.findById(existingLink.userId, workspace.id, {
-          trx,
-        });
+        resolvedUser = await this.userRepo.findById(
+          existingLink.userId,
+          workspace.id,
+          {
+            trx,
+          },
+        );
         if (!resolvedUser || isUserDisabled(resolvedUser)) {
           throw new UnauthorizedException('Linked SSO account is disabled.');
         }
@@ -445,7 +495,10 @@ export class SsoService implements OnModuleInit {
         resolvedUser.emailVerifiedAt = new Date();
       }
 
-      if (displayName && this.shouldUpdateDisplayName(resolvedUser.name, email)) {
+      if (
+        displayName &&
+        this.shouldUpdateDisplayName(resolvedUser.name, email)
+      ) {
         await this.userRepo.updateUser(
           {
             name: displayName,
@@ -487,6 +540,63 @@ export class SsoService implements OnModuleInit {
     return user;
   }
 
+  async resolveProviderIdForAcs(req: any): Promise<string> {
+    let requestUrl: string;
+    try {
+      requestUrl = buildRequestPublicUrl(req);
+    } catch {
+      throw new NotFoundException('SAML callback not found.');
+    }
+
+    const callbackPath = getSamlAcsPath(requestUrl);
+    const candidates = await this.db
+      .selectFrom('authProviders')
+      .select(['id', 'spAcsUrl'])
+      .where('type', '=', SAML_PROVIDER_TYPE)
+      .where('spAcsPath', '=', callbackPath)
+      .where('isEnabled', '=', true)
+      .where('deletedAt', 'is', null)
+      .execute();
+
+    const provider = candidates.find(
+      (candidate) =>
+        candidate.spAcsUrl &&
+        canonicalizeSamlAcsUrl(candidate.spAcsUrl) ===
+          canonicalizeSamlAcsUrl(requestUrl),
+    );
+
+    if (!provider) {
+      throw new NotFoundException('SAML callback not found.');
+    }
+
+    return provider.id;
+  }
+
+  async getSamlMetadata(providerId: string): Promise<string> {
+    const provider = await this.findProviderByIdAny(providerId);
+    if (!provider || provider.type !== SAML_PROVIDER_TYPE) {
+      throw new NotFoundException('SSO provider not found');
+    }
+
+    const workspace = await this.workspaceRepo.findById(provider.workspaceId);
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
+    }
+
+    const config = this.getEffectiveSamlConfig(
+      provider,
+      this.domainService.getUrl(workspace.hostname),
+    );
+
+    return buildSamlMetadata({
+      entityId: config.entityId,
+      acsUrl: config.acsUrl,
+      acsBinding: config.acsBinding,
+      sloUrl: config.spSloUrl,
+      nameIdFormat: config.nameIdFormat,
+    });
+  }
+
   private async buildSamlOptions(req: any) {
     const providerId = req?.params?.providerId;
     if (!providerId) {
@@ -503,9 +613,7 @@ export class SsoService implements OnModuleInit {
     }
 
     if (!provider.samlUrl || !provider.samlCertificate) {
-      throw new BadRequestException(
-        'SAML provider is not fully configured.',
-      );
+      throw new BadRequestException('SAML provider is not fully configured.');
     }
 
     const workspace = await this.workspaceRepo.findById(provider.workspaceId);
@@ -513,22 +621,36 @@ export class SsoService implements OnModuleInit {
       throw new NotFoundException('Workspace not found');
     }
 
-    const baseUrl = this.domainService.getUrl(workspace.hostname);
-    const entityId = buildSamlEntityId(baseUrl, provider.id);
+    const config = this.getEffectiveSamlConfig(
+      provider,
+      this.domainService.getUrl(workspace.hostname),
+    );
 
     return {
-      callbackUrl: buildSamlCallbackUrl(baseUrl, provider.id),
+      callbackUrl: config.acsUrl,
       entryPoint: provider.samlUrl,
-      issuer: entityId,
-      audience: entityId,
+      issuer: config.entityId,
+      audience: config.entityId,
       idpCert: normalizeSamlCertificate(provider.samlCertificate),
       wantAssertionsSigned: true,
       wantAuthnResponseSigned: true,
-      identifierFormat:
-        'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
+      identifierFormat: config.nameIdFormat,
+      idpIssuer: provider.idpEntityId ?? undefined,
+      logoutUrl: provider.idpSloUrl ?? undefined,
+      logoutCallbackUrl: config.spSloUrl ?? undefined,
       validateInResponseTo: 'ifPresent',
       requestIdExpirationPeriodMs: 8 * 60 * 60 * 1000,
       cacheProvider: this.getSamlCacheProvider(provider.id),
+    };
+  }
+
+  private getEffectiveSamlConfig(provider: AuthProvider, baseUrl: string) {
+    return {
+      entityId: provider.spEntityId ?? buildSamlEntityId(baseUrl, provider.id),
+      acsUrl: provider.spAcsUrl ?? buildSamlCallbackUrl(baseUrl, provider.id),
+      acsBinding: provider.spAcsBinding ?? SAML_HTTP_POST_BINDING,
+      spSloUrl: provider.spSloUrl,
+      nameIdFormat: provider.nameIdFormat ?? SAML_DEFAULT_NAME_ID_FORMAT,
     };
   }
 
@@ -579,9 +701,13 @@ export class SsoService implements OnModuleInit {
   ) {
     const uniqueGroups = [...new Set(groups)];
     for (const groupName of uniqueGroups) {
-      const existingGroup = await this.groupRepo.findByName(groupName, workspaceId, {
-        trx,
-      });
+      const existingGroup = await this.groupRepo.findByName(
+        groupName,
+        workspaceId,
+        {
+          trx,
+        },
+      );
 
       if (!existingGroup) {
         continue;
@@ -616,9 +742,7 @@ export class SsoService implements OnModuleInit {
       profile?.[
         'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
       ],
-      profile?.[
-        'http://schemas.microsoft.com/identity/claims/emailaddress'
-      ],
+      profile?.['http://schemas.microsoft.com/identity/claims/emailaddress'],
       profile?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
     ];
 
@@ -642,9 +766,7 @@ export class SsoService implements OnModuleInit {
       profile?.given_name && profile?.family_name
         ? `${profile.given_name} ${profile.family_name}`
         : undefined,
-      profile?.[
-        'http://schemas.microsoft.com/identity/claims/displayname'
-      ],
+      profile?.['http://schemas.microsoft.com/identity/claims/displayname'],
     ];
 
     for (const candidate of candidates) {
@@ -695,9 +817,9 @@ export class SsoService implements OnModuleInit {
       values.push(...this.flattenStrings(candidate));
     }
 
-    return [...new Set(values.map((value) => value.trim()).filter(Boolean))].filter(
-      (value) => value.length >= 2 && value.length <= 100,
-    );
+    return [
+      ...new Set(values.map((value) => value.trim()).filter(Boolean)),
+    ].filter((value) => value.length >= 2 && value.length <= 100);
   }
 
   private flattenStrings(value: unknown): string[] {
@@ -802,6 +924,7 @@ export class SsoService implements OnModuleInit {
   private serializeProvider(provider: AuthProvider) {
     return {
       ...provider,
+      spAcsUrlKey: undefined,
       providerId: provider.id,
     };
   }

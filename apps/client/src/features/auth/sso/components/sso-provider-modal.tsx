@@ -23,6 +23,7 @@ export default function SsoProviderModal({
       opened={opened}
       title="Entra ID SAML configuration"
       onClose={onClose}
+      size="lg"
     >
       <SsoSamlForm provider={provider} onClose={onClose} />
     </Modal>

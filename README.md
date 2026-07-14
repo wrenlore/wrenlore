@@ -81,6 +81,7 @@ Provider/model setup is currently configured through environment-backed WrenLore
 Important docs:
 
 - [`README-deploy.md`](README-deploy.md) — deployment runbook
+- [`docs/SAML_ENTRA_SETUP.md`](docs/SAML_ENTRA_SETUP.md) - Entra ID SAML field mapping
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution policy and proprietary-code boundary
 - [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md) — public release gates
 - [`docs/provenance/public-release-provenance.md`](docs/provenance/public-release-provenance.md) — public provenance summary

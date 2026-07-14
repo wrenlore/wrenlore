@@ -6,6 +6,14 @@ export interface IAuthProvider {
   type: SSO_PROVIDER;
   samlUrl: string;
   samlCertificate: string;
+  spEntityId: string | null;
+  spAcsUrl: string | null;
+  spAcsPath: string | null;
+  spAcsBinding: string | null;
+  spSloUrl: string | null;
+  nameIdFormat: string | null;
+  idpEntityId: string | null;
+  idpSloUrl: string | null;
   oidcIssuer: string;
   oidcClientId: string;
   oidcClientSecret: string;
