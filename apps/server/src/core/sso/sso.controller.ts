@@ -115,6 +115,15 @@ export class SsoController {
     return res.redirect(redirectUrl);
   }
 
+  @Public()
+  @Get('saml/:providerId/metadata')
+  async samlMetadata(@Req() req: any, @Res() res: FastifyReply) {
+    const metadata = await this.ssoService.getSamlMetadata(
+      req.params.providerId,
+    );
+    return res.type('application/samlmetadata+xml').send(metadata);
+  }
+
   private assertManageSettings(user: User, workspace: Workspace) {
     const ability = this.workspaceAbility.createForUser(user, workspace);
     if (
@@ -122,5 +131,29 @@ export class SsoController {
     ) {
       throw new ForbiddenException();
     }
+  }
+}
+
+@Controller()
+export class CustomSamlAcsController {
+  constructor(private readonly ssoService: SsoService) {}
+
+  @Public()
+  @UseGuards(SamlAuthGuard)
+  @Post('*')
+  async samlCallback(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    const user: User = req.user;
+    const token = await this.ssoService.issueAuthCookieAndToken(user);
+    this.ssoService.setAuthCookie(res, token);
+
+    const redirectUrl = await this.ssoService.buildPostLoginRedirect(
+      user,
+      req.body?.RelayState ?? req.query?.RelayState,
+    );
+
+    return res.redirect(redirectUrl);
   }
 }

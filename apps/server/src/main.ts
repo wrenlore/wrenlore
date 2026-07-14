@@ -4,7 +4,12 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { Logger, NotFoundException, ValidationPipe } from '@nestjs/common';
+import {
+  Logger,
+  NotFoundException,
+  RequestMethod,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { TransformHttpResponseInterceptor } from './common/interceptors/http-response.interceptor';
 import { WsRedisIoAdapter } from './ws/adapter/ws-redis.adapter';
@@ -36,7 +41,12 @@ async function bootstrap() {
   app.useLogger(app.get(PinoLogger));
 
   app.setGlobalPrefix('api', {
-    exclude: ['robots.txt', 'share/:shareId/p/:pageSlug', 'mcp'],
+    exclude: [
+      'robots.txt',
+      'share/:shareId/p/:pageSlug',
+      'mcp',
+      { path: '{*samlAcsPath}', method: RequestMethod.POST },
+    ],
   });
 
   const reflector = app.get(Reflector);

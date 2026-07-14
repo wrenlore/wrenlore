@@ -149,8 +149,17 @@ export interface AuthProviders {
   oidcClientId: string | null;
   oidcClientSecret: string | null;
   oidcIssuer: string | null;
+  idpEntityId: string | null;
+  idpSloUrl: string | null;
+  nameIdFormat: string | null;
   samlCertificate: string | null;
   samlUrl: string | null;
+  spAcsBinding: string | null;
+  spAcsPath: string | null;
+  spAcsUrl: string | null;
+  spAcsUrlKey: string | null;
+  spEntityId: string | null;
+  spSloUrl: string | null;
   type: string;
   updatedAt: Generated<Timestamp>;
   workspaceId: string;

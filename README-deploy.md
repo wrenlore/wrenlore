@@ -157,18 +157,21 @@ Temporary developer setup warning:
 
 ## Entra ID SAML/SSO Pointers
 
-Security/SSO settings are WrenLore-visible and should be configured there.
+Security/SSO settings are WrenLore-visible and should be configured there. See
+[`docs/SAML_ENTRA_SETUP.md`](docs/SAML_ENTRA_SETUP.md) for the full field map.
 
 Key routes:
 
 - Login: `/api/sso/saml/<providerId>/login`
 - Callback (ACS): `/api/sso/saml/<providerId>/callback`
+- Metadata: `/api/sso/saml/<providerId>/metadata`
 
 For Entra, ensure:
 
 - `APP_URL` matches your real external HTTPS URL exactly
-- Entra app Reply URL (ACS) uses the callback route above
-- Entra Identifier/Login wiring matches the provider config shown in WrenLore UI
+- Entra app Reply URL (ACS) matches the editable SP ACS URL in WrenLore; custom
+  paths are supported when the reverse proxy forwards them to WrenLore
+- Entra Identifier matches the editable SP Entity ID in WrenLore
 - Signing certificate is copied correctly into provider config
 
 ## AGPL Source Availability
