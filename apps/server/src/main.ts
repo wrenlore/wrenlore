@@ -4,18 +4,14 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import {
-  Logger,
-  NotFoundException,
-  RequestMethod,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Logger, NotFoundException, ValidationPipe } from '@nestjs/common';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { TransformHttpResponseInterceptor } from './common/interceptors/http-response.interceptor';
 import { WsRedisIoAdapter } from './ws/adapter/ws-redis.adapter';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyCookie from '@fastify/cookie';
 import { InternalLogFilter } from './common/logger/internal-log-filter';
+import { rewriteCustomSamlAcsUrl } from './core/sso/sso.utils';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -27,6 +23,7 @@ async function bootstrap() {
         ignoreTrailingSlash: true,
         ignoreDuplicateSlashes: true,
       },
+      rewriteUrl: rewriteCustomSamlAcsUrl,
     }),
     {
       rawBody: true,
@@ -41,12 +38,7 @@ async function bootstrap() {
   app.useLogger(app.get(PinoLogger));
 
   app.setGlobalPrefix('api', {
-    exclude: [
-      'robots.txt',
-      'share/:shareId/p/:pageSlug',
-      'mcp',
-      { path: '{*samlAcsPath}', method: RequestMethod.POST },
-    ],
+    exclude: ['robots.txt', 'share/:shareId/p/:pageSlug', 'mcp'],
   });
 
   const reflector = app.get(Reflector);
