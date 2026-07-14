@@ -34,6 +34,9 @@ Create/update `.env` in repo root for real deployments. Docker Compose also rend
 # Public URL users will access (must match proxy URL)
 APP_URL=https://docs-test.example.com
 
+# Host port published for the WrenLore container (container port remains 3000)
+PORT=3000
+
 # Required; at least 32 chars
 APP_SECRET=replace_with_a_long_random_secret
 
@@ -46,6 +49,7 @@ POSTGRES_PASSWORD=strong_db_password
 Notes:
 
 - Compose injects internal `DATABASE_URL` and `REDIS_URL` for container networking.
+- `PORT` controls the host-side port used by Nginx or another reverse proxy; WrenLore continues to listen on port `3000` inside the container.
 - Do not use `REPLACE_WITH_LONG_SECRET` in real deployments.
 
 Optional AI provider env vars (resolved at runtime from provider records):

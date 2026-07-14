@@ -16,7 +16,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-wrenlore}:${POSTGRES_PASSWORD:-STRONG_DB_PASSWORD}@db:5432/${POSTGRES_DB:-wrenlore}
       REDIS_URL: redis://redis:6379
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     restart: unless-stopped
     volumes:
       - wrenlore_storage:/app/data/storage

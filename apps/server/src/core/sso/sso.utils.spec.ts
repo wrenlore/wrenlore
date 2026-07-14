@@ -4,6 +4,7 @@ import {
   canonicalizeSamlAcsUrl,
   getSamlAcsPath,
   normalizeSamlAcsUrl,
+  rewriteCustomSamlAcsUrl,
   SAML_HTTP_POST_BINDING,
 } from './sso.utils';
 
@@ -35,6 +36,34 @@ describe('SAML SP utilities', () => {
         originalUrl: '/customer-saml/',
       }),
     ).toBe('https://tenant.example.com/customer-saml');
+  });
+
+  it('rewrites only external POST callbacks and preserves their public URL', () => {
+    const rawRequest = {
+      method: 'POST',
+      url: '/customer-saml/',
+    };
+
+    expect(rewriteCustomSamlAcsUrl(rawRequest)).toBe(
+      '/api/sso/saml/custom-acs',
+    );
+    expect(
+      buildRequestPublicUrl({
+        protocol: 'https',
+        headers: { 'x-forwarded-host': 'tenant.example.com' },
+        originalUrl: '/api/sso/saml/custom-acs',
+        raw: rawRequest,
+      }),
+    ).toBe('https://tenant.example.com/customer-saml');
+  });
+
+  it('does not rewrite normal API POST requests', () => {
+    const request = {
+      method: 'POST',
+      url: '/api/users/me',
+    };
+
+    expect(rewriteCustomSamlAcsUrl(request)).toBe('/api/users/me');
   });
 
   it('generates metadata with configured SP values', () => {

@@ -3,6 +3,27 @@ export const SAML_HTTP_POST_BINDING =
   'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' as const;
 export const SAML_DEFAULT_NAME_ID_FORMAT =
   'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress' as const;
+export const CUSTOM_SAML_ACS_INTERNAL_PATH = '/api/sso/saml/custom-acs';
+export const SAML_ACS_ORIGINAL_URL = Symbol('samlAcsOriginalUrl');
+
+type RewritableRequest = {
+  method?: string;
+  url?: string;
+  [SAML_ACS_ORIGINAL_URL]?: string;
+};
+
+export function rewriteCustomSamlAcsUrl(req: RewritableRequest): string {
+  const url = req.url ?? '/';
+  const pathname = url.split(/[?#]/, 1)[0];
+  const isApiRequest = pathname === '/api' || pathname.startsWith('/api/');
+
+  if (req.method?.toUpperCase() === 'POST' && !isApiRequest) {
+    req[SAML_ACS_ORIGINAL_URL] = url;
+    return CUSTOM_SAML_ACS_INTERNAL_PATH;
+  }
+
+  return url;
+}
 
 export function buildSamlEntityId(baseUrl: string, providerId: string): string {
   return `${baseUrl}/api/sso/saml/${providerId}/login`;
@@ -47,8 +68,13 @@ export function buildRequestPublicUrl(req: any): string {
   const protocol = req.protocol ?? 'https';
   const host = req.headers?.['x-forwarded-host'] ?? req.headers?.host;
   const forwardedHost = Array.isArray(host) ? host[0] : host;
+  const originalSamlAcsUrl =
+    req.raw?.[SAML_ACS_ORIGINAL_URL] ?? req[SAML_ACS_ORIGINAL_URL];
   const pathname = normalizeSamlAcsPath(
-    (req.originalUrl ?? req.url ?? '/').split(/[?#]/, 1)[0],
+    (originalSamlAcsUrl ?? req.originalUrl ?? req.url ?? '/').split(
+      /[?#]/,
+      1,
+    )[0],
   );
 
   return normalizeSamlAcsUrl(`${protocol}://${forwardedHost}${pathname}`);
