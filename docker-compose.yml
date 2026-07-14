@@ -15,6 +15,15 @@ services:
       APP_SECRET: ${APP_SECRET:-REPLACE_WITH_LONG_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER:-wrenlore}:${POSTGRES_PASSWORD:-STRONG_DB_PASSWORD}@db:5432/${POSTGRES_DB:-wrenlore}
       REDIS_URL: redis://redis:6379
+      MAIL_DRIVER: ${MAIL_DRIVER:-log}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-WrenLore}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_IGNORETLS: ${SMTP_IGNORETLS:-false}
     ports:
       - "${PORT:-3000}:3000"
     restart: unless-stopped
