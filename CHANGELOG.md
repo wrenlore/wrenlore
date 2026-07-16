@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.1.3 - 2026-07-16
+
+### Security
+- Cleared the current GitHub Security & quality backlog for WrenLore after the July 2026 SAML/deployment work.
+- Reduced GitHub Dependabot open alerts from 52 alert records to 0 open alerts on master.
+- Kept the Docker/Node base-image major-version PR separate; PR #5 (node:22-slim -> node:26-slim) remains intentionally deferred for dedicated runtime validation.
+
+### Dependency updates and pins
+- Merged Dependabot updates for @nestjs/platform-fastify, DOMPurify, Nodemailer, Vite, ws, and actions/checkout.
+- Added transitive security pins for @babel/core, @opentelemetry/core, esbuild, form-data, hono, js-yaml, linkify-it, markdown-it, protobufjs, react-router, shell-quote, tmp, undici, and ws.
+- Closed duplicate Nodemailer PR #61 as superseded after PR #59 landed the manifest and lockfile update.
+
+### Validation
+- Verified GitHub Dependabot reports 0 open alerts after the cleanup.
+- Verified frozen install under Node 22.22.2.
+- Verified git diff whitespace checks.
+- Verified server build and client production build under Node 22.
+- Verified server Jest passes: 26 test suites, 144 tests.
+- Noted that pnpm audit could not be used because npm returned HTTP 410 for the old audit endpoint; GitHub Dependabot was the source of truth.
+
+### Known notes
+- Existing client Vite chunk-size warnings remain.
+- Existing ts-jest warnings about compiled editor-ext JavaScript remain.
+
 ## v0.1.2 - 2026-05-15
 
 ### Security
