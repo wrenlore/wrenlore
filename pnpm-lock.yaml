@@ -14,7 +14,7 @@ overrides:
   lodash: 4.18.1
   ws: 8.20.1
   cross-spawn: 7.0.5
-  dompurify: 3.4.11
+  dompurify: 3.4.12
   tmp: 0.2.6
   lodash-es: 4.18.1
   markdown-it: 14.1.1
@@ -187,8 +187,8 @@ importers:
         specifier: 8.0.3
         version: 8.0.3
       dompurify:
-        specifier: 3.4.11
-        version: 3.4.11
+        specifier: 3.4.12
+        version: 3.4.12
       fractional-indexing-jittered:
         specifier: ^1.0.0
         version: 1.0.0
@@ -1772,6 +1772,7 @@ packages:
 
   '@clickhouse/client-common@1.17.0':
     resolution: {integrity: sha512-MiwwgXViFAQA2YZkN4ymF1ynzG0K49KeSX9/iOcmJetWkxqSekDdpyp1GjwATWa9R215uQ+hGzJtJujeQVZZIw==}
+    deprecated: 'Deprecated: import from @clickhouse/client or @clickhouse/client-web instead.'
 
   '@clickhouse/client@1.17.0':
     resolution: {integrity: sha512-Y3DQoamKZ/Iyosoq7Lj7lqpDkQDK4R/5mI52yJs4ZLPIO+d6/CYDqTbFBIb4No3C/AlXUYE4TKhj/kXDpe6rOA==}
@@ -6446,8 +6447,8 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@3.4.11:
-    resolution: {integrity: sha512-zhlUV12GsaRzMsf9q5M254YhA4+VuF0fG+QFqu6aYpoGlKtz+w8//jBcGVYBgQkR5GHjUomejY84AV+/uPbWdw==}
+  dompurify@3.4.12:
+    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
@@ -16778,7 +16779,7 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@3.4.11:
+  dompurify@3.4.12:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -18807,7 +18808,7 @@ snapshots:
       d3-sankey: 0.12.3
       dagre-d3-es: 7.0.14
       dayjs: 1.11.20
-      dompurify: 3.4.11
+      dompurify: 3.4.12
       es-toolkit: 1.46.1
       katex: 0.16.27
       khroma: 2.1.0
@@ -19605,7 +19606,7 @@ snapshots:
       '@posthog/core': 1.22.0
       '@posthog/types': 1.345.5
       core-js: 3.43.0
-      dompurify: 3.4.11
+      dompurify: 3.4.12
       fflate: 0.4.8
       preact: 10.28.3
       query-selector-shadow-dom: 1.0.1
