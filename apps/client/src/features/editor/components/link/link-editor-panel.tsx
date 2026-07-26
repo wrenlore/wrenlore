@@ -12,7 +12,7 @@ import { LinkEditorPanelProps } from "@/features/editor/components/link/types.ts
 import { useTranslation } from "react-i18next";
 import { useSearchSuggestionsQuery } from "@/features/search/queries/search-query.ts";
 import { useSpaceQuery } from "@/features/space/queries/space-query.ts";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { buildPageUrl } from "@/features/page/page.utils.ts";
 import { IPage } from "@/features/page/types/page.types.ts";
 import { AutoTooltipText } from "@/components/ui/auto-tooltip-text.tsx";

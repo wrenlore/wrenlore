@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { PasswordResetForm } from "@/features/auth/components/password-reset-form";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { useVerifyUserTokenQuery } from "@/features/auth/queries/auth-query";
 import { Button, Container, Group, Text } from "@mantine/core";
 import APP_ROUTE from "@/lib/app-route";

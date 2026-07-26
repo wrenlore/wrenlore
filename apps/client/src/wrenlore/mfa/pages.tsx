@@ -18,7 +18,7 @@ import { notifications } from "@mantine/notifications";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type React from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   completeMfaLogin,

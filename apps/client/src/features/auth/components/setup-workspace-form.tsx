@@ -16,7 +16,7 @@ import useAuth from "@/features/auth/hooks/use-auth";
 import classes from "@/features/auth/components/auth.module.css";
 import { useTranslation } from "react-i18next";
 import { isCloud } from "@/lib/config.ts";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import APP_ROUTE from "@/lib/app-route.ts";
 
 const formSchema = z.object({

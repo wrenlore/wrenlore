@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useCreateGroupMutation } from "@/features/group/queries/group-query.ts";
 import { useForm } from "@mantine/form";
 import { z } from "zod/v4";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { MultiUserSelect } from "@/features/group/components/multi-user-select.tsx";
 import { useTranslation } from "react-i18next";
 import { zod4Resolver } from 'mantine-form-zod-resolver';

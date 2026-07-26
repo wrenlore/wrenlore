@@ -1,6 +1,6 @@
 import { Table, Group, Text, Anchor } from "@mantine/core";
 import { useGetGroupsQuery } from "@/features/group/queries/group-query";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { IconGroupCircle } from "@/components/icons/icon-people-circle.tsx";
 import { useTranslation } from "react-i18next";
 import { formatMemberCount } from "@/lib";

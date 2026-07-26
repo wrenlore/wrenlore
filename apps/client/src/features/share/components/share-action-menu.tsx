@@ -15,7 +15,7 @@ import {
 } from "@/features/page/page.utils.ts";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { notifications } from "@mantine/notifications";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useDeleteShareMutation } from "@/features/share/queries/share-query.ts";
 
 interface Props {

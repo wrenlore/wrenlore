@@ -1,5 +1,5 @@
 import { useGroupQuery } from "@/features/group/queries/group-query";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { Group, Title, Text } from "@mantine/core";
 import AddGroupMemberModal from "@/features/group/components/add-group-member-modal";
 import React from "react";

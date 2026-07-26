@@ -6,7 +6,7 @@ import {
   Table,
   ActionIcon,
 } from "@mantine/core";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import PageListSkeleton from "@/components/ui/page-list-skeleton.tsx";
 import { buildPageUrl } from "@/features/page/page.utils.ts";
 import { formattedDate } from "@/lib/time.ts";

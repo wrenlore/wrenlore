@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Text } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import {
   activeHistoryIdAtom,
   historyAtoms,

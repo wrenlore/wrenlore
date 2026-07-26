@@ -10,7 +10,7 @@ import {
 import { useAtom } from "jotai";
 import { treeDataAtom } from "@/features/page/tree/atoms/tree-data-atom.ts";
 import { IMovePage, IPage } from "@/features/page/types/page.types.ts";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import {
   useCreatePageMutation,
   useRemovePageMutation,

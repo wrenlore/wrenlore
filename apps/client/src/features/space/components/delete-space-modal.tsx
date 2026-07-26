@@ -3,7 +3,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { useDeleteSpaceMutation } from "../queries/space-query";
 import { useField } from "@mantine/form";
 import { ISpace } from "../types/space.types";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import APP_ROUTE from "@/lib/app-route";
 import { Trans, useTranslation } from "react-i18next";
 import { useState } from "react";

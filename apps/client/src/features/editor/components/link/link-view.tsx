@@ -1,5 +1,5 @@
 import { MarkViewContent, MarkViewProps } from "@tiptap/react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router";
 import {
   IconFileDescription,
   IconCopy,

@@ -1,7 +1,7 @@
 import { settingsOriginAtom } from "@/components/settings/atoms/settings-origin-atom";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 
 export function useTrackOrigin() {
   const location = useLocation();

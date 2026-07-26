@@ -2,7 +2,7 @@ import {
   useDeleteGroupMutation,
   useGroupQuery,
 } from "@/features/group/queries/group-query";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { Menu, ActionIcon, Text } from "@mantine/core";
 import React from "react";
 import { IconDots, IconTrash } from "@tabler/icons-react";

@@ -1,5 +1,5 @@
 import Trash from "@/features/page/trash/components/trash.tsx";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useGetSpaceBySlugQuery } from "@/features/space/queries/space-query.ts";
 import { useSpaceAbility } from "@/features/space/permissions/use-space-ability.ts";
 import React from "react";

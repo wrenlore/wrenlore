@@ -7,7 +7,7 @@ import {
   setupWorkspace,
   verifyUserToken,
 } from "@/features/auth/services/auth-service";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useAtom } from "jotai";
 import { currentUserAtom } from "@/features/user/atoms/current-user-atom";
 import {

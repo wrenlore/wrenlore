@@ -1,6 +1,6 @@
 import {Container} from "@mantine/core";
 import SpaceHomeTabs from "@/features/space/components/space-home-tabs.tsx";
-import {useParams} from "react-router-dom";
+import {useParams} from "react-router";
 import {useGetSpaceBySlugQuery} from "@/features/space/queries/space-query.ts";
 import {getAppName} from "@/lib/config.ts";
 import {Helmet} from "react-helmet-async";

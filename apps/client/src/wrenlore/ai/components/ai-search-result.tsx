@@ -1,6 +1,6 @@
 import { Spotlight } from "@mantine/spotlight";
 import { Anchor, Stack, Text } from "@mantine/core";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { IAiSearchResponse } from "@/wrenlore/ai/types/ai.types";
 import { buildPageUrl } from "@/features/page/page.utils";
 
