@@ -9,7 +9,7 @@ import {
   getDefaultZIndex,
 } from "@mantine/core";
 import { Spotlight } from "@mantine/spotlight";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { IconFile, IconDownload } from "@tabler/icons-react";
 import { buildPageUrl } from "@/features/page/page.utils";
 import { getPageIcon } from "@/lib";

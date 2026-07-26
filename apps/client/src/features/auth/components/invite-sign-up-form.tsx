@@ -12,7 +12,7 @@ import {
   Stack,
 } from "@mantine/core";
 import { zod4Resolver } from "mantine-form-zod-resolver";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router";
 import useAuth from "@/features/auth/hooks/use-auth";
 import classes from "@/features/auth/components/auth.module.css";
 import { useGetInvitationQuery } from "@/features/workspace/queries/workspace-query.ts";

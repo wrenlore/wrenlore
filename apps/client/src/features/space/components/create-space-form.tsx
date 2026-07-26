@@ -3,7 +3,7 @@ import React, { useEffect } from "react";
 import { useForm } from "@mantine/form";
 import { zod4Resolver } from "mantine-form-zod-resolver";
 import { z } from "zod/v4";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useCreateSpaceMutation } from "@/features/space/queries/space-query.ts";
 import { computeSpaceSlug } from "@/lib";
 import { getSpaceUrl } from "@/lib/config.ts";

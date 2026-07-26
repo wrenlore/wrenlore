@@ -22,7 +22,7 @@ import classes from "./mention.module.css";
 import { CustomAvatar } from "@/components/ui/custom-avatar.tsx";
 import { IconFileDescription, IconPlus } from "@tabler/icons-react";
 import { useSpaceQuery } from "@/features/space/queries/space-query.ts";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { v7 as uuid7 } from "uuid";
 import { useAtom } from "jotai";
 import { currentUserAtom } from "@/features/user/atoms/current-user-atom.ts";

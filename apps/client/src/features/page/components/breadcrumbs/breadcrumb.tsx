@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { IconCornerDownRightDouble, IconDots } from "@tabler/icons-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import classes from "./breadcrumb.module.css";
 import { SpaceTreeNode } from "@/features/page/tree/types.ts";
 import { buildPageUrl } from "@/features/page/page.utils.ts";

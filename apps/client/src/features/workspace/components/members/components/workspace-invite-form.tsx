@@ -4,7 +4,7 @@ import { MultiGroupSelect } from "@/features/group/components/multi-group-select
 import { UserRole } from "@/lib/types.ts";
 import { userRoleData } from "@/features/workspace/types/user-role-data.ts";
 import { useCreateInvitationMutation } from "@/features/workspace/queries/workspace-query.ts";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
 interface Props {

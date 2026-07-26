@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { useEffect } from "react";
 import { buildSharedPageUrl } from "@/features/page/page.utils.ts";
 import { Error404 } from "@/components/ui/error-404.tsx";

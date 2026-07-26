@@ -15,7 +15,7 @@ import classes from "./ai-menu.module.css";
 import { marked } from "marked";
 import { DOMSerializer } from "@tiptap/pm/model";
 import { copyToClipboard, htmlToMarkdown } from "@wrenlore/editor-ext";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { notifications } from "@mantine/notifications";
 
 interface EditorAiMenuProps {

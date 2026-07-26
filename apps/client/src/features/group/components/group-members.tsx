@@ -3,7 +3,7 @@ import {
   useGroupMembersQuery,
   useRemoveGroupMemberMutation,
 } from "@/features/group/queries/group-query";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import React from "react";
 import { IconDots } from "@tabler/icons-react";
 import { modals } from "@mantine/modals";

@@ -5,7 +5,7 @@ import {
   useGetSpacesQuery,
 } from "@/features/space/queries/space-query.ts";
 import { getSpaceUrl } from "@/lib/config.ts";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import classes from "./space-grid.module.css";
 import { formatMemberCount } from "@/lib";
 import { useTranslation } from "react-i18next";

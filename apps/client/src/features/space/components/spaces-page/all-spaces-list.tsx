@@ -9,7 +9,7 @@ import {
   Anchor,
 } from "@mantine/core";
 import { IconDots, IconSettings } from "@tabler/icons-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
 import { useDisclosure } from "@mantine/hooks";

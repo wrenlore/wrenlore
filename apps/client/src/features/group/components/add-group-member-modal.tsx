@@ -2,7 +2,7 @@ import { Button, Divider, Group, Modal } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import React, { useState } from "react";
 import { MultiUserSelect } from "@/features/group/components/multi-user-select.tsx";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useAddGroupMemberMutation } from "@/features/group/queries/group-query.ts";
 import { useTranslation } from "react-i18next";
 

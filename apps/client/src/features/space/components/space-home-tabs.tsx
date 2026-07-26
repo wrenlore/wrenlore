@@ -1,7 +1,7 @@
 import { Text, Tabs, Space } from "@mantine/core";
 import { IconClockHour3 } from "@tabler/icons-react";
 import RecentChanges from "@/components/common/recent-changes.tsx";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useGetSpaceBySlugQuery } from "@/features/space/queries/space-query.ts";
 import { useTranslation } from "react-i18next";
 

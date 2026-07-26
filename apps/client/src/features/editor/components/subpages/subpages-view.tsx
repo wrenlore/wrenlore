@@ -3,7 +3,7 @@ import { Stack, Text, Anchor, ActionIcon } from "@mantine/core";
 import { IconFileDescription } from "@tabler/icons-react";
 import { useGetSidebarPagesQuery } from "@/features/page/queries/page-query";
 import { useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import classes from "./subpages.module.css";
 import styles from "../mention/mention.module.css";
 import {

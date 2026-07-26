@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { useEffect } from "react";
 import { usePageQuery } from "@/features/page/queries/page-query";
 import { buildPageUrl } from "@/features/page/page.utils.ts";

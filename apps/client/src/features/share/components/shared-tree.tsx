@@ -7,7 +7,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { SpaceTreeNode } from "@/features/page/tree/types.ts";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import { atom, useAtom } from "jotai/index";
 import { useTranslation } from "react-i18next";
 import { buildSharedPageUrl } from "@/features/page/page.utils.ts";

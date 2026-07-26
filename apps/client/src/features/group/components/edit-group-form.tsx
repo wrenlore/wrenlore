@@ -6,7 +6,7 @@ import {
 } from "@/features/group/queries/group-query.ts";
 import { useForm } from "@mantine/form";
 import { z } from "zod/v4";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { zod4Resolver } from "mantine-form-zod-resolver";
 

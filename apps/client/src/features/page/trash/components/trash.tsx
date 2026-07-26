@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useGetSpaceBySlugQuery } from "@/features/space/queries/space-query";
 import {
   Container,

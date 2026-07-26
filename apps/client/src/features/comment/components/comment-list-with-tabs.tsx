@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, memo, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import {
   ActionIcon,
   Center,

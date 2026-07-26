@@ -7,7 +7,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useGetSharedPageTreeQuery } from "@/features/share/queries/share-query.ts";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import SharedTree from "@/features/share/components/shared-tree.tsx";
 import { TableOfContents } from "@/features/editor/components/table-of-contents/table-of-contents.tsx";
 import { readOnlyEditorAtom } from "@/features/editor/atoms/editor-atoms.ts";

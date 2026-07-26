@@ -1,5 +1,5 @@
 import classes from "./switch-space.module.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { SpaceSelect } from "./space-select";
 import { getSpaceUrl } from "@/lib/config";
 import { Button, Popover, Text } from "@mantine/core";

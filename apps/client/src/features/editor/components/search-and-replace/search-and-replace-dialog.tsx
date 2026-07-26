@@ -22,7 +22,7 @@ import { searchAndReplaceStateAtom } from "@/features/editor/components/search-a
 import { useAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { getHotkeyHandler, useToggle } from "@mantine/hooks";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import classes from "./search-replace.module.css";
 
 interface PageFindDialogDialogProps {

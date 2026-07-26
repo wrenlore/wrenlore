@@ -17,7 +17,7 @@ import {
   useShareForPageQuery,
   useUpdateShareMutation,
 } from "@/features/share/queries/share-query.ts";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import { extractPageSlugId, getPageIcon } from "@/lib";
 import { useTranslation } from "react-i18next";
 import { usePageQuery } from "@/features/page/queries/page-query.ts";

@@ -14,7 +14,7 @@ import {
   useUpdatePageMutation,
 } from "@/features/page/queries/page-query.ts";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import classes from "@/features/page/tree/styles/tree.module.css";
 import { ActionIcon, Box, Menu, rem, Text } from "@mantine/core";
 import {

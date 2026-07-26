@@ -20,7 +20,7 @@ import {
 } from "@tabler/icons-react";
 import { useAtom } from "jotai";
 import { currentUserAtom } from "@/features/user/atoms/current-user-atom.ts";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import APP_ROUTE from "@/lib/app-route.ts";
 import useAuth from "@/features/auth/hooks/use-auth.ts";
 import { CustomAvatar } from "@/components/ui/custom-avatar.tsx";

@@ -13,7 +13,7 @@ import {
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { INotification } from "../types/notification.types";
 import { Trans, useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useState } from "react";
 import { useMarkReadMutation } from "../queries/notification-query";
 import { buildPageUrl } from "@/features/page/page.utils";
