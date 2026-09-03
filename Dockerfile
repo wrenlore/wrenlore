@@ -1,4 +1,4 @@
-FROM node:22-slim AS base
+FROM node:26-slim AS base
 LABEL org.opencontainers.image.source="https://github.com/wrenlore/wrenlore"
 
 RUN npm config set strict-ssl false \
