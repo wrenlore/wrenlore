@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.5 - 2026-09-04
+
+### Security
+- Reduced 44 GitHub Dependabot alerts to 0 open alerts through PR #88.
+- Removed vulnerable transitive `image-size` from the resolved dependency graph because no fixed package release was available for its reported advisories.
+- Consolidated dependency and security updates from the remediation pass, including the regenerated Tiptap patch.
+
+### Validation
+- Verified frozen install with `corepack pnpm install --frozen-lockfile` under Node 22.22.2.
+- Verified `pnpm audit --prod` reports no known vulnerabilities.
+- Verified the full `pnpm audit` reports no known vulnerabilities.
+- Verified the repository test command passes: 26 test suites, 152 tests.
+- Verified the full build passes under Node 22.22.2.
+
+### Release notes
+- No deployment changes.
+- No live-data changes.
+
 ## v0.1.3 - 2026-07-16
 
 ### Security
