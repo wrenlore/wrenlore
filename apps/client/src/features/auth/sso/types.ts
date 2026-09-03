@@ -1,5 +1,15 @@
 import { SSO_PROVIDER } from "@/features/auth/sso/constants.ts";
 
+export type SamlRequestedAuthnContextMode =
+  | "omit"
+  | "explicit"
+  | "legacy-default";
+export type SamlAuthnContextComparison =
+  | "exact"
+  | "minimum"
+  | "maximum"
+  | "better";
+
 export interface IAuthProvider {
   id: string;
   name: string;
@@ -14,6 +24,9 @@ export interface IAuthProvider {
   nameIdFormat: string | null;
   idpEntityId: string | null;
   idpSloUrl: string | null;
+  requestedAuthnContextMode: SamlRequestedAuthnContextMode;
+  requestedAuthnContextClassRefs: string[];
+  requestedAuthnContextComparison: SamlAuthnContextComparison;
   oidcIssuer: string;
   oidcClientId: string;
   oidcClientSecret: string;

@@ -28,6 +28,7 @@ import { UpdateSsoProviderDto } from './dto/update-sso-provider.dto';
 import { ProviderIdDto } from './dto/provider-id.dto';
 import {
   buildSamlCallbackUrl,
+  buildSamlAuthnContextOptions,
   buildSamlEntityId,
   buildRequestPublicUrl,
   buildSamlMetadata,
@@ -155,6 +156,7 @@ export class SsoService implements OnModuleInit {
         groupSync: dto.groupSync ?? false,
         creatorId,
         workspaceId,
+        requestedAuthnContextMode: 'omit',
       })
       .returningAll()
       .executeTakeFirst();
@@ -194,6 +196,11 @@ export class SsoService implements OnModuleInit {
         : provider.samlCertificate;
     const nextIsEnabled =
       typeof dto.isEnabled !== 'undefined' ? dto.isEnabled : provider.isEnabled;
+    const nextRequestedAuthnContextMode =
+      dto.requestedAuthnContextMode ?? provider.requestedAuthnContextMode;
+    const nextRequestedAuthnContextClassRefs =
+      dto.requestedAuthnContextClassRefs ??
+      this.getSamlAuthnContextClassRefs(provider);
 
     let nextSpAcsUrl = provider.spAcsUrl;
     if (typeof dto.spAcsUrl !== 'undefined') {
@@ -207,6 +214,15 @@ export class SsoService implements OnModuleInit {
     if (nextIsEnabled && (!nextSamlUrl || !nextSamlCertificate)) {
       throw new BadRequestException(
         'SAML URL and certificate are required before enabling the provider.',
+      );
+    }
+
+    if (
+      nextRequestedAuthnContextMode === 'explicit' &&
+      nextRequestedAuthnContextClassRefs.length === 0
+    ) {
+      throw new BadRequestException(
+        'At least one AuthnContext class reference is required in explicit mode.',
       );
     }
 
@@ -258,6 +274,20 @@ export class SsoService implements OnModuleInit {
       updateData.idpSloUrl = dto.idpSloUrl || null;
     }
 
+    if (typeof dto.requestedAuthnContextMode !== 'undefined') {
+      updateData.requestedAuthnContextMode = dto.requestedAuthnContextMode;
+    }
+
+    if (typeof dto.requestedAuthnContextClassRefs !== 'undefined') {
+      updateData.requestedAuthnContextClassRefs =
+        dto.requestedAuthnContextClassRefs;
+    }
+
+    if (typeof dto.requestedAuthnContextComparison !== 'undefined') {
+      updateData.requestedAuthnContextComparison =
+        dto.requestedAuthnContextComparison;
+    }
+
     if (typeof dto.allowSignup !== 'undefined') {
       updateData.allowSignup = dto.allowSignup;
     }
@@ -289,6 +319,11 @@ export class SsoService implements OnModuleInit {
           samlUrl: provider.samlUrl,
           spEntityId: provider.spEntityId,
           spAcsUrl: provider.spAcsUrl,
+          requestedAuthnContextMode: provider.requestedAuthnContextMode,
+          requestedAuthnContextClassRefs:
+            provider.requestedAuthnContextClassRefs,
+          requestedAuthnContextComparison:
+            provider.requestedAuthnContextComparison,
           isEnabled: provider.isEnabled,
           allowSignup: provider.allowSignup,
           groupSync: provider.groupSync,
@@ -298,6 +333,11 @@ export class SsoService implements OnModuleInit {
           samlUrl: updated.samlUrl,
           spEntityId: updated.spEntityId,
           spAcsUrl: updated.spAcsUrl,
+          requestedAuthnContextMode: updated.requestedAuthnContextMode,
+          requestedAuthnContextClassRefs:
+            updated.requestedAuthnContextClassRefs,
+          requestedAuthnContextComparison:
+            updated.requestedAuthnContextComparison,
           isEnabled: updated.isEnabled,
           allowSignup: updated.allowSignup,
           groupSync: updated.groupSync,
@@ -641,7 +681,16 @@ export class SsoService implements OnModuleInit {
       validateInResponseTo: 'ifPresent',
       requestIdExpirationPeriodMs: 8 * 60 * 60 * 1000,
       cacheProvider: this.getSamlCacheProvider(provider.id),
+      ...buildSamlAuthnContextOptions(provider),
     };
+  }
+
+  private getSamlAuthnContextClassRefs(provider: AuthProvider): string[] {
+    return Array.isArray(provider.requestedAuthnContextClassRefs)
+      ? provider.requestedAuthnContextClassRefs.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : [];
   }
 
   private getEffectiveSamlConfig(provider: AuthProvider, baseUrl: string) {

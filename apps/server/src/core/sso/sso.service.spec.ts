@@ -1,4 +1,5 @@
 import { SsoService } from './sso.service';
+import { SAML } from '@node-saml/passport-saml';
 import {
   SAML_DEFAULT_NAME_ID_FORMAT,
   SAML_HTTP_POST_BINDING,
@@ -18,6 +19,11 @@ describe('SsoService SAML configuration', () => {
     };
     const db = {
       selectFrom: jest.fn().mockReturnValue(query),
+      insertInto: jest.fn().mockReturnValue({
+        values: jest.fn().mockReturnThis(),
+        returningAll: jest.fn().mockReturnThis(),
+        executeTakeFirst: jest.fn().mockResolvedValue(provider),
+      }),
     };
     const workspaceRepo = {
       findById: jest.fn().mockResolvedValue({
@@ -42,7 +48,7 @@ describe('SsoService SAML configuration', () => {
       { log: jest.fn() } as any,
     );
 
-    return { service, query };
+    return { service, query, db };
   }
 
   function samlProvider(overrides: Record<string, unknown> = {}) {
@@ -60,9 +66,81 @@ describe('SsoService SAML configuration', () => {
       nameIdFormat: null,
       idpEntityId: null,
       idpSloUrl: null,
+      requestedAuthnContextMode: 'legacy-default',
+      requestedAuthnContextClassRefs: [],
+      requestedAuthnContextComparison: 'exact',
       ...overrides,
     };
   }
+
+  async function generateAuthnRequest(service: SsoService) {
+    const options = await (service as any).buildSamlOptions({
+      params: { providerId },
+    });
+    const saml = new SAML(options);
+    return (saml as any).generateAuthorizeRequestAsync(false, false);
+  }
+
+  it('creates new Entra providers with RequestedAuthnContext omitted', async () => {
+    const provider = samlProvider({ requestedAuthnContextMode: 'omit' });
+    const { service, db } = createService(provider);
+
+    await service.createProvider(workspaceId, 'creator-id', {
+      name: 'Entra ID',
+      type: 'saml',
+    });
+
+    const insertValues = db.insertInto.mock.results[0].value.values;
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ requestedAuthnContextMode: 'omit' }),
+    );
+  });
+
+  it('omits RequestedAuthnContext from Entra AuthnRequests', async () => {
+    const { service } = createService(
+      samlProvider({ requestedAuthnContextMode: 'omit' }),
+    );
+
+    const request = await generateAuthnRequest(service);
+
+    expect(request).not.toContain('RequestedAuthnContext');
+    expect(request).not.toContain('AuthnContextClassRef');
+    expect(request).not.toContain('Password');
+    expect(request).not.toContain('PasswordProtectedTransport');
+  });
+
+  it('emits configured AuthnContext class refs and comparison', async () => {
+    const classRefs = [
+      'urn:oasis:names:tc:SAML:2.0:ac:classes:X509',
+      'urn:oasis:names:tc:SAML:2.0:ac:classes:TimeSyncToken',
+    ];
+    const { service } = createService(
+      samlProvider({
+        requestedAuthnContextMode: 'explicit',
+        requestedAuthnContextClassRefs: classRefs,
+        requestedAuthnContextComparison: 'minimum',
+      }),
+    );
+
+    const request = await generateAuthnRequest(service);
+
+    expect(request).toContain('RequestedAuthnContext');
+    expect(request).toContain('Comparison="minimum"');
+    expect(request).toContain(classRefs[0]);
+    expect(request).toContain(classRefs[1]);
+  });
+
+  it('preserves the legacy AuthnRequest default for generic providers', async () => {
+    const { service } = createService(samlProvider());
+
+    const request = await generateAuthnRequest(service);
+
+    expect(request).toContain('RequestedAuthnContext');
+    expect(request).toContain('Comparison="exact"');
+    expect(request).toContain(
+      'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
+    );
+  });
 
   it('uses customer-provided SP and IdP values in SAML runtime options', async () => {
     const provider = samlProvider({

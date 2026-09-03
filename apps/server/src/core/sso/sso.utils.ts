@@ -3,6 +3,64 @@ export const SAML_HTTP_POST_BINDING =
   'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' as const;
 export const SAML_DEFAULT_NAME_ID_FORMAT =
   'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress' as const;
+export const SAML_REQUESTED_AUTHN_CONTEXT_MODES = [
+  'omit',
+  'explicit',
+  'legacy-default',
+] as const;
+export type SamlRequestedAuthnContextMode =
+  (typeof SAML_REQUESTED_AUTHN_CONTEXT_MODES)[number];
+export const SAML_AUTHN_CONTEXT_COMPARISONS = [
+  'exact',
+  'minimum',
+  'maximum',
+  'better',
+] as const;
+export type SamlAuthnContextComparison =
+  (typeof SAML_AUTHN_CONTEXT_COMPARISONS)[number];
+
+type SamlAuthnContextConfig = {
+  requestedAuthnContextMode?: string | null;
+  requestedAuthnContextClassRefs?: unknown;
+  requestedAuthnContextComparison?: string | null;
+};
+
+export function buildSamlAuthnContextOptions(config: SamlAuthnContextConfig) {
+  if (config.requestedAuthnContextMode === 'omit') {
+    return { disableRequestedAuthnContext: true } as const;
+  }
+
+  if (config.requestedAuthnContextMode === 'explicit') {
+    const authnContext = Array.isArray(config.requestedAuthnContextClassRefs)
+      ? config.requestedAuthnContextClassRefs.filter(
+          (value): value is string =>
+            typeof value === 'string' && value.trim().length > 0,
+        )
+      : [];
+
+    // Do not accidentally fall through to node-saml's password default if an
+    // invalid row is introduced outside the validated provider API.
+    if (authnContext.length === 0) {
+      return { disableRequestedAuthnContext: true } as const;
+    }
+
+    const racComparison = SAML_AUTHN_CONTEXT_COMPARISONS.includes(
+      config.requestedAuthnContextComparison as SamlAuthnContextComparison,
+    )
+      ? (config.requestedAuthnContextComparison as SamlAuthnContextComparison)
+      : 'exact';
+
+    return {
+      disableRequestedAuthnContext: false,
+      authnContext,
+      racComparison,
+    } as const;
+  }
+
+  // Omitting these options intentionally preserves node-saml's historical
+  // PasswordProtectedTransport/exact defaults for legacy generic providers.
+  return {};
+}
 export const CUSTOM_SAML_ACS_INTERNAL_PATH = '/api/sso/saml/custom-acs';
 export const SAML_ACS_ORIGINAL_URL = Symbol('samlAcsOriginalUrl');
 
