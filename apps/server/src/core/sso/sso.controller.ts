@@ -99,10 +99,7 @@ export class SsoController {
   @Public()
   @UseGuards(SamlAuthGuard)
   @Post('saml/:providerId/callback')
-  async samlCallback(
-    @Req() req: any,
-    @Res({ passthrough: true }) res: FastifyReply,
-  ) {
+  async samlCallback(@Req() req: any, @Res() res: FastifyReply) {
     const user: User = req.user;
     const token = await this.ssoService.issueAuthCookieAndToken(user);
     this.ssoService.setAuthCookie(res, token);
@@ -118,10 +115,7 @@ export class SsoController {
   @Public()
   @UseGuards(SamlAuthGuard)
   @Post('saml/custom-acs')
-  async customSamlCallback(
-    @Req() req: any,
-    @Res({ passthrough: true }) res: FastifyReply,
-  ) {
+  async customSamlCallback(@Req() req: any, @Res() res: FastifyReply) {
     const user: User = req.user;
     const token = await this.ssoService.issueAuthCookieAndToken(user);
     this.ssoService.setAuthCookie(res, token);

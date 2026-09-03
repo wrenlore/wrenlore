@@ -46,22 +46,27 @@ import * as passport from 'passport';
 import { MultiSamlStrategy } from '@node-saml/passport-saml';
 import { isUserDisabled, nanoIdGen } from '../../common/helpers';
 import { FastifyReply } from 'fastify';
+import { RedisService } from '@nestjs-labs/nestjs-ioredis';
+import type { Redis } from 'ioredis';
 
 type SamlCacheEntry = {
   value: string;
-  expiresAt: number;
+  createdAt: number;
 };
 
 type SamlCacheProvider = {
   saveAsync(key: string, value: string): Promise<SamlCacheEntry | null>;
   getAsync(key: string): Promise<string | null>;
-  removeAsync(key: string): Promise<string | null>;
+  removeAsync(key: string | null): Promise<string | null>;
 };
+
+const SAML_REQUEST_ID_TTL_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class SsoService implements OnModuleInit {
   private readonly logger = new Logger(SsoService.name);
   private readonly samlCaches = new Map<string, SamlCacheProvider>();
+  private readonly redis: Redis;
 
   constructor(
     @InjectKysely() private readonly db: KyselyDB,
@@ -73,15 +78,18 @@ export class SsoService implements OnModuleInit {
     private readonly tokenService: TokenService,
     private readonly environmentService: EnvironmentService,
     private readonly domainService: DomainService,
+    private readonly redisService: RedisService,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
-  ) {}
+  ) {
+    this.redis = this.redisService.getOrThrow();
+  }
 
   onModuleInit() {
     const strategy = new MultiSamlStrategy(
       {
         passReqToCallback: true,
         validateInResponseTo: 'ifPresent',
-        requestIdExpirationPeriodMs: 8 * 60 * 60 * 1000,
+        requestIdExpirationPeriodMs: SAML_REQUEST_ID_TTL_MS,
         getSamlOptions: async (req: any, done: any) => {
           try {
             const options = await this.buildSamlOptions(req);
@@ -679,7 +687,7 @@ export class SsoService implements OnModuleInit {
       logoutUrl: provider.idpSloUrl ?? undefined,
       logoutCallbackUrl: config.spSloUrl ?? undefined,
       validateInResponseTo: 'ifPresent',
-      requestIdExpirationPeriodMs: 8 * 60 * 60 * 1000,
+      requestIdExpirationPeriodMs: SAML_REQUEST_ID_TTL_MS,
       cacheProvider: this.getSamlCacheProvider(provider.id),
       ...buildSamlAuthnContextOptions(provider),
     };
@@ -709,37 +717,59 @@ export class SsoService implements OnModuleInit {
       return existing;
     }
 
-    const cache = new Map<string, SamlCacheEntry>();
     const providerCache: SamlCacheProvider = {
       saveAsync: async (key: string, value: string) => {
-        cache.set(key, {
+        const cacheKey = this.getSamlRequestCacheKey(providerId, key);
+        const entry = {
           value,
-          expiresAt: Date.now() + 8 * 60 * 60 * 1000,
-        });
-        return null;
+          createdAt: Date.now(),
+        };
+        const result = await this.redis.set(
+          cacheKey,
+          JSON.stringify(entry),
+          'PX',
+          SAML_REQUEST_ID_TTL_MS,
+          'NX',
+        );
+        return result === 'OK' ? entry : null;
       },
       getAsync: async (key: string) => {
-        const entry = cache.get(key);
-        if (!entry) {
+        const rawEntry = await this.redis.get(
+          this.getSamlRequestCacheKey(providerId, key),
+        );
+        if (!rawEntry) {
           return null;
         }
 
-        if (entry.expiresAt < Date.now()) {
-          cache.delete(key);
+        try {
+          const entry = JSON.parse(rawEntry) as Partial<SamlCacheEntry>;
+          return typeof entry.value === 'string' ? entry.value : null;
+        } catch (error) {
+          await this.redis.del(this.getSamlRequestCacheKey(providerId, key));
           return null;
         }
-
-        return entry.value;
       },
-      removeAsync: async (key: string) => {
-        const entry = cache.get(key);
-        cache.delete(key);
-        return entry?.value ?? null;
+      removeAsync: async (key: string | null) => {
+        if (!key) {
+          return null;
+        }
+
+        const deleted = await this.redis.del(
+          this.getSamlRequestCacheKey(providerId, key),
+        );
+        return deleted > 0 ? key : null;
       },
     };
 
     this.samlCaches.set(providerId, providerCache);
     return providerCache;
+  }
+
+  private getSamlRequestCacheKey(
+    providerId: string,
+    requestId: string,
+  ): string {
+    return `sso:saml:request:${providerId}:${requestId}`;
   }
 
   private async syncGroups(
