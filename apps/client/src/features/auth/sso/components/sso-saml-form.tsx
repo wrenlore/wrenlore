@@ -28,21 +28,70 @@ import { useUpdateSsoProviderMutation } from "@/features/auth/sso/queries.ts";
 const SAML_HTTP_POST_BINDING =
   "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" as const;
 
-const ssoSchema = z.object({
-  name: z.string().min(1, "Display name is required"),
-  spEntityId: z.string(),
-  spAcsUrl: z.union([z.literal(""), z.string().url()]),
-  spAcsBinding: z.literal(SAML_HTTP_POST_BINDING),
-  spSloUrl: z.union([z.literal(""), z.string().url()]),
-  nameIdFormat: z.string(),
-  idpEntityId: z.string(),
-  samlUrl: z.string().url(),
-  idpSloUrl: z.union([z.literal(""), z.string().url()]),
-  samlCertificate: z.string().min(1, "SAML Idp Certificate is required"),
-  isEnabled: z.boolean(),
-  allowSignup: z.boolean(),
-  groupSync: z.boolean(),
-});
+const requestedAuthnContextModes = [
+  "omit",
+  "explicit",
+  "legacy-default",
+] as const;
+const authnContextComparisons = [
+  "exact",
+  "minimum",
+  "maximum",
+  "better",
+] as const;
+
+const parseAuthnContextClassRefs = (value: string) =>
+  value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const ssoSchema = z
+  .object({
+    name: z.string().min(1, "Display name is required"),
+    spEntityId: z.string(),
+    spAcsUrl: z.union([z.literal(""), z.string().url()]),
+    spAcsBinding: z.literal(SAML_HTTP_POST_BINDING),
+    spSloUrl: z.union([z.literal(""), z.string().url()]),
+    nameIdFormat: z.string(),
+    idpEntityId: z.string(),
+    samlUrl: z.string().url(),
+    idpSloUrl: z.union([z.literal(""), z.string().url()]),
+    samlCertificate: z.string().min(1, "SAML Idp Certificate is required"),
+    requestedAuthnContextMode: z.enum(requestedAuthnContextModes),
+    requestedAuthnContextClassRefs: z.string(),
+    requestedAuthnContextComparison: z.enum(authnContextComparisons),
+    isEnabled: z.boolean(),
+    allowSignup: z.boolean(),
+    groupSync: z.boolean(),
+  })
+  .superRefine((values, context) => {
+    const classRefs = parseAuthnContextClassRefs(
+      values.requestedAuthnContextClassRefs,
+    );
+
+    if (
+      values.requestedAuthnContextMode === "explicit" &&
+      classRefs.length === 0
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["requestedAuthnContextClassRefs"],
+        message: "Enter at least one AuthnContext class reference",
+      });
+    }
+
+    if (
+      classRefs.length > 20 ||
+      classRefs.some((value) => value.length > 2048)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["requestedAuthnContextClassRefs"],
+        message: "Enter up to 20 class references, one per line",
+      });
+    }
+  });
 
 type SSOFormValues = z.infer<typeof ssoSchema>;
 
@@ -77,6 +126,13 @@ export function SsoSamlForm({ provider, onClose }: SsoFormProps) {
       samlUrl: provider.samlUrl || "",
       idpSloUrl: provider.idpSloUrl || "",
       samlCertificate: provider.samlCertificate || "",
+      requestedAuthnContextMode:
+        provider.requestedAuthnContextMode || "legacy-default",
+      requestedAuthnContextClassRefs: (
+        provider.requestedAuthnContextClassRefs || []
+      ).join("\n"),
+      requestedAuthnContextComparison:
+        provider.requestedAuthnContextComparison || "exact",
       isEnabled: provider.isEnabled,
       allowSignup: provider.allowSignup,
       groupSync: provider.groupSync || false,
@@ -119,6 +175,18 @@ export function SsoSamlForm({ provider, onClose }: SsoFormProps) {
     }
     if (form.isDirty("idpSloUrl")) {
       ssoData.idpSloUrl = values.idpSloUrl || null;
+    }
+    if (form.isDirty("requestedAuthnContextMode")) {
+      ssoData.requestedAuthnContextMode = values.requestedAuthnContextMode;
+    }
+    if (form.isDirty("requestedAuthnContextClassRefs")) {
+      ssoData.requestedAuthnContextClassRefs = parseAuthnContextClassRefs(
+        values.requestedAuthnContextClassRefs,
+      );
+    }
+    if (form.isDirty("requestedAuthnContextComparison")) {
+      ssoData.requestedAuthnContextComparison =
+        values.requestedAuthnContextComparison;
     }
     if (form.isDirty("isEnabled")) {
       ssoData.isEnabled = values.isEnabled;
@@ -212,6 +280,44 @@ export function SsoSamlForm({ provider, onClose }: SsoFormProps) {
             maxRows={5}
             {...form.getInputProps("samlCertificate")}
           />
+
+          <Divider />
+          <Text fw={600}>Advanced authentication request</Text>
+          <Select
+            label="Requested AuthnContext"
+            description="Omit is recommended for Entra ID and lets the identity provider choose the authentication method."
+            data={[
+              { value: "omit", label: "Omit (recommended for Entra ID)" },
+              { value: "explicit", label: "Explicit class references" },
+              {
+                value: "legacy-default",
+                label: "Legacy library default",
+              },
+            ]}
+            allowDeselect={false}
+            {...form.getInputProps("requestedAuthnContextMode")}
+          />
+          {form.values.requestedAuthnContextMode === "explicit" && (
+            <>
+              <Textarea
+                label="AuthnContext class references"
+                description="Enter SAML AuthnContext class reference URIs, one per line."
+                autosize
+                minRows={2}
+                maxRows={6}
+                {...form.getInputProps("requestedAuthnContextClassRefs")}
+              />
+              <Select
+                label="Comparison"
+                data={authnContextComparisons.map((value) => ({
+                  value,
+                  label: value,
+                }))}
+                allowDeselect={false}
+                {...form.getInputProps("requestedAuthnContextComparison")}
+              />
+            </>
+          )}
 
           <Group justify="space-between">
             <div>{t("Group sync")}</div>

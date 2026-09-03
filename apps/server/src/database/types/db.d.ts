@@ -152,6 +152,9 @@ export interface AuthProviders {
   idpEntityId: string | null;
   idpSloUrl: string | null;
   nameIdFormat: string | null;
+  requestedAuthnContextClassRefs: Generated<Json>;
+  requestedAuthnContextComparison: Generated<string>;
+  requestedAuthnContextMode: Generated<string>;
   samlCertificate: string | null;
   samlUrl: string | null;
   spAcsBinding: string | null;
