@@ -1,8 +1,8 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index bd61d4f..4e37295 100644
+index 76e34aed83b1da924e34f1e598b741387a984fc1..64672c6730e359c1726d64e414484c7b9373246c 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -7109,8 +7109,11 @@ var ResizableNodeView = class {
+@@ -7177,8 +7177,11 @@ var ResizableNodeView = class {
  			this.container.dataset.resizeState = "false";
  			if (this.classNames.resizing) this.container.classList.remove(this.classNames.resizing);
  			document.removeEventListener("mousemove", this.handleMouseMove);
@@ -14,7 +14,7 @@ index bd61d4f..4e37295 100644
  			document.removeEventListener("keyup", this.handleKeyUp);
  		};
  		this.handleKeyDown = (event) => {
-@@ -7199,8 +7202,11 @@ var ResizableNodeView = class {
+@@ -7267,8 +7270,11 @@ var ResizableNodeView = class {
  			this.container.dataset.resizeState = "false";
  			if (this.classNames.resizing) this.container.classList.remove(this.classNames.resizing);
  			document.removeEventListener("mousemove", this.handleMouseMove);
@@ -26,7 +26,7 @@ index bd61d4f..4e37295 100644
  			document.removeEventListener("keyup", this.handleKeyUp);
  			this.isResizing = false;
  			this.activeHandle = null;
-@@ -7369,7 +7375,9 @@ var ResizableNodeView = class {
+@@ -7437,7 +7443,9 @@ var ResizableNodeView = class {
  		document.addEventListener("mousemove", this.handleMouseMove);
  		document.addEventListener("touchmove", this.handleTouchMove);
  		document.addEventListener("mouseup", this.handleMouseUp);
@@ -37,10 +37,10 @@ index bd61d4f..4e37295 100644
  	}
  	handleResize(deltaX, deltaY) {
 diff --git a/dist/index.js b/dist/index.js
-index 56e60b7..efeb2cb 100644
+index 8329cc761a10603dde4a4714a8b681ff940d939b..88d234fe7689a8768aa7cc6314a8c74e873b4e80 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -7097,8 +7097,11 @@ var ResizableNodeView = class {
+@@ -7165,8 +7165,11 @@ var ResizableNodeView = class {
  			this.container.dataset.resizeState = "false";
  			if (this.classNames.resizing) this.container.classList.remove(this.classNames.resizing);
  			document.removeEventListener("mousemove", this.handleMouseMove);
@@ -52,7 +52,7 @@ index 56e60b7..efeb2cb 100644
  			document.removeEventListener("keyup", this.handleKeyUp);
  		};
  		this.handleKeyDown = (event) => {
-@@ -7187,8 +7190,11 @@ var ResizableNodeView = class {
+@@ -7255,8 +7258,11 @@ var ResizableNodeView = class {
  			this.container.dataset.resizeState = "false";
  			if (this.classNames.resizing) this.container.classList.remove(this.classNames.resizing);
  			document.removeEventListener("mousemove", this.handleMouseMove);
@@ -64,7 +64,7 @@ index 56e60b7..efeb2cb 100644
  			document.removeEventListener("keyup", this.handleKeyUp);
  			this.isResizing = false;
  			this.activeHandle = null;
-@@ -7357,7 +7363,9 @@ var ResizableNodeView = class {
+@@ -7425,7 +7431,9 @@ var ResizableNodeView = class {
  		document.addEventListener("mousemove", this.handleMouseMove);
  		document.addEventListener("touchmove", this.handleTouchMove);
  		document.addEventListener("mouseup", this.handleMouseUp);
@@ -75,7 +75,7 @@ index 56e60b7..efeb2cb 100644
  	}
  	handleResize(deltaX, deltaY) {
 diff --git a/src/lib/ResizableNodeView.ts b/src/lib/ResizableNodeView.ts
-index b2f309e..726dff3 100644
+index b2f309e450ba2c32e72c7fddeb55f77d2c706a7d..726dff36823727a1138540f21fda7f0c3578fa18 100644
 --- a/src/lib/ResizableNodeView.ts
 +++ b/src/lib/ResizableNodeView.ts
 @@ -533,8 +533,11 @@ export class ResizableNodeView {
