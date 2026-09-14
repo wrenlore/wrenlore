@@ -358,21 +358,21 @@ describe('SsoController SAML callbacks', () => {
       query: {},
     };
     const res = {
-      redirect: jest.fn().mockReturnValue('redirect-response'),
+      setCookie: jest.fn(),
     };
 
-    await expect(controller.samlCallback(req as any, res as any)).resolves.toBe(
-      'redirect-response',
-    );
+    await expect(
+      controller.samlCallback(req as any, res as any),
+    ).resolves.toEqual({
+      url: 'https://tenant.example.com/home',
+      statusCode: 303,
+    });
 
     expect(ssoService.issueAuthCookieAndToken).toHaveBeenCalledWith(req.user);
     expect(ssoService.setAuthCookie).toHaveBeenCalledWith(res, 'jwt-token');
     expect(ssoService.buildPostLoginRedirect).toHaveBeenCalledWith(
       req.user,
       '/space/docs',
-    );
-    expect(res.redirect).toHaveBeenCalledWith(
-      'https://tenant.example.com/home',
     );
   });
 });

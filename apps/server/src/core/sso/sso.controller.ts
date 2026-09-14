@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Post,
   Req,
+  Redirect,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -99,7 +100,11 @@ export class SsoController {
   @Public()
   @UseGuards(SamlAuthGuard)
   @Post('saml/:providerId/callback')
-  async samlCallback(@Req() req: any, @Res() res: FastifyReply) {
+  @Redirect()
+  async samlCallback(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
     const user: User = req.user;
     const token = await this.ssoService.issueAuthCookieAndToken(user);
     this.ssoService.setAuthCookie(res, token);
@@ -109,13 +114,17 @@ export class SsoController {
       req.body?.RelayState ?? req.query?.RelayState,
     );
 
-    return res.redirect(redirectUrl);
+    return { url: redirectUrl, statusCode: HttpStatus.SEE_OTHER };
   }
 
   @Public()
   @UseGuards(SamlAuthGuard)
   @Post('saml/custom-acs')
-  async customSamlCallback(@Req() req: any, @Res() res: FastifyReply) {
+  @Redirect()
+  async customSamlCallback(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
     const user: User = req.user;
     const token = await this.ssoService.issueAuthCookieAndToken(user);
     this.ssoService.setAuthCookie(res, token);
@@ -125,7 +134,7 @@ export class SsoController {
       req.body?.RelayState ?? req.query?.RelayState,
     );
 
-    return res.redirect(redirectUrl);
+    return { url: redirectUrl, statusCode: HttpStatus.SEE_OTHER };
   }
 
   @Public()
