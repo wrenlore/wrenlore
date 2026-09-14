@@ -5,6 +5,8 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import fastifyCookie from '@fastify/cookie';
+import { Reflector } from '@nestjs/core';
+import { TransformHttpResponseInterceptor } from '../../common/interceptors/http-response.interceptor';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import WorkspaceAbilityFactory from '../casl/abilities/workspace-ability.factory';
 import { SamlAuthGuard } from './saml-auth.guard';
@@ -71,6 +73,9 @@ describe('SsoController SAML callbacks with Fastify adapter', () => {
     );
     app.setGlobalPrefix('api');
     await app.register(fastifyCookie);
+    app.useGlobalInterceptors(
+      new TransformHttpResponseInterceptor(app.get(Reflector)),
+    );
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
   });
@@ -90,6 +95,7 @@ describe('SsoController SAML callbacks with Fastify adapter', () => {
     expect(response.headers.location).toBe(
       'https://tenant.example.com/space/docs',
     );
+    expect(Buffer.byteLength(response.body)).toBe(0);
     expect(asHeaderArray(response.headers['set-cookie'])).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/^authToken=jwt-token; Path=\/; HttpOnly/),
@@ -110,6 +116,7 @@ describe('SsoController SAML callbacks with Fastify adapter', () => {
 
     expect(response.statusCode).toBe(303);
     expect(response.headers.location).toBe('https://tenant.example.com/home');
+    expect(Buffer.byteLength(response.body)).toBe(0);
     expect(asHeaderArray(response.headers['set-cookie'])).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/^authToken=jwt-token; Path=\/; HttpOnly/),

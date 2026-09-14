@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Post,
   Req,
-  Redirect,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +26,7 @@ import { SsoService } from './sso.service';
 import { CreateSsoProviderDto } from './dto/create-sso-provider.dto';
 import { UpdateSsoProviderDto } from './dto/update-sso-provider.dto';
 import { ProviderIdDto } from './dto/provider-id.dto';
+import { SkipTransform } from '../../common/decorators/skip-transform.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('sso')
@@ -100,31 +100,20 @@ export class SsoController {
   @Public()
   @UseGuards(SamlAuthGuard)
   @Post('saml/:providerId/callback')
-  @Redirect()
-  async samlCallback(
-    @Req() req: any,
-    @Res({ passthrough: true }) res: FastifyReply,
-  ) {
-    const user: User = req.user;
-    const token = await this.ssoService.issueAuthCookieAndToken(user);
-    this.ssoService.setAuthCookie(res, token);
-
-    const redirectUrl = await this.ssoService.buildPostLoginRedirect(
-      user,
-      req.body?.RelayState ?? req.query?.RelayState,
-    );
-
-    return { url: redirectUrl, statusCode: HttpStatus.SEE_OTHER };
+  @SkipTransform()
+  async samlCallback(@Req() req: any, @Res() res: FastifyReply) {
+    return this.sendSamlCallbackRedirect(req, res);
   }
 
   @Public()
   @UseGuards(SamlAuthGuard)
   @Post('saml/custom-acs')
-  @Redirect()
-  async customSamlCallback(
-    @Req() req: any,
-    @Res({ passthrough: true }) res: FastifyReply,
-  ) {
+  @SkipTransform()
+  async customSamlCallback(@Req() req: any, @Res() res: FastifyReply) {
+    return this.sendSamlCallbackRedirect(req, res);
+  }
+
+  private async sendSamlCallbackRedirect(req: any, res: FastifyReply) {
     const user: User = req.user;
     const token = await this.ssoService.issueAuthCookieAndToken(user);
     this.ssoService.setAuthCookie(res, token);
@@ -134,7 +123,10 @@ export class SsoController {
       req.body?.RelayState ?? req.query?.RelayState,
     );
 
-    return { url: redirectUrl, statusCode: HttpStatus.SEE_OTHER };
+    return res
+      .status(HttpStatus.SEE_OTHER)
+      .header('Location', redirectUrl)
+      .send();
   }
 
   @Public()
