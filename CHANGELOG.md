@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.1.6 - 2026-09-14
+
+### Fixed
+- Preserved SAML request correlation through the callback flow by caching pending requests and honoring the intended post-login redirect from PR #92.
+- Fixed the production SAML callback response lifecycle so successful callbacks return the redirect response instead of leaving the browser on a blank page from PR #93.
+
+### Security
+- Consolidated the Dependabot remediation from PR #94, reducing 13 open GitHub Dependabot alerts to 0.
+- Raised the principal secured dependency floors to Tiptap 3.30.5, Hono 4.13.5, js-yaml 3.15.2/4.3.2, Nodemailer 9.1.1, smol-toml 1.7.1, and `@ai-sdk/provider-utils` 4.0.33.
+
+### Validation
+- Verified frozen install with `pnpm install --frozen-lockfile` under Node 22.22.2.
+- Verified `pnpm audit` reports no known vulnerabilities.
+- Verified the server test command passes: 27 test suites, 156 tests.
+- Verified package-level editor, server, and client builds pass.
+- Verified clean diff checks with `git diff --check`.
+- Verified the release diff is limited to package version metadata and changelog notes.
+
+### Release notes
+- No deployment changes.
+- No live-data changes.
+
 ## v0.1.5 - 2026-09-04
 
 ### Security
