@@ -340,6 +340,38 @@ describe('SsoService SAML configuration', () => {
       }),
     ).resolves.toBe(providerId);
   });
+
+  it('keeps post-login redirects inside the workspace origin', async () => {
+    const { service } = createService(samlProvider());
+    const user = { workspaceId } as any;
+
+    await expect(
+      service.buildPostLoginRedirect(user, '/space/docs?tab=1#section'),
+    ).resolves.toBe('https://tenant.example.com/space/docs?tab=1#section');
+    await expect(
+      service.buildPostLoginRedirect(
+        user,
+        'https://tenant.example.com/settings',
+      ),
+    ).resolves.toBe('https://tenant.example.com/settings');
+  });
+
+  it('falls back for unsafe post-login redirect targets', async () => {
+    const { service } = createService(samlProvider());
+    const user = { workspaceId } as any;
+
+    for (const unsafeTarget of [
+      'https://evil.example.com/phish',
+      '//evil.example.com/phish',
+      'http://tenant.example.com/not-https',
+      'http://[',
+      '',
+    ]) {
+      await expect(
+        service.buildPostLoginRedirect(user, unsafeTarget),
+      ).resolves.toBe('https://tenant.example.com/home');
+    }
+  });
 });
 
 describe('SsoController SAML callbacks', () => {
@@ -357,16 +389,17 @@ describe('SsoController SAML callbacks', () => {
       body: { RelayState: '/space/docs' },
       query: {},
     };
+    const sendResult = {};
     const res = {
       setCookie: jest.fn(),
+      status: jest.fn().mockReturnThis(),
+      header: jest.fn().mockReturnThis(),
+      send: jest.fn().mockReturnValue(sendResult),
     };
 
-    await expect(
-      controller.samlCallback(req as any, res as any),
-    ).resolves.toEqual({
-      url: 'https://tenant.example.com/home',
-      statusCode: 303,
-    });
+    await expect(controller.samlCallback(req as any, res as any)).resolves.toBe(
+      sendResult,
+    );
 
     expect(ssoService.issueAuthCookieAndToken).toHaveBeenCalledWith(req.user);
     expect(ssoService.setAuthCookie).toHaveBeenCalledWith(res, 'jwt-token');
@@ -374,5 +407,11 @@ describe('SsoController SAML callbacks', () => {
       req.user,
       '/space/docs',
     );
+    expect(res.status).toHaveBeenCalledWith(303);
+    expect(res.header).toHaveBeenCalledWith(
+      'Location',
+      'https://tenant.example.com/home',
+    );
+    expect(res.send).toHaveBeenCalledTimes(1);
   });
 });
