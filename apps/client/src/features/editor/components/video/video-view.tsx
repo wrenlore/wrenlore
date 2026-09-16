@@ -5,11 +5,20 @@ import { getFileUrl } from "@/lib/config.ts";
 import clsx from "clsx";
 import classes from "./video-view.module.css";
 import { useTranslation } from "react-i18next";
+import { getAccessibilityDescription } from "@wrenlore/editor-ext";
 
 export default function VideoView(props: NodeViewProps) {
   const { t } = useTranslation();
   const { editor, node, selected } = props;
-  const { src, width, align, aspectRatio, placeholder } = node.attrs;
+  const {
+    src,
+    width,
+    align,
+    accessibilityDescription,
+    aspectRatio,
+    placeholder,
+  } = node.attrs;
+  const description = getAccessibilityDescription(accessibilityDescription);
   const alignClass = useMemo(() => {
     if (align === "left") return "alignLeft";
     if (align === "right") return "alignRight";
@@ -46,6 +55,7 @@ export default function VideoView(props: NodeViewProps) {
             preload="metadata"
             controls
             src={getFileUrl(src)}
+            aria-label={description || undefined}
           />
         )}
         {!src && previewSrc && (

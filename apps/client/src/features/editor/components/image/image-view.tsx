@@ -5,11 +5,20 @@ import { getFileUrl } from "@/lib/config.ts";
 import clsx from "clsx";
 import classes from "./image-view.module.css";
 import { useTranslation } from "react-i18next";
+import { getAccessibilityDescription } from "@wrenlore/editor-ext";
 
 export default function ImageView(props: NodeViewProps) {
   const { t } = useTranslation();
   const { editor, node, selected } = props;
-  const { src, width, align, title, aspectRatio, placeholder } = node.attrs;
+  const {
+    src,
+    width,
+    align,
+    alt,
+    accessibilityDescription,
+    aspectRatio,
+    placeholder,
+  } = node.attrs;
   const alignClass = useMemo(() => {
     if (align === "left") return "alignLeft";
     if (align === "right") return "alignRight";
@@ -41,7 +50,12 @@ export default function ImageView(props: NodeViewProps) {
         }}
       >
         {src && (
-          <Image radius="md" fit="contain" src={getFileUrl(src)} alt={title} />
+          <Image
+            radius="md"
+            fit="contain"
+            src={getFileUrl(src)}
+            alt={getAccessibilityDescription(accessibilityDescription, alt)}
+          />
         )}
         {!src && previewSrc && (
           <Group pos="relative" h="100%" w="100%">

@@ -8,6 +8,7 @@ export * from './lib/image';
 export * from './lib/video';
 export * from './lib/callout';
 export * from './lib/media-utils';
+export * from './lib/media-description';
 export * from './lib/media-filename';
 export * from './lib/link';
 export * from './lib/selection';

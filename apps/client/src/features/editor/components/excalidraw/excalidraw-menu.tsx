@@ -1,6 +1,13 @@
 import { BubbleMenu as BaseBubbleMenu } from "@tiptap/react/menus";
 import { findParentNode, posToDOMRect, useEditorState } from "@tiptap/react";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Node as PMNode } from "@tiptap/pm/model";
 import {
   EditorMenuProps,
@@ -35,6 +42,8 @@ import { IAttachment } from "@/features/attachments/types/attachment.types";
 import ReactClearModal from "react-clear-modal";
 import { useHandleLibrary } from "@excalidraw/excalidraw";
 import { localStorageLibraryAdapter } from "@/features/editor/components/excalidraw/excalidraw-utils.ts";
+import { MediaDescriptionAction } from "@/features/editor/components/common/media-description-action";
+import { getAccessibilityDescription } from "@wrenlore/editor-ext";
 import classes from "../common/toolbar-menu.module.css";
 
 const ExcalidrawComponent = lazy(() =>
@@ -74,6 +83,9 @@ export function ExcalidrawMenu({ editor }: EditorMenuProps) {
         isAlignRight: ctx.editor.isActive("excalidraw", { align: "right" }),
         src: excalidrawAttr?.src || null,
         attachmentId: excalidrawAttr?.attachmentId || null,
+        description: getAccessibilityDescription(
+          excalidrawAttr?.accessibilityDescription,
+        ),
       };
     },
   });
@@ -332,6 +344,12 @@ export function ExcalidrawMenu({ editor }: EditorMenuProps) {
           </Tooltip>
 
           <div className={classes.divider} />
+
+          <MediaDescriptionAction
+            editor={editor}
+            nodeTypeName="excalidraw"
+            description={editorState?.description}
+          />
 
           <Tooltip position="top" label={t("Edit")} withinPortal={false}>
             <ActionIcon
