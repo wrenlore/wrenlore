@@ -8,6 +8,7 @@ import { WorkspaceRepo } from '@wrenlore/db/repos/workspace/workspace.repo';
 import { EnvironmentService } from '../../integrations/environment/environment.service';
 import { Workspace } from '@wrenlore/db/types/entity.types';
 import { htmlEscape } from '../../common/helpers/html-escaper';
+import { SharePageMetadata } from './share.service';
 
 @Controller('share')
 export class ShareSeoController {
@@ -60,35 +61,18 @@ export class ShareSeoController {
 
       const pageId = this.extractPageSlugId(pageSlug);
 
-      const share = await this.shareService.getShareForPage(
+      const metadata = await this.shareService.getSharePageMetadata(
         pageId,
         workspace.id,
+        shareId,
       );
 
-      if (!share) {
+      if (!metadata) {
         return this.sendIndex(indexFilePath, res);
       }
 
-      const rawTitle = htmlEscape(share?.sharedPage.title ?? 'untitled');
-      const metaTitle =
-        rawTitle.length > 80 ? `${rawTitle.slice(0, 77)}…` : rawTitle;
-
-      const metaTagVar = '<!--meta-tags-->';
-
-      const metaTags = [
-        `<meta property="og:title" content="${metaTitle}" />`,
-        `<meta property="twitter:title" content="${metaTitle}" />`,
-        !share.searchIndexing ? `<meta name="robots" content="noindex" />` : '',
-      ]
-        .filter(Boolean)
-        .join('\n    ');
-
       const html = fs.readFileSync(indexFilePath, 'utf8');
-      const transformedHtml = html
-        .replace(/<title>[\s\S]*?<\/title>/i, `<title>${metaTitle}</title>`)
-        .replace(metaTagVar, metaTags);
-
-      res.type('text/html').send(transformedHtml);
+      res.type('text/html').send(applyShareSeoMetadata(html, metadata));
     }
   }
 
@@ -107,4 +91,27 @@ export class ShareSeoController {
     const parts = slug.split('-');
     return parts.length > 1 ? parts[parts.length - 1] : slug;
   }
+}
+
+export function applyShareSeoMetadata(
+  html: string,
+  metadata: SharePageMetadata,
+): string {
+  const rawTitle = htmlEscape(metadata.title ?? 'untitled');
+  const metaTitle =
+    rawTitle.length > 80 ? `${rawTitle.slice(0, 79)}…` : rawTitle;
+
+  const metaTagVar = '<!--meta-tags-->';
+
+  const metaTags = [
+    `<meta property="og:title" content="${metaTitle}" />`,
+    `<meta property="twitter:title" content="${metaTitle}" />`,
+    !metadata.searchIndexing ? `<meta name="robots" content="noindex" />` : '',
+  ]
+    .filter(Boolean)
+    .join('\n    ');
+
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/i, `<title>${metaTitle}</title>`)
+    .replace(metaTagVar, metaTags);
 }
