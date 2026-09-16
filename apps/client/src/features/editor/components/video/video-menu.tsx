@@ -17,6 +17,8 @@ import {
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { getFileUrl } from "@/lib/config.ts";
+import { MediaDescriptionAction } from "@/features/editor/components/common/media-description-action";
+import { getAccessibilityDescription } from "@wrenlore/editor-ext";
 import classes from "../common/toolbar-menu.module.css";
 
 export function VideoMenu({ editor }: EditorMenuProps) {
@@ -37,6 +39,9 @@ export function VideoMenu({ editor }: EditorMenuProps) {
         isAlignCenter: ctx.editor.isActive("video", { align: "center" }),
         isAlignRight: ctx.editor.isActive("video", { align: "right" }),
         src: videoAttrs?.src || null,
+        description: getAccessibilityDescription(
+          videoAttrs?.accessibilityDescription,
+        ),
       };
     },
   });
@@ -162,6 +167,12 @@ export function VideoMenu({ editor }: EditorMenuProps) {
         </Tooltip>
 
         <div className={classes.divider} />
+
+        <MediaDescriptionAction
+          editor={editor}
+          nodeTypeName="video"
+          description={editorState?.description}
+        />
 
         <Tooltip position="top" label={t("Download")} withinPortal={false}>
           <ActionIcon
