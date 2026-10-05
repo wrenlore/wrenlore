@@ -11,6 +11,7 @@
     "server:build": "nx run server:build",
     "client:build": "nx run client:build",
     "editor-ext:build": "nx run @wrenlore/editor-ext:build",
+    "test:editor-ext": "pnpm --filter @wrenlore/editor-ext test",
     "client:dev": "nx run client:dev",
     "server:dev": "nx run server:start:dev",
     "server:start": "nx run server:start:prod",

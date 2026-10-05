@@ -113,6 +113,7 @@ export default function PageEditor({
   const { handleScrollTo } = useEditorScroll({ canScroll });
   // Providers only created once per pageId
   const providersRef = useRef<{
+    pageId: string;
     local: IndexeddbPersistence;
     remote: HocuspocusProvider;
     socket: HocuspocusProviderWebsocket;
@@ -121,6 +122,8 @@ export default function PageEditor({
 
   useEffect(() => {
     if (!providersRef.current) {
+      setIsLocalSynced(false);
+      setIsRemoteSynced(false);
       const documentName = `page.${pageId}`;
       const ydoc = new Y.Doc();
       const local = new IndexeddbPersistence(documentName, ydoc);
@@ -163,7 +166,7 @@ export default function PageEditor({
       });
 
       local.on("synced", onLocalSyncedHandler);
-      providersRef.current = { socket, local, remote };
+      providersRef.current = { pageId, socket, local, remote };
       setProvidersReady(true);
     } else {
       setProvidersReady(true);
@@ -203,7 +206,16 @@ export default function PageEditor({
   providersRef.current?.remote.attach();
 
   const extensions = useMemo(() => {
-    if (!providersReady || !providersRef.current || !currentUser?.user) {
+    // An initial editor transaction must not write a blank view into Yjs.
+    // Also reject providers from the previous page during a page transition.
+    if (
+      !providersReady ||
+      !providersRef.current ||
+      providersRef.current.pageId !== pageId ||
+      !currentUser?.user ||
+      !isLocalSynced ||
+      !isRemoteSynced
+    ) {
       return mainExtensions;
     }
 
@@ -213,7 +225,13 @@ export default function PageEditor({
       ...mainExtensions,
       ...collabExtensions(remoteProvider, currentUser?.user),
     ];
-  }, [providersReady, currentUser?.user]);
+  }, [
+    pageId,
+    providersReady,
+    currentUser?.user,
+    isLocalSynced,
+    isRemoteSynced,
+  ]);
 
   const editor = useEditor(
     {
