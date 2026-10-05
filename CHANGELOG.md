@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.1.7 - 2026-10-05
+
+### Fixed
+- Prevented collaborative editor initialization from overwriting populated page content with a stale empty view, including after browser refresh, from PR #100.
+- Wait for local and remote synchronization before binding collaboration; reject providers from a previous page; defer and guard initial ID writes; skip no-op dispatches and clean up timers/listeners.
+- Corrected copied attachment filenames containing query/hash components or encoded path names from PR #96.
+- Corrected shared-page SEO titles while retaining workspace, space, inherited-share, requested-share, and restricted-page boundaries from PR #96.
+
+### Added
+- Optional authored accessibility descriptions for images, uploaded videos, Draw.io, and Excalidraw, including toolbar editing and JSON/HTML persistence, from PR #96.
+- Synthetic editor regression tests and a SHA-pinned, read-only GitHub Actions workflow for collaborative initialization.
+
+### Dependencies
+- Merged the two Nodemailer update PRs #97 and #98 to 10.0.9.
+- Updated `@nestjs/platform-fastify` to 11.2.4 from PR #99, DOMPurify to 3.4.16 from PR #101, and Axios to 1.20.0 from PR #102.
+- Aligned the root Axios override with the requested update and reconciled two stale `hasown` snapshot references in the lockfile.
+- Kept Docker on `node:22-slim`. Node-major bump PRs #5 and #78 remain intentionally unmerged.
+
+### Validation
+- Verified frozen installation under Node 22.19.0 with pnpm 10.4.0.
+- Verified 31/31 editor regression tests, including 10 real-editor/Yjs timing cases.
+- Verified the media filename/accessibility regression script.
+- Verified all 29 server test suites: 168/168 tests passed.
+- Verified client, server, and editor-extension production builds.
+- Verified clean whitespace diffs and passing PR checks before merging.
+
+### Known limitations and release notes
+- Production dependency audit reports 14 high, 13 moderate, and 3 low advisories, with 0 critical advisories. This release does not claim complete remediation of all dependency advisories.
+- Dependency installation reports peer warnings for React/React Router and class-validator/mapped-types; builds and automated tests pass. Vite bundle-size/dynamic-import and ts-jest warnings remain.
+- Media accessibility UI and shared-page SEO changes still warrant normal browser/manual smoke testing after deployment; automated regression coverage is included.
+- No database migrations, deployment changes, live-data changes, or private import artifacts are included.
+
 ## v0.1.6 - 2026-09-14
 
 ### Fixed
