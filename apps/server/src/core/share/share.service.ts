@@ -43,8 +43,9 @@ export class ShareService {
       throw new NotFoundException('Share not found');
     }
 
-    const isRestricted =
-      await this.pagePermissionRepo.hasRestrictedAncestor(share.pageId);
+    const isRestricted = await this.pagePermissionRepo.hasRestrictedAncestor(
+      share.pageId,
+    );
     if (isRestricted) {
       throw new NotFoundException('Share not found');
     }
@@ -123,8 +124,9 @@ export class ShareService {
     }
 
     // Block access to restricted pages
-    const isRestricted =
-      await this.pagePermissionRepo.hasRestrictedAncestor(page.id);
+    const isRestricted = await this.pagePermissionRepo.hasRestrictedAncestor(
+      page.id,
+    );
     if (isRestricted) {
       throw new NotFoundException('Shared page not found');
     }
@@ -218,6 +220,107 @@ export class ShareService {
         icon: share.icon,
       },
     };
+  }
+
+  async getSharePageMetadata(
+    pageId: string,
+    workspaceId: string,
+    requestedShareId?: string,
+  ): Promise<SharePageMetadata | undefined> {
+    const candidate = await this.findSharePageMetadataCandidate(pageId);
+
+    const preliminary = resolveSharePageMetadataCandidate(candidate, {
+      workspaceId,
+      requestedShareId,
+      isRestricted: false,
+      deferRestrictionCheck: true,
+    });
+
+    if (!preliminary || !candidate) {
+      return undefined;
+    }
+
+    const isRestricted = await this.pagePermissionRepo.hasRestrictedAncestor(
+      candidate.requestedPageId,
+    );
+
+    return resolveSharePageMetadataCandidate(candidate, {
+      workspaceId,
+      requestedShareId,
+      isRestricted,
+    });
+  }
+
+  private async findSharePageMetadataCandidate(
+    pageId: string,
+  ): Promise<SharePageMetadataCandidate | undefined> {
+    return this.db
+      .withRecursive('page_hierarchy', (cte) =>
+        cte
+          .selectFrom('pages')
+          .leftJoin('shares', 'shares.pageId', 'pages.id')
+          .select([
+            'pages.id',
+            'pages.parentPageId',
+            sql`0`.as('level'),
+            'pages.id as requestedPageId',
+            'pages.title as requestedTitle',
+            'pages.spaceId as requestedSpaceId',
+            'pages.workspaceId as requestedWorkspaceId',
+            'shares.id as shareId',
+            'shares.key as shareKey',
+            'shares.pageId as sharePageId',
+            'shares.includeSubPages',
+            'shares.searchIndexing',
+            'shares.spaceId as shareSpaceId',
+            'shares.workspaceId as shareWorkspaceId',
+          ])
+          .where(isValidUUID(pageId) ? 'pages.id' : 'pages.slugId', '=', pageId)
+          .where('pages.deletedAt', 'is', null)
+          .unionAll((union) =>
+            union
+              .selectFrom('pages as p')
+              .innerJoin('page_hierarchy as ph', 'ph.parentPageId', 'p.id')
+              .leftJoin('shares as s', 's.pageId', 'p.id')
+              .select([
+                'p.id',
+                'p.parentPageId',
+                sql`ph.level + 1`.as('level'),
+                'ph.requestedPageId',
+                'ph.requestedTitle',
+                'ph.requestedSpaceId',
+                'ph.requestedWorkspaceId',
+                's.id as shareId',
+                's.key as shareKey',
+                's.pageId as sharePageId',
+                's.includeSubPages',
+                's.searchIndexing',
+                's.spaceId as shareSpaceId',
+                's.workspaceId as shareWorkspaceId',
+              ])
+              .where('p.deletedAt', 'is', null)
+              .where(sql`ph.share_id`, 'is', null)
+              .where(sql`ph.level`, '<', sql`25`),
+          ),
+      )
+      .selectFrom('page_hierarchy')
+      .select([
+        'requestedPageId',
+        'requestedTitle',
+        'requestedSpaceId',
+        'requestedWorkspaceId',
+        'shareId',
+        'shareKey',
+        'sharePageId',
+        'includeSubPages',
+        'searchIndexing',
+        'shareSpaceId',
+        'shareWorkspaceId',
+        'level',
+      ])
+      .where('shareId', 'is not', null)
+      .limit(1)
+      .executeTakeFirst() as Promise<SharePageMetadataCandidate | undefined>;
   }
 
   async getShareAncestorPage(
@@ -338,4 +441,73 @@ export class ShareService {
     const removeCommentMarks = removeMarkTypeFromDoc(doc, 'comment');
     return removeCommentMarks.toJSON();
   }
+}
+
+export type SharePageMetadata = {
+  title: string;
+  searchIndexing: boolean;
+};
+
+export type SharePageMetadataCandidate = {
+  requestedPageId: string;
+  requestedTitle: string | null;
+  requestedSpaceId: string;
+  requestedWorkspaceId: string;
+  shareId: string;
+  shareKey: string;
+  sharePageId: string;
+  includeSubPages: boolean | null;
+  searchIndexing: boolean | null;
+  shareSpaceId: string;
+  shareWorkspaceId: string;
+  level: number;
+};
+
+export function resolveSharePageMetadataCandidate(
+  candidate: SharePageMetadataCandidate | undefined,
+  opts: {
+    workspaceId: string;
+    requestedShareId?: string;
+    isRestricted: boolean;
+    deferRestrictionCheck?: boolean;
+  },
+): SharePageMetadata | undefined {
+  if (!candidate) {
+    return undefined;
+  }
+
+  if (
+    candidate.requestedWorkspaceId !== opts.workspaceId ||
+    candidate.shareWorkspaceId !== opts.workspaceId
+  ) {
+    return undefined;
+  }
+
+  if (candidate.requestedSpaceId !== candidate.shareSpaceId) {
+    return undefined;
+  }
+
+  const level = Number(candidate.level);
+  if (level > 0 && !candidate.includeSubPages) {
+    return undefined;
+  }
+
+  if (opts.requestedShareId) {
+    const requestedShareId = opts.requestedShareId.toLowerCase();
+    if (
+      requestedShareId !== candidate.shareId.toLowerCase() &&
+      requestedShareId !== candidate.shareKey.toLowerCase()
+    ) {
+      return undefined;
+    }
+  }
+
+  if (!opts.deferRestrictionCheck && opts.isRestricted) {
+    return undefined;
+  }
+
+  return {
+    title: candidate.requestedTitle || 'untitled',
+    searchIndexing: Boolean(candidate.searchIndexing),
+  };
 }

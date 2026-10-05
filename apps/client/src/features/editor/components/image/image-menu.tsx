@@ -19,6 +19,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { getFileUrl } from "@/lib/config.ts";
 import { uploadImageAction } from "@/features/editor/components/image/upload-image-action.tsx";
+import { MediaDescriptionAction } from "@/features/editor/components/common/media-description-action";
+import { getAccessibilityDescription } from "@wrenlore/editor-ext";
 import classes from "../common/toolbar-menu.module.css";
 
 export function ImageMenu({ editor }: EditorMenuProps) {
@@ -40,6 +42,10 @@ export function ImageMenu({ editor }: EditorMenuProps) {
         isAlignCenter: ctx.editor.isActive("image", { align: "center" }),
         isAlignRight: ctx.editor.isActive("image", { align: "right" }),
         src: imageAttrs?.src || null,
+        description: getAccessibilityDescription(
+          imageAttrs?.accessibilityDescription,
+          imageAttrs?.alt,
+        ),
       };
     },
   });
@@ -186,6 +192,13 @@ export function ImageMenu({ editor }: EditorMenuProps) {
         </Tooltip>
 
         <div className={classes.divider} />
+
+        <MediaDescriptionAction
+          editor={editor}
+          nodeTypeName="image"
+          description={editorState?.description}
+          legacyAttributeNames={["alt"]}
+        />
 
         <Tooltip position="top" label={t("Download")} withinPortal={false}>
           <ActionIcon

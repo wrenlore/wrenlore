@@ -1,13 +1,14 @@
-import Image from "@tiptap/extension-image";
-import { ImageOptions as DefaultImageOptions } from "@tiptap/extension-image";
-import { ReactNodeViewRenderer } from "@tiptap/react";
+import Image from '@tiptap/extension-image';
+import { ImageOptions as DefaultImageOptions } from '@tiptap/extension-image';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { mergeAttributes, Range, ResizableNodeView } from '@tiptap/core';
+import { normalizeFileUrl } from '../media-utils';
+import type { ResizableNodeViewDirection } from '@tiptap/core';
 import {
-  mergeAttributes,
-  Range,
-  ResizableNodeView,
-} from "@tiptap/core";
-import { normalizeFileUrl } from "../media-utils";
-import type { ResizableNodeViewDirection } from "@tiptap/core";
+  getAccessibilityDescription,
+  MEDIA_ACCESSIBILITY_DESCRIPTION_DATA_ATTR,
+  normalizeAccessibilityDescription,
+} from '../media-description';
 
 export type ImageResizeOptions = {
   enabled: boolean;
@@ -32,6 +33,7 @@ export interface ImageOptions extends DefaultImageOptions {
 export interface ImageAttributes {
   src?: string;
   alt?: string;
+  accessibilityDescription?: string;
   align?: string;
   attachmentId?: string;
   size?: number;
@@ -44,14 +46,14 @@ export interface ImageAttributes {
   };
 }
 
-declare module "@tiptap/core" {
+declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     imageBlock: {
       setImage: (attributes: ImageAttributes) => ReturnType;
       setImageAt: (
         attributes: ImageAttributes & { pos: number | Range },
       ) => ReturnType;
-      setImageAlign: (align: "left" | "center" | "right") => ReturnType;
+      setImageAlign: (align: 'left' | 'center' | 'right') => ReturnType;
       setImageWidth: (width: number) => ReturnType;
       setImageSize: (width: number, height: number) => ReturnType;
     };
@@ -59,10 +61,10 @@ declare module "@tiptap/core" {
 }
 
 export const TiptapImage = Image.extend<ImageOptions>({
-  name: "image",
+  name: 'image',
 
   inline: false,
-  group: "block",
+  group: 'block',
   isolating: true,
   atom: true,
   defining: true,
@@ -78,8 +80,8 @@ export const TiptapImage = Image.extend<ImageOptions>({
   addAttributes() {
     return {
       src: {
-        default: "",
-        parseHTML: (element) => element.getAttribute("src"),
+        default: '',
+        parseHTML: (element) => element.getAttribute('src'),
         renderHTML: (attributes) => ({
           src: attributes.src,
         }),
@@ -87,9 +89,9 @@ export const TiptapImage = Image.extend<ImageOptions>({
       width: {
         default: null,
         parseHTML: (element) => {
-          const raw = element.getAttribute("width");
+          const raw = element.getAttribute('width');
           if (!raw) return null;
-          if (raw.endsWith("%")) return raw;
+          if (raw.endsWith('%')) return raw;
           const num = parseFloat(raw);
           return isNaN(num) ? null : num;
         },
@@ -100,7 +102,7 @@ export const TiptapImage = Image.extend<ImageOptions>({
       height: {
         default: null,
         parseHTML: (element) => {
-          const raw = element.getAttribute("height");
+          const raw = element.getAttribute('height');
           if (!raw) return null;
           const num = parseFloat(raw);
           return isNaN(num) ? null : num;
@@ -110,38 +112,52 @@ export const TiptapImage = Image.extend<ImageOptions>({
         }),
       },
       align: {
-        default: "center",
-        parseHTML: (element) => element.getAttribute("data-align"),
+        default: 'center',
+        parseHTML: (element) => element.getAttribute('data-align'),
         renderHTML: (attributes: ImageAttributes) => ({
-          "data-align": attributes.align,
+          'data-align': attributes.align,
         }),
       },
       alt: {
         default: undefined,
-        parseHTML: (element) => element.getAttribute("alt"),
+        parseHTML: (element) => element.getAttribute('alt'),
         renderHTML: (attributes: ImageAttributes) => ({
-          alt: attributes.alt,
+          alt: getAccessibilityDescription(
+            attributes.accessibilityDescription,
+            attributes.alt,
+          ),
+        }),
+      },
+      accessibilityDescription: {
+        default: undefined,
+        parseHTML: (element) =>
+          element.getAttribute(MEDIA_ACCESSIBILITY_DESCRIPTION_DATA_ATTR),
+        renderHTML: (attributes: ImageAttributes) => ({
+          [MEDIA_ACCESSIBILITY_DESCRIPTION_DATA_ATTR]:
+            normalizeAccessibilityDescription(
+              attributes.accessibilityDescription,
+            ),
         }),
       },
       attachmentId: {
         default: undefined,
-        parseHTML: (element) => element.getAttribute("data-attachment-id"),
+        parseHTML: (element) => element.getAttribute('data-attachment-id'),
         renderHTML: (attributes: ImageAttributes) => ({
-          "data-attachment-id": attributes.attachmentId,
+          'data-attachment-id': attributes.attachmentId,
         }),
       },
       size: {
         default: null,
-        parseHTML: (element) => element.getAttribute("data-size"),
+        parseHTML: (element) => element.getAttribute('data-size'),
         renderHTML: (attributes: ImageAttributes) => ({
-          "data-size": attributes.size,
+          'data-size': attributes.size,
         }),
       },
       aspectRatio: {
         default: null,
-        parseHTML: (element) => element.getAttribute("data-aspect-ratio"),
+        parseHTML: (element) => element.getAttribute('data-aspect-ratio'),
         renderHTML: (attributes: ImageAttributes) => ({
-          "data-aspect-ratio": attributes.aspectRatio,
+          'data-aspect-ratio': attributes.aspectRatio,
         }),
       },
       placeholder: {
@@ -153,7 +169,7 @@ export const TiptapImage = Image.extend<ImageOptions>({
 
   renderHTML({ HTMLAttributes }) {
     return [
-      "img",
+      'img',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
     ];
   },
@@ -164,7 +180,7 @@ export const TiptapImage = Image.extend<ImageOptions>({
         (attrs: ImageAttributes) =>
         ({ commands }) => {
           return commands.insertContent({
-            type: "image",
+            type: 'image',
             attrs: attrs,
           });
         },
@@ -173,7 +189,7 @@ export const TiptapImage = Image.extend<ImageOptions>({
         (attrs) =>
         ({ commands }) => {
           return commands.insertContentAt(attrs.pos, {
-            type: "image",
+            type: 'image',
             attrs: attrs,
           });
         },
@@ -181,17 +197,17 @@ export const TiptapImage = Image.extend<ImageOptions>({
       setImageAlign:
         (align) =>
         ({ commands }) =>
-          commands.updateAttributes("image", { align }),
+          commands.updateAttributes('image', { align }),
 
       setImageWidth:
         (width) =>
         ({ commands }) =>
-          commands.updateAttributes("image", { width }),
+          commands.updateAttributes('image', { width }),
 
       setImageSize:
         (width, height) =>
         ({ commands }) =>
-          commands.updateAttributes("image", { width, height }),
+          commands.updateAttributes('image', { width, height }),
     };
   },
 
@@ -238,13 +254,13 @@ export const TiptapImage = Image.extend<ImageOptions>({
       }
 
       // Has src — use ResizableNodeView
-      const el = document.createElement("img");
+      const el = document.createElement('img');
 
       Object.entries(HTMLAttributes).forEach(([key, value]) => {
         if (value != null) {
           switch (key) {
-            case "width":
-            case "height":
+            case 'width':
+            case 'height':
               break;
             default:
               el.setAttribute(key, String(value));
@@ -254,13 +270,13 @@ export const TiptapImage = Image.extend<ImageOptions>({
       });
 
       el.src = normalizeFileUrl(HTMLAttributes.src);
-      el.style.display = "block";
-      el.style.maxWidth = "100%";
-      el.style.borderRadius = "8px";
+      el.style.display = 'block';
+      el.style.maxWidth = '100%';
+      el.style.borderRadius = '8px';
 
-      if (typeof node.attrs.width === "number" && node.attrs.width > 0) {
+      if (typeof node.attrs.width === 'number' && node.attrs.width > 0) {
         el.style.width = `${node.attrs.width}px`;
-        if (typeof node.attrs.height === "number" && node.attrs.height > 0) {
+        if (typeof node.attrs.height === 'number' && node.attrs.height > 0) {
           el.style.height = `${node.attrs.height}px`;
         }
       }
@@ -298,8 +314,15 @@ export const TiptapImage = Image.extend<ImageOptions>({
             el.src = normalizeFileUrl(updatedNode.attrs.src);
           }
 
-          if (updatedNode.attrs.alt !== currentNode.attrs.alt) {
-            el.alt = updatedNode.attrs.alt || "";
+          if (
+            updatedNode.attrs.accessibilityDescription !==
+              currentNode.attrs.accessibilityDescription ||
+            updatedNode.attrs.alt !== currentNode.attrs.alt
+          ) {
+            el.alt = getAccessibilityDescription(
+              updatedNode.attrs.accessibilityDescription,
+              updatedNode.attrs.alt,
+            );
           }
 
           const w = updatedNode.attrs.width;
@@ -312,7 +335,7 @@ export const TiptapImage = Image.extend<ImageOptions>({
           }
 
           // Update alignment on container
-          const align = updatedNode.attrs.align || "center";
+          const align = updatedNode.attrs.align || 'center';
           const container = nodeView.dom as HTMLElement;
           applyAlignment(container, align);
 
@@ -334,11 +357,11 @@ export const TiptapImage = Image.extend<ImageOptions>({
       const dom = nodeView.dom as HTMLElement;
 
       // Apply initial alignment
-      applyAlignment(dom, node.attrs.align || "center");
+      applyAlignment(dom, node.attrs.align || 'center');
 
       // Handle percentage width backward compat
       const widthAttr = node.attrs.width;
-      if (typeof widthAttr === "string" && widthAttr.endsWith("%")) {
+      if (typeof widthAttr === 'string' && widthAttr.endsWith('%')) {
         // Defer conversion until we can measure the container
         requestAnimationFrame(() => {
           const parentEl = dom.parentElement;
@@ -346,28 +369,26 @@ export const TiptapImage = Image.extend<ImageOptions>({
             const containerWidth = parentEl.clientWidth;
             const pctValue = parseInt(widthAttr, 10);
             if (!isNaN(pctValue) && containerWidth > 0) {
-              const pxWidth = Math.round(
-                containerWidth * (pctValue / 100),
-              );
+              const pxWidth = Math.round(containerWidth * (pctValue / 100));
               el.style.width = `${pxWidth}px`;
               if (node.attrs.aspectRatio) {
                 el.style.height = `${Math.round(pxWidth / node.attrs.aspectRatio)}px`;
               }
             }
           }
-          dom.style.visibility = "";
-          dom.style.pointerEvents = "";
+          dom.style.visibility = '';
+          dom.style.pointerEvents = '';
         });
       }
 
       // Show skeleton background while image loads from server
-      dom.style.pointerEvents = "none";
+      dom.style.pointerEvents = 'none';
       dom.style.background =
-        "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-6))";
+        'light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-6))';
 
       el.onload = () => {
-        dom.style.pointerEvents = "";
-        dom.style.background = "";
+        dom.style.pointerEvents = '';
+        dom.style.background = '';
       };
 
       return nodeView;
@@ -376,11 +397,11 @@ export const TiptapImage = Image.extend<ImageOptions>({
 });
 
 function applyAlignment(container: HTMLElement, align: string) {
-  if (align === "left") {
-    container.style.justifyContent = "flex-start";
-  } else if (align === "right") {
-    container.style.justifyContent = "flex-end";
+  if (align === 'left') {
+    container.style.justifyContent = 'flex-start';
+  } else if (align === 'right') {
+    container.style.justifyContent = 'flex-end';
   } else {
-    container.style.justifyContent = "center";
+    container.style.justifyContent = 'center';
   }
 }

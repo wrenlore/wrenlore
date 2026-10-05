@@ -36,6 +36,8 @@ import {
 import { decodeBase64ToSvgString, svgStringToFile } from "@/lib/utils";
 import { IAttachment } from "@/features/attachments/types/attachment.types";
 import { modals } from "@mantine/modals";
+import { MediaDescriptionAction } from "@/features/editor/components/common/media-description-action";
+import { getAccessibilityDescription } from "@wrenlore/editor-ext";
 import classes from "../common/toolbar-menu.module.css";
 
 export function DrawioMenu({ editor }: EditorMenuProps) {
@@ -62,6 +64,9 @@ export function DrawioMenu({ editor }: EditorMenuProps) {
         isAlignRight: ctx.editor.isActive("drawio", { align: "right" }),
         src: drawioAttr?.src || null,
         attachmentId: drawioAttr?.attachmentId || null,
+        description: getAccessibilityDescription(
+          drawioAttr?.accessibilityDescription,
+        ),
       };
     },
   });
@@ -136,39 +141,42 @@ export function DrawioMenu({ editor }: EditorMenuProps) {
     editor.commands.deleteSelection();
   }, [editor]);
 
-  const saveData = useCallback(async (svgXml: string) => {
-    if (isSavingRef.current) return;
+  const saveData = useCallback(
+    async (svgXml: string) => {
+      if (isSavingRef.current) return;
 
-    isSavingRef.current = true;
+      isSavingRef.current = true;
 
-    try {
-      const svgString = decodeBase64ToSvgString(svgXml);
-      const fileName = "diagram.drawio.svg";
-      const drawioSVGFile = await svgStringToFile(svgString, fileName);
+      try {
+        const svgString = decodeBase64ToSvgString(svgXml);
+        const fileName = "diagram.drawio.svg";
+        const drawioSVGFile = await svgStringToFile(svgString, fileName);
 
-      // @ts-ignore
-      const pageId = editor.storage?.pageId;
-      const attachmentId = editorState?.attachmentId;
+        // @ts-ignore
+        const pageId = editor.storage?.pageId;
+        const attachmentId = editorState?.attachmentId;
 
-      let attachment: IAttachment = null;
-      if (attachmentId) {
-        attachment = await uploadFile(drawioSVGFile, pageId, attachmentId);
-      } else {
-        attachment = await uploadFile(drawioSVGFile, pageId);
+        let attachment: IAttachment = null;
+        if (attachmentId) {
+          attachment = await uploadFile(drawioSVGFile, pageId, attachmentId);
+        } else {
+          attachment = await uploadFile(drawioSVGFile, pageId);
+        }
+
+        editor.commands.updateAttributes("drawio", {
+          src: `/api/files/${attachment.id}/${attachment.fileName}?t=${new Date(attachment.updatedAt).getTime()}`,
+          title: attachment.fileName,
+          size: attachment.fileSize,
+          attachmentId: attachment.id,
+        });
+
+        isDirtyRef.current = false;
+      } finally {
+        isSavingRef.current = false;
       }
-
-      editor.commands.updateAttributes("drawio", {
-        src: `/api/files/${attachment.id}/${attachment.fileName}?t=${new Date(attachment.updatedAt).getTime()}`,
-        title: attachment.fileName,
-        size: attachment.fileSize,
-        attachmentId: attachment.id,
-      });
-
-      isDirtyRef.current = false;
-    } finally {
-      isSavingRef.current = false;
-    }
-  }, [editor, editorState?.attachmentId]);
+    },
+    [editor, editorState?.attachmentId],
+  );
 
   const handleClose = useCallback(() => {
     if (!isDirtyRef.current) {
@@ -301,6 +309,12 @@ export function DrawioMenu({ editor }: EditorMenuProps) {
 
           <div className={classes.divider} />
 
+          <MediaDescriptionAction
+            editor={editor}
+            nodeTypeName="drawio"
+            description={editorState?.description}
+          />
+
           <Tooltip position="top" label={t("Edit")} withinPortal={false}>
             <ActionIcon
               onClick={handleOpen}
@@ -336,7 +350,12 @@ export function DrawioMenu({ editor }: EditorMenuProps) {
         </div>
       </BaseBubbleMenu>
 
-      <Modal.Root opened={opened} onClose={handleClose} fullScreen closeOnEscape={false}>
+      <Modal.Root
+        opened={opened}
+        onClose={handleClose}
+        fullScreen
+        closeOnEscape={false}
+      >
         <Modal.Overlay />
         <Modal.Content style={{ overflow: "hidden" }}>
           <Modal.Body>
@@ -357,7 +376,9 @@ export function DrawioMenu({ editor }: EditorMenuProps) {
                   if (data.parentEvent !== "save") {
                     return;
                   }
-                  saveData(data.xml).then(() => close()).catch(() => {});
+                  saveData(data.xml)
+                    .then(() => close())
+                    .catch(() => {});
                 }}
                 onClose={(data: EventExit) => {
                   if (data.parentEvent) {
