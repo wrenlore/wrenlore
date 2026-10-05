@@ -58,7 +58,7 @@ overrides:
   shell-quote: 1.9.0
   undici: 7.29.0
   '@hono/node-server': 2.0.12
-  axios: 1.18.1
+  axios: 1.20.0
   fast-uri: 3.1.6
   body-parser: 2.3.0
   engine.io: 6.6.7
@@ -332,8 +332,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       axios:
-        specifier: 1.18.1
-        version: 1.18.1(supports-color@7.2.0)
+        specifier: 1.20.0
+        version: 1.20.0(supports-color@7.2.0)
       blueimp-load-image:
         specifier: ^5.16.0
         version: 5.16.0
@@ -5460,8 +5460,8 @@ packages:
   avvio@9.3.0:
     resolution: {integrity: sha512-g2tQ7LE7oOSqDfwEm3M+ZCMTJc7KiZCdJ4UwyZJb5ckTKyYu50OYmvv0mCFXPuYXoM4zkSt8zM9XQ9KCvxA74A==}
 
-  axios@1.18.1:
-    resolution: {integrity: sha512-3nTvFlvpn9Zu/RkHUqtc7/+al4UpRW5az71ap5zccp6e8RAYEzhMTecX8Dz1wWDYrPpUoB1HAQEGEAEvUr7S9g==}
+  axios@1.20.0:
+    resolution: {integrity: sha512-r8aOh8j9cGKpgQAqpzrUHnSIc6a59Y3Xf/cv8sy1DrHCkZHzQGEuoq1tARk6qSyDdtQGSDgpb9kFlruzPvrgwg==}
 
   babel-jest@30.2.0:
     resolution: {integrity: sha512-0YiBEOxWqKkSQWL9nNGGEgndoeL0ZpWrbLMNL5u/Kaxrli3Eaxlt3ZtIDktEvXt4L/R9r3ODr2zKwGM/2BjxVw==}
@@ -6772,6 +6772,15 @@ packages:
 
   follow-redirects@1.16.0:
     resolution: {integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
+
+  follow-redirects@1.16.1:
+    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -15559,9 +15568,9 @@ snapshots:
       '@fastify/error': 4.2.0
       fastq: 1.20.3
 
-  axios@1.18.1(supports-color@7.2.0):
+  axios@1.20.0(supports-color@7.2.0):
     dependencies:
-      follow-redirects: 1.16.0
+      follow-redirects: 1.16.1
       form-data: 4.0.6
       https-proxy-agent: 5.0.1(supports-color@7.2.0)
       proxy-from-env: 2.1.0
@@ -17097,6 +17106,8 @@ snapshots:
 
   follow-redirects@1.16.0: {}
 
+  follow-redirects@1.16.1: {}
+
   for-each@0.3.3:
     dependencies:
       is-callable: 1.2.7
@@ -18614,7 +18625,7 @@ snapshots:
       ansi-styles: 4.3.0
       argparse: 2.0.1
       asynckit: 0.4.0
-      axios: 1.18.1(supports-color@7.2.0)
+      axios: 1.20.0(supports-color@7.2.0)
       balanced-match: 4.0.3
       base64-js: 1.5.1
       bl: 4.1.0
@@ -19240,7 +19251,7 @@ snapshots:
 
   postmark@4.0.5:
     dependencies:
-      axios: 1.18.1(supports-color@7.2.0)
+      axios: 1.20.0(supports-color@7.2.0)
     transitivePeerDependencies:
       - debug
       - supports-color
@@ -20592,7 +20603,7 @@ snapshots:
   typesense@2.1.0(@babel/runtime@7.29.2):
     dependencies:
       '@babel/runtime': 7.29.2
-      axios: 1.18.1(supports-color@7.2.0)
+      axios: 1.20.0(supports-color@7.2.0)
       loglevel: 1.9.1
       tslib: 2.8.1
     transitivePeerDependencies:
