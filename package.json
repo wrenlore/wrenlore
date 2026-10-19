@@ -80,7 +80,7 @@
     "yjs": "^13.6.29"
   },
   "devDependencies": {
-    "@nx/js": "22.7.7",
+    "@nx/js": "22.7.10",
     "@types/bytes": "^3.1.5",
     "@types/turndown": "^5.0.6",
     "@types/uuid": "^10.0.0",
@@ -98,7 +98,8 @@
   "pnpm": {
     "patchedDependencies": {
       "react-arborist@3.4.0": "patches/react-arborist@3.4.0.patch",
-      "@tiptap/core@3.30.5": "patches/@tiptap__core@3.30.5.patch"
+      "@tiptap/core@3.30.5": "patches/@tiptap__core@3.30.5.patch",
+      "@fastify/busboy@3.2.3": "patches/@fastify__busboy@3.2.3.patch"
     },
     "overrides": {
       "jsdom": "25.0.1",
@@ -152,25 +153,28 @@
       "linkify-it": "5.0.2",
       "react-router": "8.3.0",
       "shell-quote": "1.11.0",
-      "undici": "7.29.0",
+      "undici": "7.29.1",
       "@hono/node-server": "2.0.12",
       "axios": "1.20.0",
-      "fast-uri": "3.1.6",
+      "fast-uri": "3.1.8",
       "body-parser": "2.3.0",
-      "engine.io": "6.6.7",
+      "engine.io": "6.6.10",
       "find-my-way": "9.7.0",
       "@fastify/static": "10.1.2",
       "postcss": "8.5.23",
       "fflate": "0.4.9",
       "@humanfs/node": "0.16.8",
       "@xmldom/xmldom": "0.8.15",
-      "fastify": "5.12.1",
+      "fastify": "5.12.5",
       "socket.io-parser": "4.2.7",
       "less": "4.9.1",
       "browserslist": "4.28.7",
       "smol-toml": "1.7.1",
       "@ai-sdk/provider-utils": "4.0.33",
-      "proxy-addr": "2.0.8"
+      "proxy-addr": "2.0.8",
+      "source-map-js": "1.2.2",
+      "@fastify/busboy": "3.2.3",
+      "@modelcontextprotocol/sdk": "1.31.0"
     },
     "neverBuiltDependencies": []
   }
