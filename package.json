@@ -158,7 +158,7 @@
       "axios": "1.20.0",
       "fast-uri": "3.1.8",
       "body-parser": "2.3.0",
-      "engine.io": "6.6.7",
+      "engine.io": "6.6.10",
       "find-my-way": "9.7.0",
       "@fastify/static": "10.1.2",
       "postcss": "8.5.23",
