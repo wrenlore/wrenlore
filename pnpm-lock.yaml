@@ -76,8 +76,12 @@ overrides:
   '@ai-sdk/provider-utils': 4.0.33
   proxy-addr: 2.0.8
   source-map-js: 1.2.2
+  '@fastify/busboy': 3.2.3
 
 patchedDependencies:
+  '@fastify/busboy@3.2.3':
+    hash: 31c8292321eba373afc7c13e3ea0177e1e1630e7678f47c55c4b5877cfc3b539
+    path: patches/@fastify__busboy@3.2.3.patch
   '@tiptap/core@3.30.5':
     hash: c59ff825fd4fc7c40327b915c99258363d9f631c9aec21b6f8f01755d689eecd
     path: patches/@tiptap__core@3.30.5.patch
@@ -2131,8 +2135,8 @@ packages:
   '@fastify/ajv-compiler@4.0.6':
     resolution: {integrity: sha512-NtuzM0SfaMJbGlnjr9LWQUN5LzgSrbB8tf/wRZNas+4E1O/Nmzl53e7ruT61HDZyRCJGC6FxIogmNZO1c5ETBA==}
 
-  '@fastify/busboy@3.1.1':
-    resolution: {integrity: sha512-5DGmA8FTdB2XbDeEwc/5ZXBl6UbBAyBOOLlPuBnZ/N1SwdH9Ii+cOX3tBROlDgcTXxjOYnLMVoKk9+FXAw0CJw==}
+  '@fastify/busboy@3.2.3':
+    resolution: {integrity: sha512-fmo/IKgkenPzz3qTKG+sIUXdF/Kv83AkvvOXJHPTHJeKJbat8SsL1ihUaFaDotqoEl4UZ1Lf8Eb/3vK6eaWX2A==}
 
   '@fastify/cookie@11.0.2':
     resolution: {integrity: sha512-GWdwdGlgJxyvNv+QcKiGNevSspMQXncjMZ1J8IvuDQk0jvkzgWWZFNC2En3s+nHndZBGV8IbLwOI/sxCZw/mzA==}
@@ -11965,7 +11969,7 @@ snapshots:
       ajv-formats: 3.0.1(ajv@8.18.0)
       fast-uri: 3.1.6
 
-  '@fastify/busboy@3.1.1': {}
+  '@fastify/busboy@3.2.3(patch_hash=31c8292321eba373afc7c13e3ea0177e1e1630e7678f47c55c4b5877cfc3b539)': {}
 
   '@fastify/cookie@11.0.2':
     dependencies:
@@ -12008,7 +12012,7 @@ snapshots:
 
   '@fastify/multipart@9.4.0':
     dependencies:
-      '@fastify/busboy': 3.1.1
+      '@fastify/busboy': 3.2.3(patch_hash=31c8292321eba373afc7c13e3ea0177e1e1630e7678f47c55c4b5877cfc3b539)
       '@fastify/deepmerge': 3.1.0
       '@fastify/error': 4.0.0
       fastify-plugin: 5.1.0
