@@ -80,12 +80,12 @@
     "yjs": "^13.6.29"
   },
   "devDependencies": {
-    "@nx/js": "22.7.7",
+    "@nx/js": "22.7.10",
     "@types/bytes": "^3.1.5",
     "@types/turndown": "^5.0.6",
     "@types/uuid": "^10.0.0",
     "concurrently": "^9.1.2",
-    "nx": "22.7.7",
+    "nx": "22.7.10",
     "tsx": "^4.19.3"
   },
   "workspaces": {
@@ -98,7 +98,8 @@
   "pnpm": {
     "patchedDependencies": {
       "react-arborist@3.4.0": "patches/react-arborist@3.4.0.patch",
-      "@tiptap/core@3.30.5": "patches/@tiptap__core@3.30.5.patch"
+      "@tiptap/core@3.30.5": "patches/@tiptap__core@3.30.5.patch",
+      "@fastify/busboy@3.2.3": "patches/@fastify__busboy@3.2.3.patch"
     },
     "overrides": {
       "jsdom": "25.0.1",
@@ -127,13 +128,13 @@
       "handlebars": "4.7.10",
       "picomatch": "4.0.4",
       "minimatch": "10.2.3",
-      "brace-expansion": "5.0.9",
+      "brace-expansion": "5.0.12",
       "yaml": "2.8.3",
       "fast-xml-parser": "5.7.0",
       "path-to-regexp": "8.4.0",
       "express-rate-limit": "8.2.2",
       "ajv": "8.18.0",
-      "ip-address": "10.3.1",
+      "ip-address": "10.7.1",
       "file-type": "21.3.2",
       "serialize-javascript": "7.0.5",
       "immutable": "4.3.9",
@@ -146,30 +147,37 @@
       "@opentelemetry/core": "2.8.0",
       "esbuild": "0.28.1",
       "form-data": "4.0.6",
-      "hono": "4.13.5",
+      "hono": "4.13.7",
       "js-yaml@^3": "3.15.2",
       "js-yaml@^4": "4.3.2",
       "linkify-it": "5.0.2",
       "react-router": "8.3.0",
-      "shell-quote": "1.9.0",
-      "undici": "7.29.0",
+      "shell-quote": "1.11.0",
+      "undici": "7.29.1",
       "@hono/node-server": "2.0.12",
       "axios": "1.20.0",
-      "fast-uri": "3.1.6",
+      "fast-uri": "3.1.8",
       "body-parser": "2.3.0",
-      "engine.io": "6.6.7",
+      "engine.io": "6.6.10",
       "find-my-way": "9.7.0",
       "@fastify/static": "10.1.2",
       "postcss": "8.5.23",
       "fflate": "0.4.9",
       "@humanfs/node": "0.16.8",
       "@xmldom/xmldom": "0.8.15",
-      "fastify": "5.12.1",
+      "fastify": "5.12.5",
       "socket.io-parser": "4.2.7",
       "less": "4.9.1",
       "browserslist": "4.28.7",
-      "smol-toml": "1.7.1",
-      "@ai-sdk/provider-utils": "4.0.33"
+      "smol-toml": "1.9.0",
+      "@ai-sdk/provider-utils": "4.0.33",
+      "proxy-addr": "2.0.8",
+      "source-map-js": "1.2.2",
+      "@fastify/busboy": "3.2.3",
+      "@modelcontextprotocol/sdk": "1.31.0",
+      "postcss-selector-parser": "7.1.6",
+      "fast-copy": "4.1.0",
+      "katex": "0.18.2"
     },
     "neverBuiltDependencies": []
   }
