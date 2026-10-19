@@ -170,7 +170,8 @@
       "browserslist": "4.28.7",
       "smol-toml": "1.7.1",
       "@ai-sdk/provider-utils": "4.0.33",
-      "proxy-addr": "2.0.8"
+      "proxy-addr": "2.0.8",
+      "source-map-js": "1.2.2"
     },
     "neverBuiltDependencies": []
   }
