@@ -134,7 +134,7 @@
       "path-to-regexp": "8.4.0",
       "express-rate-limit": "8.2.2",
       "ajv": "8.18.0",
-      "ip-address": "10.3.1",
+      "ip-address": "10.7.1",
       "file-type": "21.3.2",
       "serialize-javascript": "7.0.5",
       "immutable": "4.3.9",
