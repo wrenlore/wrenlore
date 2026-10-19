@@ -173,7 +173,8 @@
       "@ai-sdk/provider-utils": "4.0.33",
       "proxy-addr": "2.0.8",
       "source-map-js": "1.2.2",
-      "@fastify/busboy": "3.2.3"
+      "@fastify/busboy": "3.2.3",
+      "@modelcontextprotocol/sdk": "1.31.0"
     },
     "neverBuiltDependencies": []
   }
