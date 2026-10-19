@@ -151,7 +151,7 @@
       "js-yaml@^4": "4.3.2",
       "linkify-it": "5.0.2",
       "react-router": "8.3.0",
-      "shell-quote": "1.9.0",
+      "shell-quote": "1.11.0",
       "undici": "7.29.0",
       "@hono/node-server": "2.0.12",
       "axios": "1.20.0",
