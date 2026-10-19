@@ -169,7 +169,8 @@
       "less": "4.9.1",
       "browserslist": "4.28.7",
       "smol-toml": "1.7.1",
-      "@ai-sdk/provider-utils": "4.0.33"
+      "@ai-sdk/provider-utils": "4.0.33",
+      "proxy-addr": "2.0.8"
     },
     "neverBuiltDependencies": []
   }
