@@ -98,7 +98,8 @@
   "pnpm": {
     "patchedDependencies": {
       "react-arborist@3.4.0": "patches/react-arborist@3.4.0.patch",
-      "@tiptap/core@3.30.5": "patches/@tiptap__core@3.30.5.patch"
+      "@tiptap/core@3.30.5": "patches/@tiptap__core@3.30.5.patch",
+      "@fastify/busboy@3.2.3": "patches/@fastify__busboy@3.2.3.patch"
     },
     "overrides": {
       "jsdom": "25.0.1",
@@ -171,7 +172,8 @@
       "smol-toml": "1.7.1",
       "@ai-sdk/provider-utils": "4.0.33",
       "proxy-addr": "2.0.8",
-      "source-map-js": "1.2.2"
+      "source-map-js": "1.2.2",
+      "@fastify/busboy": "3.2.3"
     },
     "neverBuiltDependencies": []
   }
