@@ -174,7 +174,8 @@
       "proxy-addr": "2.0.8",
       "source-map-js": "1.2.2",
       "@fastify/busboy": "3.2.3",
-      "@modelcontextprotocol/sdk": "1.31.0"
+      "@modelcontextprotocol/sdk": "1.31.0",
+      "postcss-selector-parser": "7.1.6"
     },
     "neverBuiltDependencies": []
   }
