@@ -78,6 +78,7 @@ overrides:
   source-map-js: 1.2.2
   '@fastify/busboy': 3.2.3
   '@modelcontextprotocol/sdk': 1.31.0
+  postcss-selector-parser: 7.1.6
 
 patchedDependencies:
   '@fastify/busboy@3.2.3':
@@ -8614,8 +8615,8 @@ packages:
     peerDependencies:
       postcss: 8.5.23
 
-  postcss-selector-parser@6.0.15:
-    resolution: {integrity: sha512-rEYkQOMUCEMhsKbK66tbEU9QVIxbhN18YiniAwA7XQYTVBqrBy+P2p5JcdqsHgKM2zWylp8d7J6eszocfds5Sw==}
+  postcss-selector-parser@7.1.6:
+    resolution: {integrity: sha512-7qASPzhKF2l2KLboRZux8CCTRMdGiV08vWmyKzPz22qZ7ZjQBOeY7rNzNoCLSUiftJ7HUq0GERHmxw/t0dCdMw==}
     engines: {node: '>=4'}
 
   postcss-simple-vars@7.0.1:
@@ -19199,7 +19200,7 @@ snapshots:
   postcss-nested@6.0.1(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 6.0.15
+      postcss-selector-parser: 7.1.6
 
   postcss-preset-mantine@1.17.0(postcss@8.5.23):
     dependencies:
@@ -19207,7 +19208,7 @@ snapshots:
       postcss-mixins: 9.0.4(postcss@8.5.23)
       postcss-nested: 6.0.1(postcss@8.5.23)
 
-  postcss-selector-parser@6.0.15:
+  postcss-selector-parser@7.1.6:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
