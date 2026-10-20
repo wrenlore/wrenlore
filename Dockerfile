@@ -1,4 +1,4 @@
-FROM node:22-slim AS base
+FROM node:24-slim AS base
 ARG WRENLORE_GIT_SHA=unknown
 LABEL org.opencontainers.image.source="https://github.com/wrenlore/wrenlore"
 LABEL org.opencontainers.image.revision="${WRENLORE_GIT_SHA}"
