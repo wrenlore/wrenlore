@@ -3,7 +3,14 @@ ARG WRENLORE_GIT_SHA=unknown
 LABEL org.opencontainers.image.source="https://github.com/wrenlore/wrenlore"
 LABEL org.opencontainers.image.revision="${WRENLORE_GIT_SHA}"
 
-RUN npm config set strict-ssl false \
+# Install and harden OS trust before any npm/pnpm network operation.
+# OpenSSL-only mode excludes Node's separate bundled CA list.
+ENV NODE_OPTIONS=--use-openssl-ca
+COPY scripts/tls/ca-policy.mjs /opt/wrenlore/tls/ca-policy.mjs
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && node /opt/wrenlore/tls/ca-policy.mjs \
+  && rm -rf /var/lib/apt/lists/* \
   && npm install -g pnpm@10.4.0
 
 FROM base AS builder
@@ -44,8 +51,7 @@ RUN chown -R node:node /app
 
 USER node
 
-RUN npm config set strict-ssl false \
-  && pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod
 
 RUN mkdir -p /app/data/storage
 

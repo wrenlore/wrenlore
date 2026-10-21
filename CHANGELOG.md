@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.1.8 - 2026-10-21
+
+### Security
+- Removed Docker build commands that disabled npm TLS certificate verification.
+- Install current vendor CA certificates before the first npm download and use system-only OpenSSL trust for default Node HTTPS in build and runtime stages.
+- Added exact-fingerprint protection against affected eMudhra trust anchors, including the AAA cross-sign path, with active bundle/link verification.
+- Added offline tests for untrusted-certificate rejection, explicit custom-CA support, and hostname verification; added an opt-in live incident/control verifier and CI coverage.
+
+### Runtime and dependencies
+- Includes the previously merged Node 24 LTS container baseline from PR #131.
+- Includes the dependency updates merged since v0.1.7, including Fastify, Undici, Hono, the MCP SDK, Handlebars, brace-expansion, smol-toml, KaTeX, Nx and i18next-http-backend.
+
+### Validation
+- 31 editor regression tests and 168 server tests across 29 suites passed.
+- Offline TLS checks passed in both the common build stage and the final non-root image.
+- Both Node HTTPS clients rejected all 12 incident endpoints and accepted four ordinary HTTPS controls in both image stages.
+- Clean production image build passed with certificate verification enabled.
+- Disposable PostgreSQL/Redis application proof completed 44 migrations, served frontend/API health, and started the collaboration process; disposable resources were removed.
+
+### Deployment notes and limits
+- Rebuild and recreate application containers to adopt the new trust policy; this release does not update running deployments automatically.
+- Preserve `--use-openssl-ca` when overriding `NODE_OPTIONS`. Explicit custom CA bundles need independent review; see `docs/security/tls-trust.md`.
+- The incident-specific fingerprint policy is temporary and should be reviewed against vendor guidance before removal. Live endpoint timeouts are not successful rejection evidence.
+- This release does not claim complete dependency-advisory remediation. No application schema migrations or customer-data changes were added by the TLS patch.
+
 ## v0.1.7 - 2026-10-05
 
 ### Fixed
