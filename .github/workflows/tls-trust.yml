@@ -1,0 +1,33 @@
+name: TLS trust regressions
+
+on:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - "scripts/tls/**"
+      - "docs/security/tls-trust.md"
+      - ".github/workflows/tls-trust.yml"
+  push:
+    branches: [master]
+    paths:
+      - "Dockerfile"
+      - "scripts/tls/**"
+      - "docs/security/tls-trust.md"
+      - ".github/workflows/tls-trust.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tls-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build the actual common trust stage
+        run: docker build --target base -t wrenlore-tls-test .
+      - name: Offline TLS regression tests
+        run: >-
+          docker run --rm --network none
+          -v "$PWD/scripts/tls:/tls:ro"
+          wrenlore-tls-test node --test /tls/tls-policy.test.mjs
