@@ -465,7 +465,7 @@ importers:
         version: 18.3.1
       '@vitejs/plugin-react':
         specifier: ^5.1.1
-        version: 5.1.1(vite@7.3.5(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3))
+        version: 5.1.1(vite@7.3.7(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3))
       eslint:
         specifier: ^9.39.2
         version: 9.39.2(jiti@2.4.2)
@@ -503,8 +503,8 @@ importers:
         specifier: ^8.17.0
         version: 8.17.0(eslint@9.39.2(jiti@2.4.2))(typescript@5.7.2)
       vite:
-        specifier: ^7.3.5
-        version: 7.3.5(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3)
+        specifier: ^7.3.7
+        version: 7.3.7(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3)
 
   apps/server:
     dependencies:
@@ -9973,8 +9973,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  vite@7.3.5:
-    resolution: {integrity: sha512-KuOaNhcnGFN2zIPGA7wRmzF+lJA1sea7rHq17aiJ++9lzY1WWG6Jpwqwe1KNbRVPIqHmr8GLYx7jbrQcN/7/ww==}
+  vite@7.3.7:
+    resolution: {integrity: sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -15228,7 +15228,7 @@ snapshots:
 
   '@vercel/oidc@3.1.0': {}
 
-  '@vitejs/plugin-react@5.1.1(vite@7.3.5(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3))':
+  '@vitejs/plugin-react@5.1.1(vite@7.3.7(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3))':
     dependencies:
       '@babel/core': 7.29.6
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.6)
@@ -15236,7 +15236,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.47
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
-      vite: 7.3.5(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3)
+      vite: 7.3.7(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3)
     transitivePeerDependencies:
       - supports-color
 
@@ -20693,7 +20693,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@7.3.5(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3):
+  vite@7.3.7(@types/node@22.19.1)(jiti@2.4.2)(terser@5.47.1)(tsx@4.19.3)(yaml@2.8.3):
     dependencies:
       esbuild: 0.28.1
       fdir: 6.5.0(picomatch@4.0.4)
