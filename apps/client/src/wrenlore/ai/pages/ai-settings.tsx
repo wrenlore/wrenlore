@@ -45,7 +45,14 @@ export default function AiSettings() {
         <Divider />
         <AiProviderAdmin />
         <Divider />
-        <Switch label="MCP agent connections" description="Allow users to connect agents using scoped tokens. Users manage their connections in Account → Agent connections." checked={ai.mcp === true} onChange={(event) => updateAiSetting("mcp", event.currentTarget.checked)} />
+        <Switch
+          label={t("MCP agent connections")}
+          description={t(
+            "Allow users to connect agents using scoped tokens. Users manage their connections in Account → Agent connections.",
+          )}
+          checked={ai.mcp === true}
+          onChange={(event) => updateAiSetting("mcp", event.currentTarget.checked)}
+        />
       </Stack>
     </>
   );
