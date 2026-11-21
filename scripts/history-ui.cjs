@@ -20,27 +20,59 @@ async function main() {
   let reads = 0,
     versions = 2,
     pending = true;
+  let scenario = "formatting";
+  const navigationContent = (n) => ({
+    type: "doc",
+    content: Array.from({ length: 65 }, (_, i) => {
+      const changed = scenario === "single" ? i === 0 : [3, 30, 60].includes(i);
+      const paragraph = {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text:
+              `Paragraph ${i}: Stable reference text for navigation across a long article.` +
+              (n >= 2 && changed ? " Added detail." : ""),
+          },
+        ],
+      };
+      return scenario === "table" && i === 30
+        ? {
+            type: "table",
+            content: [
+              {
+                type: "tableRow",
+                content: [{ type: "tableCell", content: [paragraph] }],
+              },
+            ],
+          }
+        : paragraph;
+    }),
+  });
   const item = (n) => ({
     id: `version-${n}`,
     title: "Synthetic article",
     createdAt: new Date(Date.UTC(2026, 10, 1, 10, n)).toISOString(),
     lastUpdatedBy: { name: "Test editor" },
     contributors: [],
-    content: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [
-            {
-              type: "text",
-              text: "Same words",
-              ...(n >= 2 ? { marks: [{ type: "bold" }] } : {}),
-            },
-          ],
-        },
-      ],
-    },
+    content:
+      scenario !== "formatting"
+        ? navigationContent(n)
+        : {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Same words",
+                    ...(n >= 2 ? { marks: [{ type: "bold" }] } : {}),
+                  },
+                ],
+              },
+            ],
+          },
   });
   const aliases = [
     ["@/main", "query.ts"],
@@ -198,6 +230,95 @@ async function main() {
       const closedReads = reads;
       await page.waitForTimeout(5500);
       assert.equal(reads, closedReads, "Hidden dialog must not keep polling");
+      for (const testScenario of ["single", "multiple", "table"]) {
+        scenario = testScenario;
+        versions = 2;
+        pending = false;
+        for (const [width, height] of [
+          [1280, 720],
+          [900, 450],
+          [420, 800],
+        ]) {
+          await page.setViewportSize({ width, height });
+          await page.goto(base);
+          await page
+            .getByRole("button", { name: "Open history", exact: true })
+            .click();
+          const total = scenario === "single" ? 1 : 3;
+          await page.getByText(`1 of ${total}`, { exact: true }).waitFor();
+          const measure = (index) =>
+            page
+              .locator(`[data-diff-index="${index}"]`)
+              .first()
+              .evaluate((el) => {
+                const viewport = el.closest(".mantine-ScrollArea-viewport");
+                const rect = el.getBoundingClientRect(),
+                  v = viewport.getBoundingClientRect();
+                return {
+                  visible: rect.top >= v.top - 2 && rect.bottom <= v.bottom + 2,
+                  top: rect.top,
+                  viewportTop: v.top,
+                  height: v.height,
+                  scrollTop: viewport.scrollTop,
+                  offsetTop: el.offsetTop,
+                  offsetParent: el.offsetParent?.tagName,
+                };
+              });
+          const settle = async (index) => {
+            for (let retry = 0; retry < 25; retry++) {
+              const state = await measure(index);
+              if (state.visible) return state;
+              await page.waitForTimeout(100);
+            }
+            return measure(index);
+          };
+          await settle(1);
+          for (const [button, index] of total === 1
+            ? [
+                ["Next change", 1],
+                ["Previous change", 1],
+              ]
+            : [
+                ["Next change", 2],
+                ["Next change", 3],
+                ["Next change", 1],
+                ["Previous change", 3],
+                ["Previous change", 2],
+                ["Previous change", 1],
+              ]) {
+            await page
+              .getByRole("button", { name: button, exact: true })
+              .click();
+            await page
+              .getByText(`${index} of ${total}`, { exact: true })
+              .waitFor();
+            const result = await settle(index);
+            assert.ok(
+              result.visible,
+              `Target not visible: ${JSON.stringify({ name, scenario, width, height, index, ...result })}`,
+            );
+          }
+          // Manual scrolling must not prevent the next arrow finding the change.
+          await page
+            .locator('[data-diff-index="1"]')
+            .first()
+            .evaluate((el) => {
+              const viewport = el.closest(".mantine-ScrollArea-viewport");
+              viewport.scrollTop = viewport.scrollHeight;
+            });
+          await page
+            .getByRole("button", { name: "Next change", exact: true })
+            .click();
+          const result = await settle(total === 1 ? 1 : 2);
+          assert.ok(
+            result.visible,
+            `Manual scroll must not break navigation: ${JSON.stringify({ name, scenario, width, height, ...result })}`,
+          );
+        }
+        console.log(
+          `PASS ${name}: ${scenario} change navigation, desktop/short/mobile, wraparound, manual scrolling`,
+        );
+      }
       assert.deepEqual(errors, []);
       console.log(
         `PASS ${name}: short/narrow screens, formatting notice, pending state, automatic refresh, no hidden polling`,
@@ -206,6 +327,7 @@ async function main() {
       browser = undefined;
       pending = true;
       versions = 2;
+      scenario = "formatting";
     }
     console.log("Synthetic screenshots:", temporary);
   } finally {

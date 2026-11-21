@@ -54,6 +54,29 @@ Times use your browser's local timezone. The display currently uses a 12-hour
 clock with AM/PM: for example, **7:05 PM** means **19:05**, and **2:39 AM** means
 **02:39**. This is a display format, not a different timezone.
 
+## Moving between changes
+
+With **Highlight changes** enabled, the up and down arrows move between
+highlighted differences in the selected version, compared with the preceding
+version. They do not scroll by a screenful or select a different version. The
+counter shows your position, such as **2 of 3**; navigation wraps at either end.
+
+With only one highlighted difference, both arrows return to that same location.
+A replacement can also appear as adjacent added and deleted text, so the counter
+may change without a noticeable scroll. To test movement across a long page,
+make edits in separated paragraphs and compare the resulting snapshot.
+
+## Restoring a version
+
+Select a version and choose **Restore**. The confirmation applies to the current
+page: it replaces that page's title and body with the selected version. It does
+not create a copy or ask you to choose a destination page. Changes that have not
+yet been captured in a snapshot can be lost if you confirm.
+
+To try restoration without changing an important page, create a throwaway page,
+make an edit, wait for its snapshots, and restore an older version on that page.
+You can cancel the confirmation dialog without restoring anything.
+
 ## What a snapshot contains
 
 A snapshot records the page state at capture time. Several edits can therefore

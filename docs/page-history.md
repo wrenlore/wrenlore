@@ -85,4 +85,7 @@ node scripts/history-ui.cjs
 The browser fixture uses real history components and a minimal document schema,
 with synthetic API responses and restore disabled. It verifies Chromium/WebKit at
 short desktop and narrow mobile viewports, formatting notices, live list refresh,
-and absence of polling after close. Customer page contents are never part of it.
+and absence of polling after close. Navigation checks cover single changes,
+separated changes, changes inside positioned table cells, wraparound in both
+directions, and navigation after manual scrolling. Customer page contents are
+never part of it.
