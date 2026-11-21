@@ -34,13 +34,15 @@ export function useClipboard(
 
   const fail = (err: unknown) => {
     const copyError = toError(err);
+    window.clearTimeout(copyTimeout!);
+    setCopied(false);
     setError(copyError);
     options.onError?.(copyError);
   };
 
   const copy = (value: string) => {
     setError(null);
-    if ("clipboard" in navigator) {
+    if (typeof navigator.clipboard?.writeText === "function") {
       navigator.clipboard
         .writeText(value)
         .then(() => handleCopyResult(true))

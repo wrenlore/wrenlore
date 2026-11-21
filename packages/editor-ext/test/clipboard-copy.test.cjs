@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
-  url: 'http://kobe:3000',
+  url: 'http://wrenlore.test:3000',
 });
 for (const name of ['window', 'document', 'navigator']) {
   Object.defineProperty(globalThis, name, {
