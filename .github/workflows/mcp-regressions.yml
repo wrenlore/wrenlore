@@ -1,0 +1,62 @@
+name: MCP regressions
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/**"
+      - "apps/client/src/wrenlore/mcp/**"
+      - "packages/editor-ext/**"
+      - "scripts/mcp-*"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mcp-regressions.yml"
+  push:
+    branches: [master]
+    paths:
+      - "apps/server/**"
+      - "apps/client/src/wrenlore/mcp/**"
+      - "packages/editor-ext/**"
+      - "scripts/mcp-*"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mcp-regressions.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: wrenlore
+          POSTGRES_PASSWORD: disposable-test-only
+          POSTGRES_DB: wrenlore_mcp_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wrenlore -d wrenlore_mcp_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        with:
+          version: 10.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @wrenlore/editor-ext build
+      - run: pnpm --filter server build
+      - run: pnpm --filter client exec tsc --noEmit
+      - run: pnpm --filter server exec jest --runInBand --testPathPatterns='core/(page|comment|sso)'
+      - run: node --test scripts/mcp-document.test.cjs
+      - run: node scripts/mcp-ci.cjs
+        env:
+          WRENLORE_MCP_TEST: disposable
+          DATABASE_URL: postgresql://wrenlore:disposable-test-only@127.0.0.1:5432/wrenlore_mcp_test
+          REDIS_URL: redis://127.0.0.1:6379

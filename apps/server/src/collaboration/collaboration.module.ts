@@ -18,6 +18,9 @@ import { LoggerExtension } from './extensions/logger.extension';
 import { CollaborationHandler } from './collaboration.handler';
 import { CollabHistoryService } from './services/collab-history.service';
 import { WatcherModule } from '../core/watcher/watcher.module';
+import { AgentTokenModule } from '../core/agent-tokens/agent-token.module';
+import { AgentDocumentService } from './agent-document.service';
+import { DocumentWriteQueue } from './document-write-queue';
 
 @Module({
   providers: [
@@ -28,9 +31,11 @@ import { WatcherModule } from '../core/watcher/watcher.module';
     HistoryProcessor,
     CollabHistoryService,
     CollaborationHandler,
+    AgentDocumentService,
+    DocumentWriteQueue,
   ],
   exports: [CollaborationGateway],
-  imports: [TokenModule, WatcherModule],
+  imports: [TokenModule, WatcherModule, AgentTokenModule],
 })
 export class CollaborationModule implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CollaborationModule.name);

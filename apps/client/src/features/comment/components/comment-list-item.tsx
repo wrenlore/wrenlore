@@ -135,6 +135,7 @@ function CommentListItem({
           <Group justify="space-between" wrap="nowrap">
             <Text size="sm" fw={500} lineClamp={1}>
               {comment.creator.name}
+              {comment.agentName && `, via ${comment.agentName}`}
             </Text>
 
             <div style={{ visibility: hovered ? "visible" : "hidden" }}>

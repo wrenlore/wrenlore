@@ -24,6 +24,7 @@ import { ClsMiddleware } from 'nestjs-cls';
 import { AiModule } from './ai/ai.module';
 import { SsoModule } from './sso/sso.module';
 import { AuditLogModule } from './audit/audit.module';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AuditLogModule } from './audit/audit.module';
     AiModule,
     SsoModule,
     AuditLogModule,
+    McpModule,
   ],
 })
 export class CoreModule implements NestModule {

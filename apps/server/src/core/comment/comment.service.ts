@@ -81,38 +81,44 @@ export class CommentService {
       includeResolvedBy: true,
     });
 
+    await this.notifyCreated(comment);
+    return comment;
+  }
+
+  async notifyCreated(comment: Comment) {
+    const { creatorId: userId, workspaceId, pageId, spaceId } = comment;
+
     this.generalQueue
       .add(QueueJob.ADD_PAGE_WATCHERS, {
         userIds: [userId],
-        pageId: page.id,
-        spaceId: page.spaceId,
+        pageId,
+        spaceId,
         workspaceId,
       })
       .catch((err) =>
         this.logger.warn(`Failed to queue add-page-watchers: ${err.message}`),
       );
 
-    const isReply = !!createCommentDto.parentCommentId;
+    const isReply = !!comment.parentCommentId;
 
     await this.queueCommentNotification(
-      commentContent,
+      comment.content,
       [],
       comment.id,
-      page.id,
-      page.spaceId,
+      pageId,
+      spaceId,
       workspaceId,
       userId,
       !isReply,
-      createCommentDto.parentCommentId,
+      comment.parentCommentId,
     );
 
-    this.wsService.emitCommentEvent(page.spaceId, page.id, {
+    this.wsService.emitCommentEvent(spaceId, pageId, {
       operation: 'commentCreated',
-      pageId: page.id,
+      pageId,
       comment,
     });
 
-    return comment;
   }
 
   async findByPageId(

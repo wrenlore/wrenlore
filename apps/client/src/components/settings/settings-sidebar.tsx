@@ -50,6 +50,7 @@ const groupedData: DataGroup[] = [
     heading: "Account",
     items: [
       { label: "Profile", icon: IconUser, path: "/settings/account/profile" },
+      { label: "Agent connections", icon: IconSparkles, path: "/settings/account/agents" },
       {
         label: "Preferences",
         icon: IconBrush,

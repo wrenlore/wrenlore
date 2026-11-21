@@ -66,6 +66,10 @@ describe('SAML SP utilities', () => {
     expect(rewriteCustomSamlAcsUrl(request)).toBe('/api/users/me');
   });
 
+  it.each(['/mcp', '/mcp/', '//mcp//', '/mcp?test=1'])('preserves the MCP endpoint %s', (url) => {
+    expect(rewriteCustomSamlAcsUrl({ method: 'POST', url })).toBe(url);
+  });
+
   it('generates metadata with configured SP values', () => {
     const metadata = buildSamlMetadata({
       entityId: 'https://tenant.example.com/enterprise/saml/metadata',

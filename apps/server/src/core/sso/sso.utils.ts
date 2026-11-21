@@ -75,7 +75,8 @@ export function rewriteCustomSamlAcsUrl(req: RewritableRequest): string {
   const pathname = url.split(/[?#]/, 1)[0];
   const isApiRequest = pathname === '/api' || pathname.startsWith('/api/');
 
-  if (req.method?.toUpperCase() === 'POST' && !isApiRequest) {
+  const isMcpRequest = pathname.replace(/\/+/g, '/').replace(/\/$/, '') === '/mcp';
+  if (req.method?.toUpperCase() === 'POST' && !isApiRequest && !isMcpRequest) {
     req[SAML_ACS_ORIGINAL_URL] = url;
     return CUSTOM_SAML_ACS_INTERNAL_PATH;
   }

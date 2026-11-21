@@ -27,6 +27,7 @@ export class SearchService {
     opts: {
       userId?: string;
       workspaceId: string;
+      allowedSpaceIds?: string[];
     },
   ): Promise<{ items: SearchResponseDto[] }> {
     const { query } = searchParams;
@@ -66,6 +67,11 @@ export class SearchService {
       .orderBy('rank', 'desc')
       .limit(searchParams.limit || 25)
       .offset(searchParams.offset || 0);
+
+    if (opts.allowedSpaceIds) {
+      if (!opts.allowedSpaceIds.length) return { items: [] };
+      queryResults = queryResults.where('spaceId', 'in', opts.allowedSpaceIds);
+    }
 
     if (opts.userId) {
       queryResults = queryResults.where(
@@ -169,7 +175,7 @@ export class SearchService {
     return { items: searchResults };
   }
 
-  private accessiblePagePredicate(userId: string) {
+  accessiblePagePredicate(userId: string) {
     return sql<SqlBool>`
       NOT EXISTS (
         WITH RECURSIVE ancestors AS (

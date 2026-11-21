@@ -31,6 +31,10 @@ export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface ApiKeys {
+  tokenHash: string | null;
+  agentName: string | null;
+  access: Generated<string>;
+  spaceIds: string[] | null;
   createdAt: Generated<Timestamp>;
   deletedAt: Timestamp | null;
   expiresAt: Timestamp | null;
@@ -208,6 +212,7 @@ export interface Billing {
 }
 
 export interface Comments {
+  agentName: string | null;
   content: Json | null;
   createdAt: Generated<Timestamp>;
   creatorId: string | null;
@@ -272,6 +277,7 @@ export interface InstanceSettings {
 }
 
 export interface PageHistory {
+  agentName: string | null;
   content: Json | null;
   contributorIds: Generated<string[] | null>;
   coverPhoto: string | null;
@@ -495,7 +501,19 @@ export interface PagePermissions {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface AgentOperations {
+  id: string;
+  tokenId: string;
+  workspaceId: string;
+  requestKey: string;
+  requestHash: string;
+  tool: string;
+  result: Json | null;
+  createdAt: Generated<Timestamp>;
+}
+
 export interface DB {
+  agentOperations: AgentOperations;
   apiKeys: ApiKeys;
   aiModels: AiModels;
   aiProviders: AiProviders;

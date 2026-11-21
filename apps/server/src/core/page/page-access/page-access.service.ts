@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { Page, User } from '@wrenlore/db/types/entity.types';
+import { KyselyTransaction } from '@wrenlore/db/types/kysely.types';
 import { PagePermissionRepo } from '@wrenlore/db/repos/page/page-permission.repo';
 import SpaceAbilityFactory from '../../casl/abilities/space-ability.factory';
 import {
@@ -19,9 +20,13 @@ export class PageAccessService {
    * If page has restrictions: page-level permission determines access.
    * If no restrictions: space-level permission determines access.
    */
-  async validateCanView(page: Page, user: User): Promise<void> {
+  async validateCanView(
+    page: Page,
+    user: User,
+    trx?: KyselyTransaction,
+  ): Promise<void> {
     const { hasAnyRestriction, canAccess } =
-      await this.pagePermissionRepo.canUserEditPage(user.id, page.id);
+      await this.pagePermissionRepo.canUserEditPage(user.id, page.id, trx);
 
     if (hasAnyRestriction) {
       if (!canAccess) {
@@ -30,7 +35,11 @@ export class PageAccessService {
       return;
     }
 
-    const ability = await this.spaceAbility.createForUser(user, page.spaceId);
+    const ability = await this.spaceAbility.createForUser(
+      user,
+      page.spaceId,
+      trx,
+    );
     if (ability.cannot(SpaceCaslAction.Read, SpaceCaslSubject.Page)) {
       throw new ForbiddenException();
     }
@@ -76,9 +85,10 @@ export class PageAccessService {
   async validateCanEdit(
     page: Page,
     user: User,
+    trx?: KyselyTransaction,
   ): Promise<{ hasRestriction: boolean }> {
     const { hasAnyRestriction, canEdit } =
-      await this.pagePermissionRepo.canUserEditPage(user.id, page.id);
+      await this.pagePermissionRepo.canUserEditPage(user.id, page.id, trx);
 
     if (hasAnyRestriction) {
       if (!canEdit) {
@@ -87,7 +97,11 @@ export class PageAccessService {
       return { hasRestriction: true };
     }
 
-    const ability = await this.spaceAbility.createForUser(user, page.spaceId);
+    const ability = await this.spaceAbility.createForUser(
+      user,
+      page.spaceId,
+      trx,
+    );
     if (ability.cannot(SpaceCaslAction.Edit, SpaceCaslSubject.Page)) {
       throw new ForbiddenException();
     }

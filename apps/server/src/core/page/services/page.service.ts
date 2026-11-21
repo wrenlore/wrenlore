@@ -15,12 +15,12 @@ import {
   executeWithCursorPagination,
 } from '@wrenlore/db/pagination/cursor-pagination';
 import { InjectKysely } from 'nestjs-kysely';
-import { KyselyDB } from '@wrenlore/db/types/kysely.types';
+import { KyselyDB, KyselyTransaction } from '@wrenlore/db/types/kysely.types';
 import { generateJitteredKeyBetween } from 'fractional-indexing-jittered';
 import { MovePageDto } from '../dto/move-page.dto';
 import { generateSlugId } from '../../../common/helpers';
 import { getPageTitle } from '../../../common/helpers';
-import { executeTx } from '@wrenlore/db/utils';
+import { dbOrTx, executeTx } from '@wrenlore/db/utils';
 import { AttachmentRepo } from '@wrenlore/db/repos/attachment/attachment.repo';
 import { v7 as uuid7 } from 'uuid';
 import {
@@ -91,6 +91,7 @@ export class PageService {
     userId: string,
     workspaceId: string,
     createPageDto: CreatePageDto,
+    trx?: KyselyTransaction,
   ): Promise<Page> {
     let parentPageId = undefined;
 
@@ -98,6 +99,7 @@ export class PageService {
     if (createPageDto.parentPageId) {
       const parentPage = await this.pageRepo.findById(
         createPageDto.parentPageId,
+        { trx },
       );
 
       if (
@@ -132,6 +134,7 @@ export class PageService {
       position: await this.nextPagePosition(
         createPageDto.spaceId,
         parentPageId,
+        trx,
       ),
       icon: createPageDto.icon,
       parentPageId: parentPageId,
@@ -142,26 +145,30 @@ export class PageService {
       content,
       textContent,
       ydoc,
-    });
+    }, trx);
 
+    if (!trx) this.notifyCreated(page);
+    return page;
+  }
+
+  notifyCreated(page: Page) {
     this.generalQueue
       .add(QueueJob.ADD_PAGE_WATCHERS, {
-        userIds: [userId],
+        userIds: [page.creatorId],
         pageId: page.id,
-        spaceId: createPageDto.spaceId,
-        workspaceId,
+        spaceId: page.spaceId,
+        workspaceId: page.workspaceId,
       })
       .catch((err) =>
         this.logger.warn(`Failed to queue add-page-watchers: ${err.message}`),
       );
 
-    return page;
   }
 
-  async nextPagePosition(spaceId: string, parentPageId?: string) {
+  async nextPagePosition(spaceId: string, parentPageId?: string, trx?: KyselyTransaction) {
     let pagePosition: string;
 
-    const lastPageQuery = this.db
+    const lastPageQuery = dbOrTx(this.db, trx)
       .selectFrom('pages')
       .select(['position'])
       .where('spaceId', '=', spaceId)

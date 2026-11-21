@@ -26,7 +26,7 @@ export default function AuditLogsTable({ items }: { items: IAuditLog[] }) {
                 <Badge variant="light">{getEventLabel(item.event)}</Badge>
               </Table.Td>
               <Table.Td>
-                <Text size="sm">{item.actor?.name || item.actorType || "System"}</Text>
+                <Text size="sm">{item.actor?.name || item.actorType || "System"}{typeof item.metadata?.agentName === "string" && `, via ${item.metadata.agentName}`}</Text>
                 {item.actor?.email && <Text size="xs" c="dimmed">{item.actor.email}</Text>}
               </Table.Td>
               <Table.Td>

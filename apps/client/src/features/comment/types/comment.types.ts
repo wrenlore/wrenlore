@@ -2,6 +2,7 @@ import { IUser } from "@/features/user/types/user.types";
 import { QueryParams } from "@/lib/types.ts";
 
 export interface IComment {
+  agentName?: string | null;
   id: string;
   content: string;
   selection?: string;

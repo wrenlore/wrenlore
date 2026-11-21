@@ -407,6 +407,7 @@ export class PagePermissionRepo {
   async canUserEditPage(
     userId: string,
     pageId: string,
+    trx?: KyselyTransaction,
   ): Promise<{
     hasAnyRestriction: boolean;
     canAccess: boolean;
@@ -438,7 +439,7 @@ export class PagePermissionRepo {
             SELECT gu.group_id FROM group_users gu WHERE gu.user_id = ${userId}::uuid
           )
         )
-    `.execute(this.db);
+    `.execute(dbOrTx(this.db, trx));
 
     const row = result.rows[0];
     if (!row || row.canAccess === null) {

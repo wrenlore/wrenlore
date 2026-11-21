@@ -7,6 +7,7 @@ import {
 } from './collaboration.util';
 import * as Y from 'yjs';
 import { User } from '@wrenlore/db/types/entity.types';
+import { AgentDocumentRequest, AgentDocumentService } from './agent-document.service';
 
 export type CollabEventHandlers = ReturnType<
   CollaborationHandler['getHandlers']
@@ -16,10 +17,12 @@ export type CollabEventHandlers = ReturnType<
 export class CollaborationHandler {
   private readonly logger = new Logger(CollaborationHandler.name);
 
-  constructor() {}
+  constructor(private readonly agentDocuments: AgentDocumentService) {}
 
   getHandlers(hocuspocus: Hocuspocus) {
     return {
+      agentRead: (name: string, request: AgentDocumentRequest) => this.agentDocuments.handle(hocuspocus, name, request, false),
+      agentEdit: (name: string, request: AgentDocumentRequest) => this.agentDocuments.handle(hocuspocus, name, request, true),
       alterState: async (documentName: string, payload: { pageId: string }) => {
         // dummy
         // this.logger.log('Processing', documentName, payload);

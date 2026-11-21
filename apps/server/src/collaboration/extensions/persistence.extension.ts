@@ -29,6 +29,7 @@ import {
 } from '../../integrations/queue/constants/queue.interface';
 import { Page } from '@wrenlore/db/types/entity.types';
 import { CollabHistoryService } from '../services/collab-history.service';
+import { DocumentWriteQueue } from '../document-write-queue';
 import {
   HISTORY_FAST_INTERVAL,
   HISTORY_FAST_THRESHOLD,
@@ -48,6 +49,7 @@ export class PersistenceExtension implements Extension {
     @InjectQueue(QueueName.HISTORY_QUEUE) private historyQueue: Queue,
     @InjectQueue(QueueName.NOTIFICATION_QUEUE) private notificationQueue: Queue,
     private readonly collabHistory: CollabHistoryService,
+    private readonly documentWrites: DocumentWriteQueue,
   ) {}
 
   async onLoadDocument(data: onLoadDocumentPayload) {
@@ -97,6 +99,12 @@ export class PersistenceExtension implements Extension {
   }
 
   async onStoreDocument(data: onStoreDocumentPayload) {
+    return this.documentWrites.run(data.documentName, () =>
+      this.storeDocument(data),
+    );
+  }
+
+  private async storeDocument(data: onStoreDocumentPayload) {
     const { documentName, document, context } = data;
 
     const pageId = getPageId(documentName);
@@ -137,7 +145,11 @@ export class PersistenceExtension implements Extension {
         try {
           const existingContributors = page.contributorIds || [];
           contributorIds = Array.from(
-            new Set([...existingContributors, ...editingUserIds, page.creatorId]),
+            new Set([
+              ...existingContributors,
+              ...editingUserIds,
+              page.creatorId,
+            ]),
           );
         } catch (err) {
           //this.logger.debug('Contributors error:' + err?.['message']);
@@ -148,7 +160,10 @@ export class PersistenceExtension implements Extension {
             content: tiptapJson,
             textContent: textContent,
             ydoc: ydocState,
-            lastUpdatedById: context.user.id,
+            // A direct read connection can flush an existing browser edit.
+            // Attribute that edit to its writer, not the reader that flushed it.
+            lastUpdatedById:
+              editingUserIds[editingUserIds.length - 1] ?? context.user.id,
             contributorIds: contributorIds,
           },
           pageId,
@@ -163,41 +178,52 @@ export class PersistenceExtension implements Extension {
 
     if (page) {
       await this.collabHistory.addContributors(pageId, editingUserIds);
-
-      const mentions = extractMentions(tiptapJson);
-      const pageMentions = extractPageMentions(mentions);
-
-      await this.generalQueue.add(QueueJob.PAGE_BACKLINKS, {
-        pageId: pageId,
-        workspaceId: page.workspaceId,
-        mentions: pageMentions,
-      } as IPageBacklinkJob);
-
-      const userMentions = extractUserMentions(mentions);
-      const oldMentions = page.content ? extractMentions(page.content) : [];
-      const oldMentionedUserIds = extractUserMentions(oldMentions).map((m) => m.entityId);
-
-      if (userMentions.length > 0) {
-        await this.notificationQueue.add(QueueJob.PAGE_MENTION_NOTIFICATION, {
-          userMentions: userMentions.map((m) => ({
-            userId: m.entityId,
-            mentionId: m.id,
-            creatorId: m.creatorId,
-          })),
-          oldMentionedUserIds,
-          pageId,
-          spaceId: page.spaceId,
-          workspaceId: page.workspaceId,
-        } as IPageMentionNotificationJob);
-      }
-
-      await this.aiQueue.add(QueueJob.PAGE_CONTENT_UPDATED, {
-        pageIds: [pageId],
-        workspaceId: page.workspaceId,
-      });
-
+      await this.afterContentSave(page, tiptapJson);
       await this.enqueuePageHistory(page);
     }
+  }
+
+  async afterAgentSave(previousPage: Page, content: any, userId: string) {
+    await this.collabHistory.addContributors(previousPage.id, [userId]);
+    await this.afterContentSave(previousPage, content);
+  }
+
+  private async afterContentSave(page: Page, tiptapJson: any) {
+    const pageId = page.id;
+
+    const mentions = extractMentions(tiptapJson);
+    const pageMentions = extractPageMentions(mentions);
+
+    await this.generalQueue.add(QueueJob.PAGE_BACKLINKS, {
+      pageId: pageId,
+      workspaceId: page.workspaceId,
+      mentions: pageMentions,
+    } as IPageBacklinkJob);
+
+    const userMentions = extractUserMentions(mentions);
+    const oldMentions = page.content ? extractMentions(page.content) : [];
+    const oldMentionedUserIds = extractUserMentions(oldMentions).map(
+      (m) => m.entityId,
+    );
+
+    if (userMentions.length > 0) {
+      await this.notificationQueue.add(QueueJob.PAGE_MENTION_NOTIFICATION, {
+        userMentions: userMentions.map((m) => ({
+          userId: m.entityId,
+          mentionId: m.id,
+          creatorId: m.creatorId,
+        })),
+        oldMentionedUserIds,
+        pageId,
+        spaceId: page.spaceId,
+        workspaceId: page.workspaceId,
+      } as IPageMentionNotificationJob);
+    }
+
+    await this.aiQueue.add(QueueJob.PAGE_CONTENT_UPDATED, {
+      pageIds: [pageId],
+      workspaceId: page.workspaceId,
+    });
   }
 
   async onChange(data: onChangePayload) {

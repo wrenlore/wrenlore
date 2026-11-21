@@ -13,14 +13,16 @@ import {
   SpaceCaslSubject,
 } from '../interfaces/space-ability.type';
 import { findHighestUserSpaceRole } from '@wrenlore/db/repos/space/utils';
+import { KyselyTransaction } from '@wrenlore/db/types/kysely.types';
 
 @Injectable()
 export default class SpaceAbilityFactory {
   constructor(private readonly spaceMemberRepo: SpaceMemberRepo) {}
-  async createForUser(user: User, spaceId: string) {
+  async createForUser(user: User, spaceId: string, trx?: KyselyTransaction) {
     const userSpaceRoles = await this.spaceMemberRepo.getUserSpaceRoles(
       user.id,
       spaceId,
+      trx,
     );
 
     const userSpaceRole = findHighestUserSpaceRole(userSpaceRoles);
