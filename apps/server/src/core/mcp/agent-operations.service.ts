@@ -13,6 +13,7 @@ import { PageHistoryRepo } from '@wrenlore/db/repos/page/page-history.repo';
 import { CommentRepo } from '@wrenlore/db/repos/comment/comment.repo';
 import { AgentTokenService } from '../agent-tokens/agent-token.service';
 import { AgentIdentity } from '../agent-tokens/agent-token.types';
+import { agentPerformedAuditMetadata } from '../../common/audit/agent-audit';
 import { PageService } from '../page/services/page.service';
 import { SearchService } from '../search/search.service';
 import { CollaborationGateway } from '../../collaboration/collaboration.gateway';
@@ -476,11 +477,9 @@ export class AgentOperationsService {
           resourceType: tool === 'add_comment' ? 'comment' : 'page',
           resourceId: result.commentId ?? result.pageId,
           spaceId: result.spaceId,
-          metadata: {
-            agentName: current.agentName,
-            tokenId: current.tokenId,
+          metadata: agentPerformedAuditMetadata(current, {
             operationId: id,
-          },
+          }),
         })
         .execute();
       return result;

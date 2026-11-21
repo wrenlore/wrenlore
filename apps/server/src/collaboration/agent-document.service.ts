@@ -9,6 +9,7 @@ import { InjectKysely } from 'nestjs-kysely';
 import { KyselyDB } from '@wrenlore/db/types/kysely.types';
 import { PageHistoryRepo } from '@wrenlore/db/repos/page/page-history.repo';
 import { AgentTokenService } from '../core/agent-tokens/agent-token.service';
+import { agentPerformedAuditMetadata } from '../common/audit/agent-audit';
 import {
   assertRevision,
   documentRevision,
@@ -303,11 +304,9 @@ export class AgentDocumentService {
           resourceType: 'page',
           resourceId: page.id,
           spaceId: page.spaceId,
-          metadata: {
-            agentName: actor.agentName,
-            tokenId: actor.tokenId,
+          metadata: agentPerformedAuditMetadata(actor, {
             operationId: operation.id,
-          },
+          }),
         })
         .execute();
     });

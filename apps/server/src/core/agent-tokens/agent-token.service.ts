@@ -24,6 +24,9 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { isUserDisabled } from '../../common/helpers';
+import {
+  agentConnectionManagedAuditMetadata,
+} from '../../common/audit/agent-audit';
 import { User, Workspace } from '@wrenlore/db/types/entity.types';
 import { AgentIdentity } from './agent-token.types';
 import { z } from 'zod';
@@ -118,12 +121,11 @@ export class AgentTokenService {
           event: 'agent.token_created',
           resourceType: 'api_key',
           resourceId: id,
-          metadata: {
-            agentName: args.agentName,
+          metadata: agentConnectionManagedAuditMetadata(args.agentName, {
             access: args.access,
             spaceIds: args.spaceIds,
             expiresAt: args.expiresAt,
-          },
+          }),
         })
         .execute();
       return created;
@@ -141,7 +143,7 @@ export class AgentTokenService {
         .where('id', '=', id)
         .where('creatorId', '=', user.id)
         .where('workspaceId', '=', user.workspaceId)
-        .returning('id')
+        .returning(['id', 'agentName'])
         .executeTakeFirst();
       if (!result) throw new NotFoundException('Token not found');
       await trx
@@ -153,6 +155,7 @@ export class AgentTokenService {
           event: 'agent.token_revoked',
           resourceType: 'api_key',
           resourceId: id,
+          metadata: agentConnectionManagedAuditMetadata(result.agentName ?? ''),
         })
         .execute();
       return { revoked: true };
