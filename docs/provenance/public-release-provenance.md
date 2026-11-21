@@ -65,3 +65,11 @@ MCP/OpenCode specifications, and the installed open-source MCP SDK and Hocuspocu
 interfaces. No proprietary Docmost material or post-fork upstream implementation
 was consulted or incorporated. The implementation uses dependencies already in
 the repository and retains the AGPL-3.0 provenance boundary.
+
+## November 2026 dependency maintenance
+
+The dependency and GitHub Actions updates are based on public package metadata,
+upstream security advisories and release records, and WrenLore regression tests.
+They do not incorporate Docmost source or change the clean-cut provenance policy.
+The reviewed versions and the deferred coordinated NestJS migration are recorded
+in [the maintenance note](../security/dependencies-2026-11-21.md).
