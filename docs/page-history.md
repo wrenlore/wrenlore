@@ -1,5 +1,7 @@
 # Page history
 
+For user-facing instructions, see the [page-history user guide](user-guide/page-history.md).
+
 Page history contains periodic snapshots, not every keystroke or an audit of every
 operation. Browser edits are saved separately from snapshot creation. New pages
 use a one-minute grouping window during their first five minutes; established

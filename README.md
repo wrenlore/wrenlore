@@ -83,6 +83,7 @@ Provider/model setup is currently configured through environment-backed WrenLore
 
 Important docs:
 
+- [User guide: page history](docs/user-guide/page-history.md) — when saved edits appear in history and what pending snapshots mean
 - [`README-deploy.md`](README-deploy.md) — deployment runbook
 - [`docs/SAML_ENTRA_SETUP.md`](docs/SAML_ENTRA_SETUP.md) - Entra ID SAML field mapping
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution policy and proprietary-code boundary
