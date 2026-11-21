@@ -26,7 +26,10 @@ import { v7 as uuid7 } from "uuid";
 import { isCellSelection, isTextSelected } from "@wrenlore/editor-ext";
 import { LinkSelector } from "@/features/editor/components/bubble-menu/link-selector.tsx";
 import { useTranslation } from "react-i18next";
-import { showAiMenuAtom, showLinkMenuAtom } from "@/features/editor/atoms/editor-atoms";
+import {
+  showAiMenuAtom,
+  showLinkMenuAtom,
+} from "@/features/editor/atoms/editor-atoms";
 import { workspaceAtom } from "@/features/user/atoms/current-user-atom";
 
 export interface BubbleMenuItem {
@@ -163,8 +166,9 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
   const [isTextAlignmentSelectorOpen, setIsTextAlignmentOpen] = useState(false);
   const [isColorSelectorOpen, setIsColorSelectorOpen] = useState(false);
 
-  // Hide the bubble menu immediately when AI menu is shown
-  if (showAiMenu || showLinkMenu) return;
+  // Keep the plugin mounted while an auxiliary menu is open. Remounting it
+  // during a React node/mark view's synchronous render can reinitialize the
+  // collaboration binding before an insertion has been written to Yjs.
 
   return (
     <BubbleMenu

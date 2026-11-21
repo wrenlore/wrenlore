@@ -82,13 +82,20 @@ export class AiController {
     res.raw.on('close', onClose);
 
     try {
-      for await (const chunk of this.runtimeService.streamGenerate(
+      for await (const event of this.runtimeService.streamGenerate(
         workspace.id,
         dto,
         abortController.signal,
       )) {
-        if (!res.raw.writableEnded) {
-          res.raw.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        if (res.raw.writableEnded) {
+          continue;
+        }
+        if ('status' in event) {
+          res.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+        } else {
+          res.raw.write(
+            `data: ${JSON.stringify({ content: event.content })}\n\n`,
+          );
         }
       }
 

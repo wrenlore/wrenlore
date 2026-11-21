@@ -24,10 +24,8 @@ interface EditorAiMenuProps {
 
 const EditorAiMenu = ({ editor }: EditorAiMenuProps): JSX.Element | null => {
   const aiGenerateStreamMutation = useAiGenerateStreamMutation();
-  const {
-    mutate: generateAiContent,
-    reset: resetAiGenerateMutation,
-  } = aiGenerateStreamMutation;
+  const { mutate: generateAiContent, reset: resetAiGenerateMutation } =
+    aiGenerateStreamMutation;
   const location = useLocation();
   const isSmBreakpoint = useMediaQuery("(max-width: 48em)");
   const [showAiMenu, setShowAiMenu] = useAtom(showAiMenuAtom);
@@ -36,6 +34,7 @@ const EditorAiMenu = ({ editor }: EditorAiMenuProps): JSX.Element | null => {
   const [prompt, setPrompt] = useState("");
   const [output, setOutput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sourceStatus, setSourceStatus] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [activeCommandSet, setActiveCommandSet] = useState<CommandSet>("main");
   const [lastAction, setLastAction] = useState<CommandItem | null>(null);
@@ -88,6 +87,7 @@ const EditorAiMenu = ({ editor }: EditorAiMenuProps): JSX.Element | null => {
   const resetMenu = useCallback(() => {
     setPrompt("");
     setOutput("");
+    setSourceStatus(null);
     setActiveCommandSet("main");
     setLastAction(null);
     resetAiGenerateMutation();
@@ -124,17 +124,39 @@ const EditorAiMenu = ({ editor }: EditorAiMenuProps): JSX.Element | null => {
       const content = htmlToMarkdown(wrapper.innerHTML);
 
       setOutput("");
+      setSourceStatus(null);
       setIsLoading(true);
       generateAiContent({
         action: command.action,
         prompt: command.prompt,
+        instruction:
+          command.action === AiAction.CUSTOM ? command.prompt : undefined,
         content,
         onChunk: (chunk) => {
-          setOutput((currentOutput) => currentOutput + chunk.content);
+          if (chunk.content) {
+            setSourceStatus(null);
+            setOutput((currentOutput) => currentOutput + chunk.content);
+          }
+        },
+        onStatus: ({ status, url }) => {
+          if (status === "fetching_source") {
+            let host = url;
+            try {
+              host = new URL(url).hostname;
+            } catch {
+              // Keep the raw value if it cannot be parsed.
+            }
+            setSourceStatus(`Fetching source from ${host}…`);
+          } else if (status === "source_failed") {
+            setSourceStatus("Could not fetch a source.");
+          } else {
+            setSourceStatus(null);
+          }
         },
         onComplete: () => {
           setPrompt("");
           setIsLoading(false);
+          setSourceStatus(null);
           setActiveCommandSet("result");
         },
         onError: (error) => {
@@ -177,8 +199,8 @@ const EditorAiMenu = ({ editor }: EditorAiMenuProps): JSX.Element | null => {
           html.lastIndexOf("<p>") === 0;
 
         const content = isSingleParagraph
-          ? new DOMParser().parseFromString(html.slice(3, -4), "text/html")
-              .body.innerHTML
+          ? new DOMParser().parseFromString(html.slice(3, -4), "text/html").body
+              .innerHTML
           : html;
 
         chain.insertContent(content).run();
@@ -271,7 +293,12 @@ const EditorAiMenu = ({ editor }: EditorAiMenuProps): JSX.Element | null => {
       window.removeEventListener("scroll", debouncedUpdateMenuPlacement, true);
       observer.disconnect();
     };
-  }, [editor, updateMenuPlacement, debouncedUpdateMenuPlacement, setShowAiMenu]);
+  }, [
+    editor,
+    updateMenuPlacement,
+    debouncedUpdateMenuPlacement,
+    setShowAiMenu,
+  ]);
 
   useEffect(() => {
     setShowAiMenu(false);
@@ -315,7 +342,11 @@ const EditorAiMenu = ({ editor }: EditorAiMenuProps): JSX.Element | null => {
         tabIndex={0}
         ref={containerRef}
       >
-        <ResultPreview output={output} isLoading={isLoading} />
+        <ResultPreview
+          output={output}
+          isLoading={isLoading}
+          statusText={sourceStatus}
+        />
         <CommandSelector
           selectedIndex={selectedIndex}
           isLoading={isLoading}

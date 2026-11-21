@@ -10,6 +10,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -17,6 +18,11 @@ export class GenerateAiTextDto {
   @IsNotEmpty()
   @IsString()
   prompt: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20_000)
+  instruction?: string;
 
   @IsOptional()
   @IsString()
