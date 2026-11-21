@@ -1,4 +1,5 @@
 import ReactDOM from "react-dom/client";
+import { MemoryRouter } from "react-router";
 import { useSetAtom } from "jotai";
 import { MantineProvider, Button } from "@mantine/core";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,7 +20,9 @@ function App() {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <MantineProvider theme={theme} cssVariablesResolver={mantineCssResolver}>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>
     </QueryClientProvider>
   </MantineProvider>,
 );

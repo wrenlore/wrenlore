@@ -80,12 +80,17 @@ pnpm exec tsx --test scripts/history-formatting.test.ts
 node scripts/history-ci.cjs
 pnpm exec playwright install chromium webkit
 node scripts/history-ui.cjs
+node scripts/history-ui.cjs --full-editor
 ```
 
-The browser fixture uses real history components and a minimal document schema,
-with synthetic API responses and restore disabled. It verifies Chromium/WebKit at
+The browser fixture uses real history components, synthetic API responses, and
+disabled restoration. Its default mode uses a minimal document schema and verifies
+Chromium/WebKit at
 short desktop and narrow mobile viewports, formatting notices, live list refresh,
 and absence of polling after close. Navigation checks cover single changes,
 separated changes, changes inside positioned table cells, wraparound in both
 directions, and navigation after manual scrolling. Customer page contents are
-never part of it.
+never part of it. The `--full-editor` mode uses the application's editor extensions
+and node views to exercise snapshots with empty paragraphs, code blocks and nested
+content, including version switching, highlighting and reopening. It guards
+against editor-plugin crashes that the minimal schema cannot reproduce.
