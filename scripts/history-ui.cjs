@@ -1,13 +1,18 @@
-/* Browser regression using real history components, synthetic API and basic editor schema. */
+/* Browser regression using real history components and synthetic API responses. */
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { createRequire } = require("node:module");
 const { pathToFileURL } = require("node:url");
 const fs = require("node:fs");
 const os = require("node:os");
+const {
+  renderingContent,
+  checkRendering,
+} = require("./history-ui/rendering.cjs");
 const repo = path.resolve(__dirname, "..");
 const req = createRequire(path.join(repo, "apps/client/package.json"));
 async function main() {
+  const fullEditor = process.argv.includes("--full-editor");
   const { createServer } = await import(pathToFileURL(req.resolve("vite")));
   const { default: react } = await import(
     pathToFileURL(req.resolve("@vitejs/plugin-react"))
@@ -18,8 +23,8 @@ async function main() {
     path.join(os.tmpdir(), "wrenlore-history-ui-"),
   );
   let reads = 0,
-    versions = 2,
-    pending = true;
+    versions = fullEditor ? 3 : 2,
+    pending = !fullEditor;
   let scenario = "formatting";
   const navigationContent = (n) => ({
     type: "doc",
@@ -55,8 +60,9 @@ async function main() {
     createdAt: new Date(Date.UTC(2026, 10, 1, 10, n)).toISOString(),
     lastUpdatedBy: { name: "Test editor" },
     contributors: [],
-    content:
-      scenario !== "formatting"
+    content: fullEditor
+      ? renderingContent(n)
+      : scenario !== "formatting"
         ? navigationContent(n)
         : {
             type: "doc",
@@ -75,12 +81,17 @@ async function main() {
           },
   });
   const aliases = [
-    ["@/main", "query.ts"],
+    [/^@\/main(?:\.tsx)?$/, "query.ts"],
     ["@/lib/api-client", "api.ts"],
-    ["@/i18n.ts", "i18n.ts"],
+    [/^@\/i18n(?:\.ts)?$/, "i18n.ts"],
     ["react-i18next", "i18n.ts"],
-    ["@/features/editor/extensions/extensions", "schema.ts"],
   ].map(([find, file]) => ({ find, replacement: path.join(root, file) }));
+  if (!fullEditor) {
+    aliases.push({
+      find: "@/features/editor/extensions/extensions",
+      replacement: path.join(root, "schema.ts"),
+    });
+  }
   aliases.push({
     find: /^(?:@\/features\/page-history\/hooks|\.\.\/hooks)$/,
     replacement: path.join(root, "hooks.ts"),
@@ -145,6 +156,7 @@ async function main() {
       browser = await playwright[name].launch({ headless: true });
       const page = await browser.newPage({
         viewport: { width: 1366, height: 768 },
+        timezoneId: "UTC",
       });
       const errors = [];
       page.on("pageerror", (e) => {
@@ -157,6 +169,12 @@ async function main() {
       page.on("console", (m) => {
         if (m.type() === "error") console.error(m.text());
       });
+      if (fullEditor) {
+        await checkRendering(page, base, name, errors);
+        await browser.close();
+        browser = undefined;
+        continue;
+      }
       await page.goto(base);
       await page
         .getByRole("button", { name: "Open history", exact: true })

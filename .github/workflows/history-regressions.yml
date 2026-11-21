@@ -5,6 +5,7 @@ on:
     paths:
       - "apps/server/**"
       - "apps/client/src/features/page-history/**"
+      - "apps/client/src/features/editor/**"
       - "packages/editor-ext/**"
       - "scripts/history-*"
       - "scripts/history-ui/**"
@@ -15,6 +16,7 @@ on:
     paths:
       - "apps/server/**"
       - "apps/client/src/features/page-history/**"
+      - "apps/client/src/features/editor/**"
       - "packages/editor-ext/**"
       - "scripts/history-*"
       - "scripts/history-ui/**"
@@ -64,3 +66,4 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6379
       - run: pnpm exec playwright install --with-deps chromium webkit
       - run: node scripts/history-ui.cjs
+      - run: node scripts/history-ui.cjs --full-editor

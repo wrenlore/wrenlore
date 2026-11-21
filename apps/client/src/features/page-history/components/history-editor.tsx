@@ -15,6 +15,13 @@ import {
 
 import { useTranslation } from "react-i18next";
 
+// Placeholder callbacks run during document replacement even when their
+// decorations are hidden. Editing hints are unnecessary in a snapshot viewer
+// and can resolve incoming positions against the previous editor document.
+const historyExtensions = mainExtensions.filter(
+  (extension) => extension.name !== "placeholder",
+);
+
 export interface HistoryEditorProps {
   title: string;
   content: any;
@@ -32,7 +39,7 @@ export function HistoryEditor({
   const [, setDiffCounts] = useAtom(diffCountsAtom);
 
   const editor = useEditor({
-    extensions: mainExtensions,
+    extensions: historyExtensions,
     editable: false,
   });
 
