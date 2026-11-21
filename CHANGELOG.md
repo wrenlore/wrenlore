@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.1.10 - 2026-11-21
+
+### MCP agent connections
+- Add a Streamable HTTP MCP endpoint at `/mcp`, with user-owned tokens and **User, via Agent** attribution (#147).
+- Support browsing spaces/pages, search, reading, page creation and direct content editing, comments and history. Tokens can be read-only or read/write, with optional selected-space restrictions; the user's live permissions remain authoritative.
+- Apply edits to the active collaborative document with revision conflict detection, persistence acknowledgement and idempotent retries. Preserve untouched rich content and human title changes.
+- Add workspace enablement, account-level token creation/revocation, expiry, and once-only token display. OpenCode and OpenClaw connection examples are in [MCP setup](docs/MCP.md).
+
+### Security and dependencies
+- Resolve the 11 Dependabot alerts recorded for follow-redirects, Glob, fast-xml-parser, @hono/node-server, Hono and Minimatch. The updated lockfile reports zero known vulnerabilities in the complete pnpm audit (#152).
+- Align every GitHub workflow on reviewed, immutable action revisions, incorporating the changes proposed in #105, #106 and #110.
+- Keep the standalone NestJS 12 adapter update (#103) separate: it requires a coordinated upgrade of core/common. See [dependency maintenance](docs/security/dependencies-2026-11-21.md).
+
+### Validation
+- Frozen installation and production builds passed on Node 24 with pnpm 10.4.0.
+- All 221 server tests, 31 editor tests and 4 document/queue tests passed with the updated dependencies.
+- The MCP integration suite passed with separate HTTP and live-document processes sharing disposable PostgreSQL/Redis, including permission changes, concurrent edits, failed-save recovery and retries.
+- MCP V1 was verified with real OpenCode and OpenClaw agents; token management was checked in Chromium and WebKit. OpenClaw integration also passed user acceptance testing.
+
+### Upgrade notes and known follow-ups
+- Back up the database and storage, then rebuild/recreate the application container. Startup applies an additive migration for hashed agent tokens, durable operation records, and comment/history attribution.
+- Enable **Settings → AI settings → MCP agent connections**, then create a token under **Account → Agent connections**. The feature is disabled by default on existing workspaces until enabled by an administrator.
+- Service accounts, moves, deletion, sharing and permission changes are not part of MCP V1. General browser API routes do not accept these scoped agent tokens.
+- The token Copy button issue (#148), manual token-creation attribution (#149), visual consistency (#150), and broader audit-log coverage/access review (#151) remain open. Manual selection and keyboard copying work around #148. This release does not claim a complete audit-coverage review.
+- Existing dependency peer warnings remain; the point-in-time zero-vulnerability audit is not a guarantee against future advisories.
+- WrenLore remains Docmost-derived AGPL-3.0 software. These additions retain the documented clean-cut provenance policy.
+
 ## v0.1.9 - 2026-11-21
 
 ### Ask AI
