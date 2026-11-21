@@ -23,6 +23,7 @@ import {
   AUDIT_SERVICE,
   IAuditService,
 } from '../../integrations/audit/audit.service';
+import { AuditEvent, AuditResource } from '../../common/events/audit-events';
 
 @UseGuards(JwtAuthGuard)
 @Controller('audit')
@@ -40,8 +41,27 @@ export class AuditController {
     @AuthUser() user: User,
     @AuthWorkspace() workspace: Workspace,
   ) {
-    this.ensureAuditAccess(user, workspace);
-    return this.auditQueryService.getAuditLogs(workspace.id, dto);
+    // Visibility is resolved and enforced server-side: workspace admins see
+    // the whole workspace, space administrators only their spaces (#151).
+    const visibility = await this.auditQueryService.resolveVisibility(
+      user,
+      workspace,
+      this.canManageWorkspaceAudit(user, workspace),
+    );
+    return this.auditQueryService.getAuditLogs(user, workspace, dto, visibility);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/access')
+  async getAccess(
+    @AuthUser() user: User,
+    @AuthWorkspace() workspace: Workspace,
+  ) {
+    return this.auditQueryService.getAccess(
+      user,
+      workspace,
+      this.canManageWorkspaceAudit(user, workspace),
+    );
   }
 
   @HttpCode(HttpStatus.OK)
@@ -62,15 +82,29 @@ export class AuditController {
     @AuthWorkspace() workspace: Workspace,
   ) {
     this.ensureAuditAccess(user, workspace);
+    const previous = await this.auditQueryService.getRetention(workspace.id);
     await this.auditService.updateRetention(workspace.id, dto.auditRetentionDays);
+    this.auditService.log({
+      event: AuditEvent.AUDIT_RETENTION_UPDATED,
+      resourceType: AuditResource.WORKSPACE,
+      resourceId: workspace.id,
+      changes: {
+        before: { auditRetentionDays: previous.retentionDays },
+        after: { auditRetentionDays: dto.auditRetentionDays },
+      },
+    });
     return {
       retentionDays: dto.auditRetentionDays,
     };
   }
 
-  private ensureAuditAccess(user: User, workspace: Workspace) {
+  private canManageWorkspaceAudit(user: User, workspace: Workspace) {
     const ability = this.workspaceAbility.createForUser(user, workspace);
-    if (ability.cannot(WorkspaceCaslAction.Manage, WorkspaceCaslSubject.Audit)) {
+    return ability.can(WorkspaceCaslAction.Manage, WorkspaceCaslSubject.Audit);
+  }
+
+  private ensureAuditAccess(user: User, workspace: Workspace) {
+    if (!this.canManageWorkspaceAudit(user, workspace)) {
       throw new ForbiddenException();
     }
   }

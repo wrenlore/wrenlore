@@ -1,18 +1,92 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectKysely } from 'nestjs-kysely';
 import { KyselyDB } from '@wrenlore/db/types/kysely.types';
+import { User, Workspace } from '@wrenlore/db/types/entity.types';
+import { SpaceMemberRepo } from '@wrenlore/db/repos/space/space-member.repo';
 import { AuditLogsDto } from './dto/audit.dto';
+
+/**
+ * Server-side audit visibility (issue #151).
+ *
+ * - Workspace owners/admins (Manage Audit) see the whole workspace.
+ * - Space administrators see only events scoped to spaces they administer.
+ *   Workspace-level events (no spaceId) are not part of that scope.
+ * - Everyone else has no audit access.
+ *
+ * The scope is applied to the query itself, so filters, pagination and
+ * returned rows can never reveal activity outside the caller's scope.
+ */
+export type AuditVisibility =
+  | { scope: 'workspace' }
+  | { scope: 'spaces'; spaceIds: string[] };
 
 @Injectable()
 export class AuditQueryService {
-  constructor(@InjectKysely() private readonly db: KyselyDB) {}
+  constructor(
+    @InjectKysely() private readonly db: KyselyDB,
+    private readonly spaceMembers: SpaceMemberRepo,
+  ) {}
 
-  async getAuditLogs(workspaceId: string, dto: AuditLogsDto) {
+  async getAccess(
+    user: User,
+    workspace: Workspace,
+    canManageWorkspaceAudit: boolean,
+  ): Promise<{ visible: boolean; scope: 'workspace' | 'spaces' | 'none' }> {
+    if (canManageWorkspaceAudit) {
+      return { visible: true, scope: 'workspace' };
+    }
+    const spaceIds = await this.spaceMembers.getUserAdminSpaceIds(
+      user.id,
+      workspace.id,
+    );
+    return spaceIds.length > 0
+      ? { visible: true, scope: 'spaces' }
+      : { visible: false, scope: 'none' };
+  }
+
+  async resolveVisibility(
+    user: User,
+    workspace: Workspace,
+    canManageWorkspaceAudit: boolean,
+  ): Promise<AuditVisibility> {
+    if (canManageWorkspaceAudit) {
+      return { scope: 'workspace' };
+    }
+    const spaceIds = await this.spaceMembers.getUserAdminSpaceIds(
+      user.id,
+      workspace.id,
+    );
+    if (spaceIds.length === 0) {
+      throw new ForbiddenException();
+    }
+    return { scope: 'spaces', spaceIds };
+  }
+
+  async getAuditLogs(
+    user: User,
+    workspace: Workspace,
+    dto: AuditLogsDto,
+    visibility: AuditVisibility,
+  ) {
     const limit = dto.limit ?? 50;
+
+    if (
+      visibility.scope === 'spaces' &&
+      dto.spaceId &&
+      !visibility.spaceIds.includes(dto.spaceId)
+    ) {
+      throw new ForbiddenException();
+    }
 
     let query = this.db
       .selectFrom('audit')
-      .leftJoin('users as actor', 'actor.id', 'audit.actorId')
+      .leftJoin(
+        'users as actor',
+        (join) =>
+          join
+            .onRef('actor.id', '=', 'audit.actorId')
+            .onRef('actor.workspaceId', '=', 'audit.workspaceId'),
+      )
       .selectAll('audit')
       .select([
         'actor.id as actorRefId',
@@ -20,8 +94,12 @@ export class AuditQueryService {
         'actor.email as actorEmail',
         'actor.avatarUrl as actorAvatarUrl',
       ])
-      .where('audit.workspaceId', '=', workspaceId)
+      .where('audit.workspaceId', '=', workspace.id)
       .orderBy('audit.id', 'desc');
+
+    if (visibility.scope === 'spaces') {
+      query = query.where('audit.spaceId', 'in', visibility.spaceIds);
+    }
 
     if (dto.cursor) {
       query = query.where('audit.id', '<', dto.cursor);
@@ -53,7 +131,8 @@ export class AuditQueryService {
       hasNextPage && pagedRows.length > 0
         ? pagedRows[pagedRows.length - 1].id
         : null;
-    const prevCursor = hasPrevPage && pagedRows.length > 0 ? pagedRows[0].id : null;
+    const prevCursor =
+      hasPrevPage && pagedRows.length > 0 ? pagedRows[0].id : null;
 
     return {
       items: pagedRows.map((row) => ({

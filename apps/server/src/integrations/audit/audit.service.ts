@@ -56,6 +56,11 @@ export class DatabaseAuditService implements IAuditService {
 
     const context = this.cls.get<AuditContext>(AUDIT_CONTEXT_KEY);
     if (!context?.workspaceId) {
+      // A missing request context means the event would be dropped. Keep this
+      // visible: silent drops made gaps impossible to diagnose (#151).
+      this.logger.warn(
+        `Dropping audit event "${payload.event}": no workspace context on request`,
+      );
       return;
     }
 
