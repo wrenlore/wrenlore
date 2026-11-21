@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.1.9 - 2026-11-21
+
+### Ask AI
+- Read public HTTP(S) URLs explicitly supplied in an Ask AI prompt and summarize the retrieved content, including GitHub repository and source-file pages (#144).
+- Show source-fetch progress and pass bounded source excerpts to the configured model. Retrieval validates and pins public DNS addresses, rechecks redirects, and applies time and size limits.
+- Preserve generated content when using Insert below or Replace in collaborative documents, including formatted links, code blocks, and tables (#144).
+- Follow streamed preview text automatically, pause when the reader scrolls up, resume at the bottom, and reset following for a new generation (#145).
+
+### Dependencies
+- Includes the dependency remediation merged in #139–#143, including Fastify, follow-redirects, Hono, the MCP SDK, DOMPurify, Undici, Nodemailer, Zod, Happy DOM, and Vite updates.
+
+### Validation
+- The feature changes passed the client production build and a full Docker production image build.
+- WebKit and Chromium passed paced-stream checks for follow, pause, resume, completion, and retry, plus Insert below and Replace with server persistence and fresh-browser reloads.
+- GitHub AI runtime/URL retrieval regressions and commit sign-off checks passed for the feature PRs.
+- The merged application was deployed and returned HTTP 200 health; browser checks also passed against that deployment.
+
+### Upgrade notes
+- Rebuild and recreate the application container, preserving the existing deployment configuration. No new database migrations are included.
+- URL retrieval requires Ask AI and a configured AI provider. It reads explicitly supplied public URLs; it does not add web search or access authenticated/private pages. See [Ask AI URL sources](docs/AI_URL_SOURCES.md) for limits and supported content.
+- WrenLore remains Docmost-derived AGPL-3.0 software. These AI changes are WrenLore-native work under the repository's clean-cut provenance policy.
+
 ## v0.1.8 - 2026-10-21
 
 ### Security

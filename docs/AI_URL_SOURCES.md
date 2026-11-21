@@ -6,6 +6,8 @@ In the editor, open `/ai` and ask a question containing a public HTTP or HTTPS U
 
 WrenLore retrieves the supplied page before sending the request to the configured AI provider. The preview shows retrieval progress, then the generated answer. Use **Insert below** or **Replace** to apply it to the document.
 
+While text streams, the preview follows the bottom automatically. Scroll up to read earlier text without being pulled back down; return to the bottom to resume following. Starting a new generation resets following.
+
 Only URLs in the custom instruction are retrieved. URLs in selected document text, retrieved pages or model output are not followed. Ordinary rewriting and summarization without an explicit URL instruction keep their existing behavior.
 
 ## Retrieval behavior
@@ -43,8 +45,6 @@ pnpm test:editor-ext
 pnpm build
 ```
 
-`scripts/ai-editor-insert-regression.cjs` runs the full editor in Chromium and WebKit against a running test workspace. It supplies a synthetic streamed response containing links, code and a table, exercises **Insert below** and **Replace**, checks the document model and debounced server save, and reopens the page in a fresh browser context. It removes its temporary pages afterward. Setup and environment variables are documented at the top of the script; use a private, short-lived test credential and do not commit it.
+`scripts/ai-editor-insert-regression.cjs` runs the full editor in Chromium and WebKit against a running test workspace. It supplies a synthetic streamed response containing links, code and a table, exercises **Insert below** and **Replace**, checks the document model and debounced server save, and reopens the page in a fresh browser context. It also uses paced SSE responses to verify preview follow, pause, resume, completion, and retry without mouse interaction. It removes its temporary pages afterward. Setup and environment variables are documented at the top of the script; use a private, short-lived test credential and do not commit it.
 
 This regression covers a toolbar lifecycle bug: remounting the formatting toolbar while a React mark/node view is being inserted can recreate the collaboration binding and restore the old document. The toolbar stays mounted while its existing visibility checks hide it during auxiliary menus.
-
-Preview auto-scroll remains a separate follow-up.
