@@ -12,10 +12,18 @@ export interface AiResolvedRoute {
 
 export interface AiGenerateRequest {
   prompt: string;
+  instruction?: string;
   systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
 }
+
+export type AiStreamEvent =
+  | { content: string }
+  | {
+      status: 'fetching_source' | 'source_fetched' | 'source_failed';
+      url: string;
+    };
 
 export interface AiUsage {
   promptTokens?: number;

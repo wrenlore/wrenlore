@@ -47,3 +47,4 @@ lerna-debug.log*
 
 # Francis/OpenClaw orchestration briefs and audit scratch files
 .francis-briefs/
+.env.deploy

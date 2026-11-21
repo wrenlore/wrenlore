@@ -16,6 +16,7 @@ export interface AiGenerateDto {
   action?: AiAction;
   content: string;
   prompt?: string;
+  instruction?: string;
 }
 
 export interface AiContentResponse {
@@ -33,7 +34,14 @@ export interface AiConfigResponse {
 }
 
 export interface AiStreamChunk {
-  content: string;
+  content?: string;
+  status?: "fetching_source" | "source_fetched" | "source_failed";
+  url?: string;
+}
+
+export interface AiStreamStatus {
+  status: NonNullable<AiStreamChunk["status"]>;
+  url?: string;
 }
 
 export interface AiStreamError {

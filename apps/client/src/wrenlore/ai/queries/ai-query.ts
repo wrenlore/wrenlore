@@ -8,6 +8,7 @@ import {
   AiGenerateDto,
   AiStreamChunk,
   AiStreamError,
+  AiStreamStatus,
 } from "@/wrenlore/ai/types/ai.types";
 
 export function useAiGenerateMutation() {
@@ -21,11 +22,18 @@ interface StreamCallbacks {
   onChunk: (chunk: AiStreamChunk) => void;
   onError?: (error: AiStreamError) => void;
   onComplete?: () => void;
+  onStatus?: (status: AiStreamStatus) => void;
 }
 
 export function useAiGenerateStreamMutation() {
   return useMutation({
-    mutationFn: ({ onChunk, onError, onComplete, ...data }: AiGenerateDto & StreamCallbacks) =>
-      generateAiContentStream(data, onChunk, onError, onComplete),
+    mutationFn: ({
+      onChunk,
+      onError,
+      onComplete,
+      onStatus,
+      ...data
+    }: AiGenerateDto & StreamCallbacks) =>
+      generateAiContentStream(data, onChunk, onError, onComplete, onStatus),
   });
 }

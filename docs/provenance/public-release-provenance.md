@@ -47,3 +47,7 @@ The current public candidate has:
 - retained legal/provenance references to Docmost where needed for attribution and release policy
 
 Known product gaps remain documented in `README.md` and `docs/PUBLIC_RELEASE_CHECKLIST.md`.
+
+## Explicit URL sources for Ask AI
+
+The URL retrieval service, status events, bounds and tests are original WrenLore work based on the explicit-URL product requirement, existing WrenLore APIs, and standard Node.js/HTTP behavior. The editor insertion fix was derived from reproducing WrenLore's toolbar and collaboration lifecycle in Chromium and WebKit. No proprietary Docmost material or post-fork upstream implementation was used. The changes retain WrenLore's AGPL-3.0 provenance boundary.

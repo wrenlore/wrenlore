@@ -5,10 +5,12 @@ import {
   AiGenerateDto,
   AiStreamChunk,
   AiStreamError,
+  AiStreamStatus,
 } from "@/wrenlore/ai/types/ai.types";
 
 interface GenerateTextRequest {
   prompt: string;
+  instruction?: string;
 }
 
 function buildPrompt(data: AiGenerateDto): string {
@@ -55,8 +57,10 @@ function buildPrompt(data: AiGenerateDto): string {
 }
 
 function toGenerateTextRequest(data: AiGenerateDto): GenerateTextRequest {
+  const instruction = data.instruction?.trim();
   return {
     prompt: buildPrompt(data),
+    ...(instruction ? { instruction } : {}),
   };
 }
 
@@ -75,6 +79,7 @@ export async function generateAiContentStream(
   onChunk: (chunk: AiStreamChunk) => void,
   onError?: (error: AiStreamError) => void,
   onComplete?: () => void,
+  onStatus?: (status: AiStreamStatus) => void,
 ): Promise<AbortController> {
   const abortController = new AbortController();
   const requestPayload = toGenerateTextRequest(data);
@@ -123,6 +128,8 @@ export async function generateAiContentStream(
                 const parsed = JSON.parse(data);
                 if (parsed.error) {
                   onError?.(parsed);
+                } else if (parsed.status) {
+                  onStatus?.({ status: parsed.status, url: parsed.url });
                 } else {
                   onChunk(parsed);
                 }

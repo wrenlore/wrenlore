@@ -9,7 +9,8 @@ import {
 } from './dto/ai-generation.dto';
 import { AiTaskRouterService } from './ai-task-router.service';
 import { AiProviderGatewayService } from './ai-provider-gateway.service';
-import { AiCitation } from './ai.types';
+import { AiUrlSourceService } from './ai-url-source.service';
+import { AiCitation, AiStreamEvent } from './ai.types';
 
 const AI_ANSWERS_EMPTY_SOURCES_MESSAGE =
   'No relevant indexed workspace sources were found for this query.';
@@ -44,6 +45,7 @@ export class AiRuntimeService {
     private readonly taskRouter: AiTaskRouterService,
     private readonly providerGateway: AiProviderGatewayService,
     private readonly searchService: SearchService,
+    private readonly urlSourceService: AiUrlSourceService,
   ) {}
 
   async generate(workspaceId: string, dto: GenerateAiTextDto) {
@@ -51,10 +53,17 @@ export class AiRuntimeService {
       workspaceId,
       'text-generation',
     );
-    const generated = await this.providerGateway.generateText(route, dto);
+
+    const urls = this.urlSourceService.extractUrls(dto.instruction);
+    const sources = await this.urlSourceService.retrieve(urls);
+    const request = this.urlSourceService.applyToRequest(dto, sources);
+    const generated = await this.providerGateway.generateText(route, request);
 
     return {
       ...generated,
+      ...(sources.length > 0
+        ? { sources: this.urlSourceService.summarizeSources(sources) }
+        : {}),
       taskClass: route.resolvedTaskClass,
       provider: {
         id: route.provider.id,
@@ -73,13 +82,36 @@ export class AiRuntimeService {
     workspaceId: string,
     dto: GenerateAiTextDto,
     signal?: AbortSignal,
-  ): AsyncGenerator<string> {
+  ): AsyncGenerator<AiStreamEvent> {
+    const urls = this.urlSourceService.extractUrls(dto.instruction);
+
+    let sources: Awaited<ReturnType<AiUrlSourceService['retrieve']>> = [];
+    if (urls.length > 0) {
+      for (const url of urls) {
+        yield { status: 'fetching_source', url };
+      }
+      sources = await this.urlSourceService.retrieve(urls, signal);
+      for (const source of sources) {
+        yield {
+          status: source.status === 'ok' ? 'source_fetched' : 'source_failed',
+          url: source.url,
+        };
+      }
+    }
+
+    const request = this.urlSourceService.applyToRequest(dto, sources);
     const route = await this.taskRouter.resolveRoute(
       workspaceId,
       'streaming-generation',
     );
 
-    yield* this.providerGateway.streamText(route, dto, signal);
+    for await (const chunk of this.providerGateway.streamText(
+      route,
+      request,
+      signal,
+    )) {
+      yield { content: chunk };
+    }
   }
 
   async groundedAnswer(
@@ -434,7 +466,9 @@ export class AiRuntimeService {
       plan.cleanedQuery,
       ...plan.fallbackTerms,
       plan.originalQuery,
-    ].filter((query, index, queries) => query && queries.indexOf(query) === index);
+    ].filter(
+      (query, index, queries) => query && queries.indexOf(query) === index,
+    );
   }
 
   private async searchGroundedSources(
