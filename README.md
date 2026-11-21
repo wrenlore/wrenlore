@@ -1,112 +1,139 @@
 # WrenLore
 
-WrenLore is Docmost-derived, self-hosted software for operational knowledge management by humans and agents.
+[![MCP regressions](https://github.com/wrenlore/wrenlore/actions/workflows/mcp-regressions.yml/badge.svg)](https://github.com/wrenlore/wrenlore/actions/workflows/mcp-regressions.yml)
+[![Editor regressions](https://github.com/wrenlore/wrenlore/actions/workflows/editor-regressions.yml/badge.svg)](https://github.com/wrenlore/wrenlore/actions/workflows/editor-regressions.yml)
+[![GitHub release](https://img.shields.io/github/v/release/wrenlore/wrenlore)](https://github.com/wrenlore/wrenlore/releases/latest)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-1d3b32)](LICENSE)
 
-It keeps the familiar wiki/documentation surface, then adds the pieces an agentic knowledge system needs: SSO, auditability, AI-assisted editing, grounded answers, controlled public sharing, and a path toward machine-readable retrieval.
+**Self-hosted knowledge infrastructure for humans and AI agents.**
 
-WrenLore is derived from the Docmost Community Edition codebase. The WrenLore public foundation is tagged `wrenlore-open-foundation-2026-05-01` in this repository. The codebases diverge from that point. WrenLore is not an upstream Docmost deployment target, not affiliated with, and not endorsed by Docmost.
+WrenLore is a collaborative wiki for teams that want clean human editing, private deployment and useful AI access without giving an agent a shared administrator account.
 
-## What WrenLore is
+[Website](https://wrenlore.com/) · [Releases](https://github.com/wrenlore/wrenlore/releases) · [Deployment guide](README-deploy.md) · [MCP setup](docs/MCP.md) · [Security](SECURITY.md)
 
-WrenLore is intended for teams that need a durable internal knowledge system without sending everything to a third-party SaaS wiki.
+![WrenLore knowledge workspace showing people, documents and systems connected to permission-aware search, versioned editing and scoped MCP access](docs/assets/screenshots/wrenlore-showcase-overview.jpg)
 
-The product direction is simple:
+## What makes WrenLore different
 
-- humans browse, write, edit, and review knowledge in a clean UI
-- agents publish, retrieve, summarize, and maintain knowledge through governed interfaces
-- admins control access, audit activity, and deploy the system in private/client environments
+| Capability | What it means in practice |
+|---|---|
+| **A proper team wiki** | Structured pages, spaces, comments, page permissions, public sharing and version history in a focused web interface. |
+| **Scoped MCP access** | Agents search, read, create and revision-safely edit knowledge through user-owned tokens with read/write, space and expiry controls. |
+| **Attribution that survives automation** | Supported agent actions are recorded as **User, via Agent**, rather than disappearing behind a generic integration account. |
+| **Grounded AI workflows** | Permission-aware retrieval, provider/model administration and AI-assisted editing keep answers attached to the team's real source material. |
+| **Identity and operational control** | SSO, local MFA, audit events and self-hosted deployment give operators control over access, infrastructure and data. |
+| **Open source** | AGPL-3.0 source, PostgreSQL data and Docker-based deployment provide a real exit path instead of a decorative export button. |
 
-## Licensing and provenance
-
-Docmost and related marks are trademarks of Docmost Inc. WrenLore is not affiliated with, endorsed by, or presented as an official Docmost distribution.
-
-WrenLore is derived from the AGPL-3.0-licensed Docmost Community codebase and is licensed under AGPL-3.0.
-
-This repository does not include Docmost Enterprise Edition source code, assets, tests, documentation, or implementation details. Public visibility of any upstream Enterprise Edition material is not permission to reuse it. Feature overlap can exist between products; this project does not reuse proprietary Docmost EE implementation.
-
-WrenLore complies with AGPL-3.0 source-availability obligations for distribution and network deployment. The source for each released version is available at this repository via the corresponding tag or release archive.
-
-WrenLore's SSO, audit, AI, sharing controls, and other product capabilities are WrenLore-native implementations based on WrenLore requirements, public standards, public documentation, public interoperability behaviour, and original implementation work — not proprietary EE source.
-
-## Upstream security posture
-
-WrenLore is responsible for tracking security vulnerabilities in its dependency stack and in inherited Docmost Community-derived code. After the documented fork point, fixes are implemented independently in WrenLore from public vulnerability disclosures and WrenLore code analysis. WrenLore does not cherry-pick, merge, or rebase from upstream Docmost. Upstream Docmost release automation must not be used.
+WrenLore has no per-user licence fee. You run the infrastructure and choose any external model services you want to connect.
 
 ## Quick start
 
-For local/dev deployment, see the full runbook:
-
-- [`README-deploy.md`](README-deploy.md)
-
-Minimal shape:
+Requirements: Docker Engine, the Docker Compose plugin and Git.
 
 ```bash
+git clone https://github.com/wrenlore/wrenlore.git
+cd wrenlore
 cp .env.example .env
-# edit APP_URL, APP_SECRET, DB credentials, and provider env vars as needed
 
-docker compose build --pull db wrenlore
-docker compose up -d
+# Edit .env: set APP_SECRET to a random value of at least 32 characters.
+# For non-local use, also set APP_URL and explicit database credentials.
+
+docker compose up -d --build
 curl -f http://localhost:3000/api/health
 ```
 
-Do not use upstream Docmost update flows or official Docmost release automation for this repository.
+Open [http://localhost:3000](http://localhost:3000). The application runs migrations on startup. Keep the database and storage volumes when upgrading.
 
-## Development notes
+For TLS, reverse-proxy configuration, backups and production environment values, use the [deployment runbook](README-deploy.md).
 
-Useful commands from the repo root:
+## Built for agent access without the shared admin token
 
-```bash
-pnpm install
-pnpm run build
-pnpm run client:dev
-pnpm run server:dev
-```
+WrenLore exposes a Streamable HTTP MCP endpoint at `/mcp`. A workspace administrator enables agent connections, then each user creates their own named token.
 
-Docker is the preferred verification path for deployment-like checks.
+Tokens can be:
 
-## AI/runtime notes
+- read-only or read/write;
+- restricted to selected spaces;
+- given an expiry and revoked independently;
+- copied once, then stored as a hash;
+- traced back to the owning user and named agent connection.
 
-Agents can browse and edit WrenLore through user-owned, scoped MCP tokens with
-**User, via Agent** attribution. See [MCP setup, clients and editing semantics](docs/MCP.md).
+The user's live workspace, space and page permissions remain authoritative on every call. Writes use expected revisions and idempotency keys, so an agent cannot silently overwrite a newer human edit or apply the same operation twice after a lost network response.
 
-Current AI functionality depends on configured provider/model/task routing.
+Current MCP tools cover context, spaces, page trees, search, page reads, page creation, direct document edits, comments and history. Deletion, moves, sharing and permission changes are deliberately outside MCP V1.
 
-For local Ollama from inside Docker, the app should generally use:
+See [MCP setup, client examples and editing semantics](docs/MCP.md).
 
-```text
-http://host.docker.internal:11434
-```
+![WrenLore MCP sequence showing scoped tokens, permission checks and revision-safe agent editing](docs/assets/screenshots/agents-at-the-gate.jpg)
 
-Provider/model setup is currently configured through environment-backed WrenLore provider records. A real admin UI for provider configuration, model discovery/selection, task-class routing, and health checks is planned for a future product slice.
+## A few real workspace views
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/assets/screenshots/knowledge-constellation.jpg" alt="A WrenLore mind map connecting product, engineering, operations, research and agent knowledge" />
+      <br /><strong>Connected knowledge</strong><br />Decisions, evidence, owners and operational context stay legible.
+    </td>
+    <td width="50%">
+      <img src="docs/assets/screenshots/open-source-by-design.jpg" alt="A WrenLore diagram showing open source code, controlled data, chosen infrastructure and agent APIs" />
+      <br /><strong>Open by design</strong><br />Inspect the code, control the data and choose where it runs.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/assets/screenshots/trusted-answer-flow.jpg" alt="A WrenLore flowchart from a user question through permission-aware retrieval to a verified answer" />
+      <br /><strong>Grounded answers</strong><br />Permission-aware retrieval keeps answers inspectable and bounded.
+    </td>
+    <td width="50%">
+      <img src="docs/assets/screenshots/north-star-roadmap.jpg" alt="A WrenLore product timeline from structured team knowledge to attributable automation" />
+      <br /><strong>A practical direction</strong><br />Portable knowledge, human approval and attributable automation.
+    </td>
+  </tr>
+</table>
+
+![A WrenLore incident room combining a timeline, operational metrics, decisions, owners and follow-up tasks](docs/assets/screenshots/incident-room.jpg)
+
+The showcase pages above were created through WrenLore's own MCP endpoint and persisted with **User, via Agent** attribution.
+
+## Deployment shape
+
+The supplied Compose stack runs:
+
+- the WrenLore application, built from this repository;
+- PostgreSQL with pgvector;
+- Redis with append-only persistence;
+- local file storage by default, with S3-compatible storage available.
+
+Docker is the preferred deployment and deployment-like verification path. WrenLore does not use upstream Docmost images, update flows or release automation.
 
 ## Documentation
 
-Important docs:
+- [Deployment runbook](README-deploy.md)
+- [MCP setup and semantics](docs/MCP.md)
+- [Page-history user guide](docs/user-guide/page-history.md)
+- [Entra ID SAML setup](docs/SAML_ENTRA_SETUP.md)
+- [Contributing](CONTRIBUTING.md)
+- [Public release checklist](docs/PUBLIC_RELEASE_CHECKLIST.md)
+- [Public provenance summary](docs/provenance/public-release-provenance.md)
 
-- [User guide: page history](docs/user-guide/page-history.md) — when saved edits appear in history and what pending snapshots mean
-- [`README-deploy.md`](README-deploy.md) — deployment runbook
-- [`docs/SAML_ENTRA_SETUP.md`](docs/SAML_ENTRA_SETUP.md) - Entra ID SAML field mapping
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution policy and proprietary-code boundary
-- [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md) — public release gates
-- [`docs/provenance/public-release-provenance.md`](docs/provenance/public-release-provenance.md) — public provenance summary
+## Provenance and licensing
 
-## Product principles
+WrenLore is derived from the Docmost Community Edition codebase. The WrenLore public foundation is tagged `wrenlore-open-foundation-2026-05-01` in this repository, and the codebases diverge from that point.
 
-For authoritative licence and compliance policy, see the Licensing and provenance section above. These principles are the practical engineering shorthand for developers.
+WrenLore is not an upstream Docmost deployment target and is not affiliated with or endorsed by Docmost. Docmost and related marks are trademarks of Docmost Inc.
 
-- Build WrenLore as WrenLore, not as a Docmost Enterprise clone.
-- Treat Docmost Community/AGPL code as the reusable foundation.
-- Treat Docmost Enterprise Edition code and directories as proprietary/licensed material. Do not copy, paste, port, translate, adapt, or line-by-line reimplement EE source, structure, assets, tests, or documentation.
-- Enterprise-grade capabilities may be added to WrenLore, but they must be specified from WrenLore product requirements, public standards, public API behaviour, and original first-principles implementation work.
-- If a feature overlaps with a Docmost Enterprise feature, implement it as a WrenLore-native module from first principles. Do not use proprietary EE implementation details as source material.
-- Reuse public concepts, protocols, and interoperability patterns where appropriate: SAML, OIDC, OAuth, REST, Postgres, pgvector, and similar public standards remain fair implementation ground. Open-source libraries may be used under their respective licences.
-- Prefer hidden/deferred surfaces over fake or broken UI.
-- Keep deployment self-hosted and understandable.
-- Treat auditability, access control, and provenance as product features, not afterthoughts.
-- Treat agent-facing workflows as first-class product concerns.
+WrenLore is derived from AGPL-3.0-licensed Docmost Community code and is itself licensed under AGPL-3.0. This repository does not include Docmost Enterprise Edition source code, assets, tests, documentation or implementation details. Public visibility of upstream Enterprise Edition material is not permission to reuse it.
+
+WrenLore's SSO, audit, AI, sharing controls and other product capabilities are WrenLore-native implementations based on WrenLore requirements, public standards, public documentation, public interoperability behaviour and original implementation work. Feature overlap can exist between products; this project does not reuse proprietary Docmost Enterprise implementation.
+
+Source for every released WrenLore version is available through the corresponding tag and release archive. See the [public provenance summary](docs/provenance/public-release-provenance.md) and [contribution policy](CONTRIBUTING.md) for the clean-cut engineering rules.
+
+## Security posture
+
+WrenLore tracks vulnerabilities in its dependency stack and inherited Community-derived code. After the documented fork point, fixes are implemented independently from public vulnerability disclosures and WrenLore code analysis; the project does not cherry-pick, merge or rebase from upstream Docmost.
+
+Security reports are handled under [SECURITY.md](SECURITY.md). Audit coverage is actively expanded and is not represented as complete for every browser and administrative action.
 
 ## Licence
 
-WrenLore is licensed under AGPL-3.0.
-
-WrenLore is provided as-is. See [`LICENSE`](LICENSE) for warranty and liability terms.
+WrenLore is provided under the [GNU Affero General Public License v3.0](LICENSE), without warranty.
