@@ -213,14 +213,16 @@ export class SpaceMemberRepo {
   async getUserSpaceRoles(
     userId: string,
     spaceId: string,
+    trx?: KyselyTransaction,
   ): Promise<UserSpaceRole[]> {
-    const roles = await this.db
+    const db = dbOrTx(this.db, trx);
+    const roles = await db
       .selectFrom('spaceMembers')
       .select(['userId', 'role'])
       .where('userId', '=', userId)
       .where('spaceId', '=', spaceId)
       .unionAll(
-        this.db
+        db
           .selectFrom('spaceMembers')
           .innerJoin('groupUsers', 'groupUsers.groupId', 'spaceMembers.groupId')
           .select(['groupUsers.userId', 'spaceMembers.role'])

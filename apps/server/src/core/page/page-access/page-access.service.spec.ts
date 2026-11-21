@@ -40,7 +40,7 @@ describe('PageAccessService', () => {
       spaceAbility as any,
     );
 
-    return { service, pagePermissionRepo };
+    return { service, pagePermissionRepo, spaceAbility };
   };
 
   it('allows authorised users to read restricted pages', async () => {
@@ -53,6 +53,27 @@ describe('PageAccessService', () => {
     expect(pagePermissionRepo.canUserEditPage).toHaveBeenCalledWith(
       user.id,
       page.id,
+      undefined,
+    );
+  });
+
+  it('keeps permission reads on the caller transaction instead of borrowing another connection', async () => {
+    const { service, pagePermissionRepo, spaceAbility } = createService({
+      hasAnyRestriction: false,
+      canAccess: true,
+      canEdit: true,
+    });
+    const trx = {} as any;
+    await service.validateCanEdit(page, user, trx);
+    expect(pagePermissionRepo.canUserEditPage).toHaveBeenCalledWith(
+      user.id,
+      page.id,
+      trx,
+    );
+    expect(spaceAbility.createForUser).toHaveBeenCalledWith(
+      user,
+      page.spaceId,
+      trx,
     );
   });
 

@@ -1,4 +1,4 @@
-import { Alert, Divider, Stack, Switch, Text } from "@mantine/core";
+import { Divider, Stack, Switch } from "@mantine/core";
 import { Helmet } from "react-helmet-async";
 import { useAtom } from "jotai";
 import { useTranslation } from "react-i18next";
@@ -14,9 +14,9 @@ export default function AiSettings() {
   const [workspace, setWorkspace] = useAtom(workspaceAtom);
   const ai = workspace?.settings?.ai ?? {};
 
-  async function updateAiSetting(key: "search" | "generative", value: boolean) {
+  async function updateAiSetting(key: "search" | "generative" | "mcp", value: boolean) {
     const field =
-      key === "search" ? "aiSearch" : "generativeAi";
+      key === "search" ? "aiSearch" : key === "mcp" ? "mcpEnabled" : "generativeAi";
     const updated = await updateWorkspace({ [field]: value } as any);
     setWorkspace(updated);
     await queryClient.invalidateQueries({ queryKey: ["current-user"] });
@@ -45,10 +45,7 @@ export default function AiSettings() {
         <Divider />
         <AiProviderAdmin />
         <Divider />
-        <Alert variant="light" color="gray">
-          <Text fw={500}>MCP</Text>
-          <Text size="sm">{t("Planned WrenLore-native module. No MCP controls are active in this build.")}</Text>
-        </Alert>
+        <Switch label="MCP agent connections" description="Allow users to connect agents using scoped tokens. Users manage their connections in Account → Agent connections." checked={ai.mcp === true} onChange={(event) => updateAiSetting("mcp", event.currentTarget.checked)} />
       </Stack>
     </>
   );

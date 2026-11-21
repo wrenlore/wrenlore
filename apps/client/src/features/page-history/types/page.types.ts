@@ -5,6 +5,7 @@ interface IPageHistoryUser {
 }
 
 export interface IPageHistory {
+  agentName?: string | null;
   id: string;
   pageId: string;
   title: string;

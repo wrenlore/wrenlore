@@ -66,6 +66,9 @@ Docker is the preferred verification path for deployment-like checks.
 
 ## AI/runtime notes
 
+Agents can browse and edit WrenLore through user-owned, scoped MCP tokens with
+**User, via Agent** attribution. See [MCP setup, clients and editing semantics](docs/MCP.md).
+
 Current AI functionality depends on configured provider/model/task routing.
 
 For local Ollama from inside Docker, the app should generally use:

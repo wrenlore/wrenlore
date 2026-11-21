@@ -6,6 +6,7 @@ import {
   Comment,
   InsertableComment,
   UpdatableComment,
+  User,
 } from '@wrenlore/db/types/entity.types';
 import { PaginationOptions } from '@wrenlore/db/pagination/pagination-options';
 import { executeWithCursorPagination } from '@wrenlore/db/pagination/cursor-pagination';
@@ -21,7 +22,7 @@ export class CommentRepo {
   async findById(
     commentId: string,
     opts?: { includeCreator: boolean; includeResolvedBy: boolean },
-  ): Promise<Comment> {
+  ): Promise<Comment & { creator?: Pick<User, 'id' | 'name' | 'avatarUrl'> }> {
     return await this.db
       .selectFrom('comments')
       .selectAll('comments')

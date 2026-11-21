@@ -55,3 +55,13 @@ The URL retrieval service, status events, bounds and tests are original WrenLore
 ## Ask AI streaming preview
 
 The preview auto-follow behavior and paced browser regression fixture are original WrenLore work based on its existing AI menu and the requirement to follow streamed output while respecting manual scrolling. No proprietary Docmost material or post-fork upstream implementation was used. The change does not alter the AGPL-3.0 provenance boundary.
+
+## User-owned MCP agent connections
+
+The MCP transport, scoped user tokens, direct collaborative editing, retry protocol,
+attribution UI and regression tests are original WrenLore work derived from its
+product requirements, existing WrenLore permission and collaboration code, public
+MCP/OpenCode specifications, and the installed open-source MCP SDK and Hocuspocus
+interfaces. No proprietary Docmost material or post-fork upstream implementation
+was consulted or incorporated. The implementation uses dependencies already in
+the repository and retains the AGPL-3.0 provenance boundary.

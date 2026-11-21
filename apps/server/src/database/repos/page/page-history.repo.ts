@@ -18,6 +18,7 @@ export class PageHistoryRepo {
   constructor(@InjectKysely() private readonly db: KyselyDB) {}
 
   private baseFields: Array<keyof PageHistory> = [
+    'agentName',
     'id',
     'pageId',
     'slugId',
@@ -64,7 +65,7 @@ export class PageHistoryRepo {
 
   async saveHistory(
     page: Page,
-    opts?: { contributorIds?: string[]; trx?: KyselyTransaction },
+    opts?: { contributorIds?: string[]; agentName?: string; trx?: KyselyTransaction },
   ): Promise<void> {
     await this.insertPageHistory(
       {
@@ -76,6 +77,7 @@ export class PageHistoryRepo {
         coverPhoto: page.coverPhoto,
         lastUpdatedById: page.lastUpdatedById ?? page.creatorId,
         contributorIds: opts?.contributorIds,
+        agentName: opts?.agentName,
         spaceId: page.spaceId,
         workspaceId: page.workspaceId,
       },

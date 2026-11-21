@@ -32,6 +32,7 @@ import {
 import SpaceTrash from "@/pages/space/space-trash.tsx";
 import AiSettings from "@/wrenlore/ai/pages/ai-settings.tsx";
 import AuditLogs from "@/wrenlore/audit/pages/audit-logs.tsx";
+import AgentConnections from "@/wrenlore/mcp/agent-connections";
 
 export default function App() {
   useTrackOrigin();
@@ -74,6 +75,7 @@ export default function App() {
 
           <Route path={"/settings"}>
             <Route path={"account/profile"} element={<AccountSettings />} />
+            <Route path={"account/agents"} element={<AgentConnections />} />
             <Route
               path={"account/preferences"}
               element={<AccountPreferences />}

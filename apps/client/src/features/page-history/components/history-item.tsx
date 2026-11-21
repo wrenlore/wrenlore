@@ -77,6 +77,7 @@ const HistoryItem = memo(function HistoryItem({
             {contributors.length === 1 && (
               <Text size="sm" c="dimmed" lineClamp={1}>
                 {contributors[0].name}
+                {historyItem.agentName && `, via ${historyItem.agentName}`}
               </Text>
             )}
           </>
@@ -89,6 +90,7 @@ const HistoryItem = memo(function HistoryItem({
             />
             <Text size="sm" c="dimmed" lineClamp={1}>
               {historyItem.lastUpdatedBy?.name}
+              {historyItem.agentName && `, via ${historyItem.agentName}`}
             </Text>
           </>
         )}
