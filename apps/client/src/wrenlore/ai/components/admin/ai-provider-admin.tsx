@@ -16,6 +16,7 @@ import {
   Table,
   Text,
   TextInput,
+  Title,
 } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
@@ -418,7 +419,7 @@ export function AiProviderAdmin() {
       <Stack gap="xs">
         <Group justify="space-between" align="flex-start">
           <div>
-            <Text fw={600}>Providers</Text>
+            <Title order={4}>Providers</Title>
             <Text size="sm" c="dimmed">
               Configure provider endpoints and API keys. Enable or disable saved
               providers from the provider list.
@@ -600,7 +601,7 @@ export function AiProviderAdmin() {
       <Divider />
 
       <Stack gap="xs">
-        <Text fw={600}>Models</Text>
+        <Title order={4}>Models</Title>
         <Text size="sm" c="dimmed">
           Register model names and task defaults for the configured providers.
         </Text>
@@ -790,7 +791,7 @@ export function AiProviderAdmin() {
       <Divider />
 
       <Stack gap="xs">
-        <Text fw={600}>Task routing</Text>
+        <Title order={4}>Task routing</Title>
         <Text size="sm" c="dimmed">
           Choose the enabled model used by each WrenLore AI task class.
         </Text>
@@ -823,7 +824,7 @@ export function AiProviderAdmin() {
       <Divider />
 
       <Stack gap="xs">
-        <Text fw={600}>Provider health</Text>
+        <Title order={4}>Provider health</Title>
         <Text size="sm" c="dimmed">
           Check provider connectivity without exposing API key values.
         </Text>

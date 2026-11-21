@@ -4,6 +4,7 @@ import {
   Badge,
   Button,
   Code,
+  Divider,
   Group,
   Modal,
   MultiSelect,
@@ -15,6 +16,7 @@ import {
 } from "@mantine/core";
 import { CopyButton } from "@/components/common/copy-button";
 import { notifications } from "@mantine/notifications";
+import { IconAlertCircle } from "@tabler/icons-react";
 import {
   useInfiniteQuery,
   useQuery,
@@ -139,7 +141,7 @@ export default function AgentConnections() {
     <>
       <SettingsTitle title="Agent connections" />
       <Stack gap="md">
-        <Text>
+        <Text size="sm" c="dimmed">
           Connect an AI agent to this workspace using your account. Changes
           appear as{" "}
           <strong>
@@ -148,7 +150,7 @@ export default function AgentConnections() {
           . Your current page and space permissions always apply.
         </Text>
         {!enabled && (
-          <Alert color="yellow">
+          <Alert variant="light" color="yellow" icon={<IconAlertCircle size={16} />}>
             MCP is disabled. A workspace administrator can enable agent
             connections in AI settings. Existing tokens can still be revoked
             here.
@@ -239,7 +241,9 @@ export default function AgentConnections() {
           Create token
         </Button>
         {tokens.isError && (
-          <Alert color="red">Could not load your connections.</Alert>
+          <Alert variant="light" color="red" icon={<IconAlertCircle size={16} />}>
+            Could not load your connections.
+          </Alert>
         )}
         <Table.ScrollContainer minWidth={650}>
           <Table>
@@ -266,7 +270,7 @@ export default function AgentConnections() {
                     </Table.Td>
                     <Table.Td>
                       {token.access === "write" ? "Read/write" : "Read only"}
-                      <Text size="xs">
+                      <Text size="xs" c="dimmed">
                         {token.spaceIds
                           ? `${token.spaceIds.length} selected spaces`
                           : "Your accessible spaces"}
@@ -288,7 +292,7 @@ export default function AgentConnections() {
                             : "Active"}
                       </Badge>
                       {token.expiresAt && (
-                        <Text size="xs">
+                        <Text size="xs" c="dimmed">
                           Expires{" "}
                           {new Date(token.expiresAt).toLocaleDateString()}
                         </Text>
@@ -312,8 +316,8 @@ export default function AgentConnections() {
             </Table.Tbody>
           </Table>
         </Table.ScrollContainer>
-        <Text fw={500}>Connect OpenCode</Text>
-        <Text size="sm">
+        <Text size="md">Connect OpenCode</Text>
+        <Text size="sm" c="dimmed">
           Set WRENLORE_MCP_TOKEN in the environment where OpenCode runs, then
           add this MCP connection to its configuration.
         </Text>
@@ -331,11 +335,10 @@ export default function AgentConnections() {
         onClose={() => setSecret(null)}
         title="Save your agent token"
       >
-        <Stack>
-          <Text>
-            This token is shown once. Save it securely before closing this
-            window.
-          </Text>
+        <Divider size="xs" mb="xs" />
+        <Stack gap="md">
+          <Text>This token is shown once. Save it securely before closing
+            this window.</Text>
           <Code
             block
             style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}
