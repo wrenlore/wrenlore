@@ -18,14 +18,15 @@ export default function AuditLogs() {
       <Helmet>
         <title>Audit log - {getAppName()}</title>
       </Helmet>
-      <Group justify="space-between" mb="md">
-        <SettingsTitle title={t("Audit log")} />
+      <SettingsTitle title={t("Audit log")} />
+
+      <Group my="md" justify="flex-end">
         <Button variant="default" size="xs" onClick={() => refetch()} loading={isLoading}>
           {t("Refresh")}
         </Button>
       </Group>
       {isError && (
-        <Alert color="red" mb="md">
+        <Alert variant="light" color="red" mb="md">
           {t("Unable to load audit log entries.")}
         </Alert>
       )}
