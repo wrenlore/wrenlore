@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.wrenlore/wrenlore",
+  "title": "WrenLore",
+  "description": "Self-hosted wiki with permission-scoped search, reading and revision-safe editing for MCP agents.",
+  "repository": {
+    "url": "https://github.com/wrenlore/wrenlore",
+    "source": "github"
+  },
+  "websiteUrl": "https://wrenlore.com/",
+  "version": "0.1.11",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{wrenlore_host}/mcp",
+      "variables": {
+        "wrenlore_host": {
+          "description": "Hostname of your self-hosted WrenLore instance, for example wiki.example.com",
+          "isRequired": true
+        }
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer token created under Account > Agent connections, including the Bearer prefix",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
