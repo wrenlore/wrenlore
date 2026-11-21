@@ -86,6 +86,7 @@
     "@types/uuid": "^10.0.0",
     "concurrently": "^9.1.2",
     "nx": "22.7.10",
+    "playwright": "1.65.1",
     "tsx": "^4.19.3"
   },
   "workspaces": {

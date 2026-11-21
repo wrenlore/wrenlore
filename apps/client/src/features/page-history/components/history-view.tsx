@@ -7,6 +7,8 @@ import {
   activeHistoryPrevIdAtom,
 } from "@/features/page-history/atoms/history-atoms";
 
+import { Text } from "@mantine/core";
+
 function HistoryView() {
   const { t } = useTranslation();
   const historyId = useAtomValue(activeHistoryIdAtom);
@@ -33,6 +35,20 @@ function HistoryView() {
 
   return (
     <div>
+      {prevData && data.title !== prevData.title && (
+        <Text size="sm" c="dimmed" mb="sm">
+          {t("Title changed from {{title}}", {
+            title: prevData.title || t("Untitled"),
+          })}
+        </Text>
+      )}
+      {prevData &&
+        (data.icon !== prevData.icon ||
+          data.coverPhoto !== prevData.coverPhoto) && (
+          <Text size="sm" c="dimmed" mb="sm">
+            {t("Page icon or cover changed.")}
+          </Text>
+        )}
       <HistoryEditor
         content={data.content}
         title={data.title}

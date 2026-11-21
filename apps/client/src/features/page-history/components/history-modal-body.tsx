@@ -1,46 +1,21 @@
-import {
-  ActionIcon,
-  Group,
-  Paper,
-  ScrollArea,
-  Switch,
-  Text,
-} from "@mantine/core";
-import HistoryList from "@/features/page-history/components/history-list";
+import { ScrollArea } from "@mantine/core";
+import HistoryList from "./history-list";
+import HistoryView from "./history-view";
+import HistoryToolbar from "./history-toolbar";
 import classes from "./css/history.module.css";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import {
   activeHistoryIdAtom,
   activeHistoryPrevIdAtom,
-  diffCountsAtom,
-  highlightChangesAtom,
-} from "@/features/page-history/atoms/history-atoms";
-import HistoryView from "@/features/page-history/components/history-view";
+} from "../atoms/history-atoms";
 import { useRef } from "react";
-import { IconChevronUp, IconChevronDown } from "@tabler/icons-react";
-import { useTranslation } from "react-i18next";
-import {
-  useDiffNavigation,
-  useHistoryReset,
-} from "@/features/page-history/hooks";
-
-interface Props {
-  pageId: string;
-}
-
-export default function HistoryModalBody({ pageId }: Props) {
-  const { t } = useTranslation();
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
-
-  const activeHistoryId = useAtomValue(activeHistoryIdAtom);
-  const activeHistoryPrevId = useAtomValue(activeHistoryPrevIdAtom);
-  const [highlightChanges, setHighlightChanges] = useAtom(highlightChangesAtom);
-  const diffCounts = useAtomValue(diffCountsAtom);
-
+import { useDiffNavigation, useHistoryReset } from "../hooks";
+export default function HistoryModalBody({ pageId }: { pageId: string }) {
+  const viewport = useRef<HTMLDivElement>(null);
+  const active = useAtomValue(activeHistoryIdAtom);
+  const previous = useAtomValue(activeHistoryPrevIdAtom);
   useHistoryReset(pageId);
-  const { currentChangeIndex, handlePrevChange, handleNextChange } =
-    useDiffNavigation(scrollViewportRef);
-
+  const nav = useDiffNavigation(viewport);
   return (
     <div className={classes.sidebarFlex}>
       <nav className={classes.sidebar}>
@@ -48,62 +23,22 @@ export default function HistoryModalBody({ pageId }: Props) {
           <HistoryList pageId={pageId} />
         </div>
       </nav>
-
-      <div style={{ position: "relative", flex: 1 }}>
+      <div className={classes.preview}>
         <ScrollArea
-          h={650}
-          w="100%"
+          className={classes.scroller}
           scrollbarSize={5}
-          viewportRef={scrollViewportRef}
+          viewportRef={viewport}
         >
           <div className={classes.sidebarRightSection}>
-            {activeHistoryId && <HistoryView />}
+            {active && <HistoryView />}
           </div>
         </ScrollArea>
-
-        {activeHistoryId && activeHistoryPrevId && (
-          <Paper
-            shadow="md"
-            radius="xl"
-            px="md"
-            py="xs"
-            style={{
-              position: "absolute",
-              bottom: 16,
-              left: "50%",
-              transform: "translateX(-50%)",
-            }}
-          >
-            <Group gap="md" wrap="nowrap">
-              <Switch
-                label={t("Highlight changes")}
-                checked={highlightChanges}
-                onChange={(e) => setHighlightChanges(e.currentTarget.checked)}
-                styles={{ label: { userSelect: "none", whiteSpace: "nowrap" } }}
-              />
-              {highlightChanges && diffCounts && diffCounts.total > 0 && (
-                <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                    {currentChangeIndex} of {diffCounts.total}
-                  </Text>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    onClick={handlePrevChange}
-                  >
-                    <IconChevronUp size={16} />
-                  </ActionIcon>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    onClick={handleNextChange}
-                  >
-                    <IconChevronDown size={16} />
-                  </ActionIcon>
-                </Group>
-              )}
-            </Group>
-          </Paper>
+        {active && previous && (
+          <HistoryToolbar
+            index={nav.currentChangeIndex}
+            previous={nav.handlePrevChange}
+            next={nav.handleNextChange}
+          />
         )}
       </div>
     </div>

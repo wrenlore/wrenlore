@@ -9,9 +9,19 @@ import {
   getPageHistoryById,
   getPageHistoryList,
 } from "@/features/page-history/services/page-history-service";
-import { IPageHistory } from "@/features/page-history/types/page.types";
+import {
+  IPageHistory,
+  HistoryStatus,
+} from "@/features/page-history/types/page.types";
 import { IPagination } from "@/lib/types.ts";
 import { queryClient } from "@/main";
+
+import { useAtomValue } from "jotai";
+import { historyAtoms } from "../atoms/history-atoms";
+
+export type HistoryListResult = IPagination<IPageHistory> & {
+  status?: HistoryStatus;
+};
 
 const HISTORY_STALE_TIME = 60 * 60 * 1000;
 
@@ -25,11 +35,16 @@ export function prefetchPageHistory(historyId: string) {
 
 export function usePageHistoryListQuery(
   pageId: string,
-): UseInfiniteQueryResult<InfiniteData<IPagination<IPageHistory>, unknown>> {
+): UseInfiniteQueryResult<InfiniteData<HistoryListResult, unknown>> {
+  const opened = useAtomValue(historyAtoms);
   return useInfiniteQuery({
     queryKey: ["page-history-list", pageId],
     queryFn: ({ pageParam }) => getPageHistoryList(pageId, pageParam),
-    enabled: !!pageId,
+    enabled: !!pageId && opened,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: opened ? 5000 : false,
     gcTime: 0,
     initialPageParam: undefined,
     getNextPageParam: (lastPage) => lastPage.meta?.nextCursor ?? undefined,

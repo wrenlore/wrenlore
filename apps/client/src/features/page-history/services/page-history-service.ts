@@ -1,11 +1,11 @@
+import type { HistoryListResult } from "../queries/page-history-query";
 import api from "@/lib/api-client";
 import { IPageHistory } from "@/features/page-history/types/page.types";
-import { IPagination } from "@/lib/types.ts";
 
 export async function getPageHistoryList(
   pageId: string,
   cursor?: string,
-): Promise<IPagination<IPageHistory>> {
+): Promise<HistoryListResult> {
   const req = await api.post("/pages/history", {
     pageId,
     cursor,

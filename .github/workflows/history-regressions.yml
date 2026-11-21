@@ -1,0 +1,66 @@
+name: Page history regressions
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/**"
+      - "apps/client/src/features/page-history/**"
+      - "packages/editor-ext/**"
+      - "scripts/history-*"
+      - "scripts/history-ui/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/history-regressions.yml"
+  push:
+    branches: [master]
+    paths:
+      - "apps/server/**"
+      - "apps/client/src/features/page-history/**"
+      - "packages/editor-ext/**"
+      - "scripts/history-*"
+      - "scripts/history-ui/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/history-regressions.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: wrenlore
+          POSTGRES_PASSWORD: disposable-test-only
+          POSTGRES_DB: wrenlore_history_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wrenlore -d wrenlore_history_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @wrenlore/editor-ext build
+      - run: pnpm --filter server build
+      - run: pnpm --filter client exec tsc --noEmit
+      - run: pnpm --filter server exec jest --runInBand
+      - run: pnpm exec tsx --test scripts/history-formatting.test.ts
+      - run: node scripts/history-ci.cjs
+        env:
+          WRENLORE_HISTORY_TEST: disposable
+          DATABASE_URL: postgresql://wrenlore:disposable-test-only@127.0.0.1:5432/wrenlore_history_test
+          REDIS_URL: redis://127.0.0.1:6379
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: node scripts/history-ui.cjs

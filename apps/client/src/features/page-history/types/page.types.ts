@@ -21,3 +21,9 @@ export interface IPageHistory {
   lastUpdatedBy: IPageHistoryUser;
   contributors?: IPageHistoryUser[];
 }
+
+export interface HistoryStatus {
+  pending: boolean;
+  dueAt: string | null;
+  retrying: boolean;
+}

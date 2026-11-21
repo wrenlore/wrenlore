@@ -56,7 +56,8 @@
 }
 
 .sidebar {
-  max-height: rem(700px);
+  min-height: 0;
+  flex-shrink: 0;
   width: rem(250px);
   padding: var(--mantine-spacing-sm);
   display: flex;
@@ -67,13 +68,56 @@
 
 .sidebarFlex {
   display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
 }
 
 .sidebarMain {
   flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
 .sidebarRightSection {
   flex: 1;
   padding: rem(16px) rem(40px);
+}
+
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modalBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.preview {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.versionList {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.scroller {
+  flex: 1;
+  min-height: 0;
+}
+.toolbar {
+  flex-shrink: 0;
+  padding: var(--mantine-spacing-xs);
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+.actions {
+  flex-shrink: 0;
 }

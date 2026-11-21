@@ -1,25 +1,13 @@
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Group,
-  Paper,
-  ScrollArea,
-  Select,
-  Switch,
-  Text,
-} from "@mantine/core";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Box, Button, Group, ScrollArea, Select, Text } from "@mantine/core";
+import { useAtom, useSetAtom } from "jotai";
 import {
   activeHistoryIdAtom,
   activeHistoryPrevIdAtom,
-  diffCountsAtom,
-  highlightChangesAtom,
   historyAtoms,
 } from "@/features/page-history/atoms/history-atoms";
 import HistoryView from "@/features/page-history/components/history-view";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { IconCheck, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { IconCheck } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { usePageHistoryListQuery } from "@/features/page-history/queries/page-history-query";
 import { formattedDate } from "@/lib/time";
@@ -28,6 +16,8 @@ import {
   useHistoryReset,
   useHistoryRestore,
 } from "@/features/page-history/hooks";
+import HistoryToolbar from "./history-toolbar";
+import HistoryStatusNotice from "./history-status";
 import classes from "./css/history-mobile.module.css";
 
 interface Props {
@@ -39,9 +29,9 @@ export default function HistoryModalMobile({ pageId, pageTitle }: Props) {
   const { t } = useTranslation();
 
   const [activeHistoryId, setActiveHistoryId] = useAtom(activeHistoryIdAtom);
-  const setActiveHistoryPrevId = useSetAtom(activeHistoryPrevIdAtom);
-  const [highlightChanges, setHighlightChanges] = useAtom(highlightChangesAtom);
-  const diffCounts = useAtomValue(diffCountsAtom);
+  const [activeHistoryPrevId, setActiveHistoryPrevId] = useAtom(
+    activeHistoryPrevIdAtom,
+  );
   const setHistoryModalOpen = useSetAtom(historyAtoms);
 
   const scrollViewportRef = useRef<HTMLDivElement>(null);
@@ -50,6 +40,7 @@ export default function HistoryModalMobile({ pageId, pageTitle }: Props) {
   const {
     data: pageHistoryData,
     isLoading,
+    isError,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -85,8 +76,9 @@ export default function HistoryModalMobile({ pageId, pageTitle }: Props) {
   useEffect(() => {
     if (historyItems.length > 0 && !activeHistoryId) {
       setActiveHistoryId(historyItems[0].id);
-      setActiveHistoryPrevId(historyItems[1]?.id ?? "");
     }
+    const index = historyItems.findIndex((item) => item.id === activeHistoryId);
+    setActiveHistoryPrevId(historyItems[index >= 0 ? index + 1 : 1]?.id ?? "");
   }, [
     historyItems,
     activeHistoryId,
@@ -125,6 +117,8 @@ export default function HistoryModalMobile({ pageId, pageTitle }: Props) {
   return (
     <Box className={classes.container}>
       <Box className={classes.selectorWrapper}>
+        <HistoryStatusNotice status={pageHistoryData?.pages[0]?.status} />
+        {isError && <Text>{t("Error loading page history.")}</Text>}
         <Select
           data={selectData}
           value={activeHistoryId}
@@ -170,45 +164,12 @@ export default function HistoryModalMobile({ pageId, pageTitle }: Props) {
         </Group>
       )}
 
-      {activeHistoryId && (
-        <Paper
-          shadow="sm"
-          radius="xl"
-          px="md"
-          py="xs"
-          className={classes.floatingBar}
-        >
-          <Group gap="sm" wrap="nowrap">
-            <Switch
-              label={t("Highlight changes")}
-              checked={highlightChanges}
-              onChange={(e) => setHighlightChanges(e.currentTarget.checked)}
-              size="sm"
-              styles={{ label: { userSelect: "none", whiteSpace: "nowrap" } }}
-            />
-            {highlightChanges && diffCounts && diffCounts.total > 0 && (
-              <Group gap={4} wrap="nowrap">
-                <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                  {currentChangeIndex} of {diffCounts.total}
-                </Text>
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  onClick={handlePrevChange}
-                >
-                  <IconChevronUp size={16} />
-                </ActionIcon>
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  onClick={handleNextChange}
-                >
-                  <IconChevronDown size={16} />
-                </ActionIcon>
-              </Group>
-            )}
-          </Group>
-        </Paper>
+      {activeHistoryId && activeHistoryPrevId && (
+        <HistoryToolbar
+          index={currentChangeIndex}
+          previous={handlePrevChange}
+          next={handleNextChange}
+        />
       )}
     </Box>
   );
