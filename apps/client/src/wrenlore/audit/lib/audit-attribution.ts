@@ -1,4 +1,11 @@
-import { IAuditLog } from "@/wrenlore/audit/types/audit.types";
+import type { IAuditLog } from "@/wrenlore/audit/types/audit.types";
+
+const connectionEvents = new Set(["agent.token_created", "agent.token_revoked"]);
+const legacyAgentEvents = new Set([
+  "agent.create_page",
+  "agent.add_comment",
+  "agent.page_edited",
+]);
 
 export interface AuditAttribution {
   /** The user (or system) that performed the action. */
@@ -18,11 +25,19 @@ export interface AuditAttribution {
 export function getAuditAttribution(item: IAuditLog): AuditAttribution {
   const agentName =
     typeof item.metadata?.agentName === "string" ? item.metadata.agentName : null;
-  const viaAgent = item.metadata?.viaAgent === true && agentName !== null;
+  // Existing agent-action records predate the explicit marker. Preserve their
+  // attribution using the known event types; never reinterpret token management
+  // or an arbitrary agentName field as an agent-performed action.
+  const managedConnection = connectionEvents.has(item.event);
+  const viaAgent =
+    agentName !== null &&
+    !managedConnection &&
+    (item.metadata?.viaAgent === true ||
+      (item.metadata?.viaAgent === undefined && legacyAgentEvents.has(item.event)));
 
   return {
     actorLabel: item.actor?.name || item.actorType || "System",
     viaAgentName: viaAgent ? agentName : null,
-    managedAgentName: viaAgent || !agentName ? null : agentName,
+    managedAgentName: managedConnection ? agentName : null,
   };
 }
