@@ -82,6 +82,7 @@ describe('PageService page permissions', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
     return { service, pagePermissionRepo, trx };

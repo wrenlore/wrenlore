@@ -1,18 +1,19 @@
 import "@/features/editor/styles/index.css";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { mainExtensions } from "@/features/editor/extensions/extensions";
-import { Title } from "@mantine/core";
+import { Title, Text } from "@mantine/core";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import historyClasses from "./css/history.module.css";
-import { recreateTransform } from "@wrenlore/editor-ext";
+import { compareHistory } from "../lib/compare-history";
 import { DOMSerializer, Node } from "@tiptap/pm/model";
-import { ChangeSet, simplifyChanges } from "@tiptap/pm/changeset";
 import { useAtom } from "jotai";
 import {
   diffCountsAtom,
   highlightChangesAtom,
 } from "@/features/page-history/atoms/history-atoms";
+
+import { useTranslation } from "react-i18next";
 
 export interface HistoryEditorProps {
   title: string;
@@ -25,6 +26,8 @@ export function HistoryEditor({
   content,
   previousContent,
 }: HistoryEditorProps) {
+  const { t } = useTranslation();
+  const [presentationChange, setPresentationChange] = useState(false);
   const [highlightChanges] = useAtom(highlightChangesAtom);
   const [, setDiffCounts] = useAtom(diffCountsAtom);
 
@@ -36,6 +39,7 @@ export function HistoryEditor({
   useEffect(() => {
     if (!editor || !content) return;
 
+    setPresentationChange(false);
     let decorationSet = DecorationSet.empty;
     let addedCount = 0;
     let deletedCount = 0;
@@ -46,18 +50,11 @@ export function HistoryEditor({
         const oldContent = Node.fromJSON(schema, previousContent);
         const newContent = Node.fromJSON(schema, content);
 
-        const tr = recreateTransform(oldContent, newContent, {
-          complexSteps: false,
-          wordDiffs: true,
-          simplifyDiff: true,
-        });
-
-        const changeSet = ChangeSet.create(oldContent).addSteps(
-          tr.doc,
-          tr.mapping.maps,
-          [],
+        const { changes, unhighlightedChanges } = compareHistory(
+          oldContent,
+          newContent,
         );
-        const changes = simplifyChanges(changeSet.changes, newContent);
+        setPresentationChange(unhighlightedChanges);
 
         editor.commands.setContent(content);
 
@@ -191,6 +188,13 @@ export function HistoryEditor({
 
   return (
     <div>
+      {presentationChange && (
+        <Text size="sm" c="dimmed" mb="sm">
+          {t(
+            "Formatting or block properties changed. Text highlighting does not show these changes.",
+          )}
+        </Text>
+      )}
       <Title order={1}>{title}</Title>
       {editor && (
         <EditorContent

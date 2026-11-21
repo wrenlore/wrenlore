@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PageHistoryRepo } from '@wrenlore/db/repos/page/page-history.repo';
 import { PageHistory } from '@wrenlore/db/types/entity.types';
 import { PaginationOptions } from '@wrenlore/db/pagination/pagination-options';
-import { CursorPaginationResult } from '@wrenlore/db/pagination/cursor-pagination';
 
 @Injectable()
 export class PageHistoryService {
@@ -17,10 +16,11 @@ export class PageHistoryService {
   async findHistoryByPageId(
     pageId: string,
     paginationOptions: PaginationOptions,
-  ): Promise<CursorPaginationResult<PageHistory>> {
-    return this.pageHistoryRepo.findPageHistoryByPageId(
-      pageId,
-      paginationOptions,
-    );
+  ) {
+    const [result, status] = await Promise.all([
+      this.pageHistoryRepo.findPageHistoryByPageId(pageId, paginationOptions),
+      this.pageHistoryRepo.getHistoryStatus(pageId),
+    ]);
+    return { ...result, status };
   }
 }

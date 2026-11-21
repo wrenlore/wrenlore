@@ -254,7 +254,7 @@ export class AgentDocumentService {
     await this.db.transaction().execute(async (trx) => {
       const currentPage = await trx
         .selectFrom('pages')
-        .select(['title', 'contributorIds'])
+        .select(['title', 'icon', 'coverPhoto', 'contributorIds'])
         .where('id', '=', page.id)
         .where('deletedAt', 'is', null)
         .forUpdate()
@@ -277,9 +277,12 @@ export class AgentDocumentService {
         .insertInto('pageHistory')
         .values({
           id: operation.id,
+          createdAt: sql<Date>`clock_timestamp()`,
           pageId: page.id,
           slugId: page.slugId,
           title: currentPage.title,
+          icon: currentPage.icon,
+          coverPhoto: currentPage.coverPhoto,
           content: savedContent as any,
           lastUpdatedById: actor.user.id,
           contributorIds: [actor.user.id],

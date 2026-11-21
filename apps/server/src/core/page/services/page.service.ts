@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreatePageDto, ContentFormat } from '../dto/create-page.dto';
 import { ContentOperation, UpdatePageDto } from '../dto/update-page.dto';
+import { PageHistoryRepo } from '@wrenlore/db/repos/page/page-history.repo';
 import { PageRepo } from '@wrenlore/db/repos/page/page.repo';
 import { PagePermissionRepo } from '@wrenlore/db/repos/page/page-permission.repo';
 import { InsertablePage, Page, User } from '@wrenlore/db/types/entity.types';
@@ -72,6 +73,7 @@ export class PageService {
     private eventEmitter: EventEmitter2,
     private collaborationGateway: CollaborationGateway,
     private readonly watcherService: WatcherService,
+    private readonly pageHistoryRepo: PageHistoryRepo,
   ) {}
 
   async findById(
@@ -211,20 +213,35 @@ export class PageService {
     updatePageDto: UpdatePageDto,
     user: User,
   ): Promise<Page> {
-    const contributors = new Set<string>(page.contributorIds);
-    contributors.add(user.id);
-    const contributorIds = Array.from(contributors);
-
-    await this.pageRepo.updatePage(
-      {
-        title: updatePageDto.title,
-        icon: updatePageDto.icon,
-        lastUpdatedById: user.id,
-        updatedAt: new Date(),
-        contributorIds: contributorIds,
-      },
-      page.id,
-    );
+    await executeTx(this.db, async (trx) => {
+      const current = await this.pageRepo.findById(page.id, {
+        withLock: true,
+        trx,
+      });
+      if (!current) throw new NotFoundException('Page not found');
+      const contributorIds = [
+        ...new Set([...(current.contributorIds ?? []), user.id]),
+      ];
+      await this.pageRepo.updatePage(
+        {
+          title: updatePageDto.title,
+          icon: updatePageDto.icon,
+          lastUpdatedById: user.id,
+          updatedAt: new Date(),
+          contributorIds,
+        },
+        page.id,
+        trx,
+      );
+      if (
+        (updatePageDto.title !== undefined &&
+          updatePageDto.title !== current.title) ||
+        (updatePageDto.icon !== undefined &&
+          updatePageDto.icon !== current.icon)
+      ) {
+        await this.pageHistoryRepo.scheduleHistory(current, [user.id], trx);
+      }
+    });
 
     this.generalQueue
       .add(QueueJob.ADD_PAGE_WATCHERS, {

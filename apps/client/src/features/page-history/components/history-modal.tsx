@@ -1,58 +1,40 @@
 import { Modal, Text } from "@mantine/core";
 import { useAtom } from "jotai";
-import { historyAtoms } from "@/features/page-history/atoms/history-atoms";
-import HistoryModalBody from "@/features/page-history/components/history-modal-body";
-import HistoryModalMobile from "@/features/page-history/components/history-modal-mobile";
+import { historyAtoms } from "../atoms/history-atoms";
+import HistoryModalBody from "./history-modal-body";
+import HistoryModalMobile from "./history-modal-mobile";
 import { useTranslation } from "react-i18next";
 import { useMediaQuery } from "@mantine/hooks";
+import classes from "./css/history.module.css";
 
-interface Props {
+export default function HistoryModal({
+  pageId,
+  pageTitle,
+}: {
   pageId: string;
   pageTitle?: string;
-}
-
-export default function HistoryModal({ pageId, pageTitle }: Props) {
+}) {
   const { t } = useTranslation();
-  const [isModalOpen, setModalOpen] = useAtom(historyAtoms);
-  const isMobile = useMediaQuery("(max-width: 800px)");
-
-  if (isMobile) {
-    return (
-      <Modal.Root
-        opened={isModalOpen}
-        onClose={() => setModalOpen(false)}
-        fullScreen
-      >
-        <Modal.Overlay />
-        <Modal.Content style={{ overflow: "hidden" }}>
-          <Modal.Header>
-            <Modal.Title>
-              <Text size="md" fw={500}>
-                {t("Page history")}
-              </Text>
-            </Modal.Title>
-            <Modal.CloseButton />
-          </Modal.Header>
-          <Modal.Body
-            p={0}
-            style={{ height: "calc(100vh - 60px)", overflow: "hidden" }}
-          >
-            <HistoryModalMobile pageId={pageId} pageTitle={pageTitle} />
-          </Modal.Body>
-        </Modal.Content>
-      </Modal.Root>
-    );
-  }
-
+  const [opened, setOpened] = useAtom(historyAtoms);
+  const mobile = useMediaQuery("(max-width: 800px)");
   return (
     <Modal.Root
       size={1400}
-      opened={isModalOpen}
-      onClose={() => setModalOpen(false)}
+      opened={opened}
+      onClose={() => setOpened(false)}
+      fullScreen={mobile}
+      classNames={{ content: classes.modalContent }}
+      styles={{
+        content: {
+          height: mobile
+            ? "100dvh"
+            : "min(820px, calc(100dvh - 2 * var(--modal-y-offset)))",
+        },
+      }}
     >
       <Modal.Overlay />
-      <Modal.Content style={{ overflow: "hidden" }}>
-        <Modal.Header>
+      <Modal.Content>
+        <Modal.Header style={{ flexShrink: 0 }}>
           <Modal.Title>
             <Text size="md" fw={500}>
               {t("Page history")}
@@ -60,8 +42,12 @@ export default function HistoryModal({ pageId, pageTitle }: Props) {
           </Modal.Title>
           <Modal.CloseButton />
         </Modal.Header>
-        <Modal.Body>
-          <HistoryModalBody pageId={pageId} />
+        <Modal.Body className={classes.modalBody} p={mobile ? 0 : undefined}>
+          {mobile ? (
+            <HistoryModalMobile pageId={pageId} pageTitle={pageTitle} />
+          ) : (
+            <HistoryModalBody pageId={pageId} />
+          )}
         </Modal.Body>
       </Modal.Content>
     </Modal.Root>

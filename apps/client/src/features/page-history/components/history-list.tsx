@@ -21,6 +21,9 @@ import {
 import { useTranslation } from "react-i18next";
 import { useHistoryRestore } from "@/features/page-history/hooks";
 
+import classes from "./css/history.module.css";
+import HistoryStatusNotice from "./history-status";
+
 const PREFETCH_DELAY_MS = 150;
 
 interface Props {
@@ -88,8 +91,9 @@ function HistoryList({ pageId }: Props) {
   useEffect(() => {
     if (historyItems.length > 0 && !activeHistoryId) {
       setActiveHistoryId(historyItems[0].id);
-      setActiveHistoryPrevId(historyItems[1]?.id ?? "");
     }
+    const index = historyItems.findIndex((item) => item.id === activeHistoryId);
+    setActiveHistoryPrevId(historyItems[index >= 0 ? index + 1 : 1]?.id ?? "");
   }, [
     historyItems,
     activeHistoryId,
@@ -123,12 +127,23 @@ function HistoryList({ pageId }: Props) {
   }
 
   if (historyItems.length === 0) {
-    return <>{t("No page history saved yet.")}</>;
+    return (
+      <div>
+        <HistoryStatusNotice status={pageHistoryData?.pages[0]?.status} />
+        {t("No page history saved yet.")}
+      </div>
+    );
   }
 
   return (
-    <div>
-      <ScrollArea h={620} w="100%" type="scroll" scrollbarSize={5}>
+    <div className={classes.versionList}>
+      <HistoryStatusNotice status={pageHistoryData?.pages[0]?.status} />
+      <ScrollArea
+        className={classes.scroller}
+        w="100%"
+        type="scroll"
+        scrollbarSize={5}
+      >
         {historyItems.map((historyItem, index) => (
           <HistoryItem
             key={historyItem.id}
@@ -151,7 +166,7 @@ function HistoryList({ pageId }: Props) {
       {canRestore && (
         <>
           <Divider />
-          <Group p="xs" wrap="nowrap">
+          <Group className={classes.actions} p="xs" wrap="nowrap">
             <Button
               variant="default"
               size="compact-md"

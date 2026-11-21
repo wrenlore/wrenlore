@@ -19,10 +19,17 @@ export function useDiffNavigation(
 
       const element = viewport.querySelector(`[data-diff-index="${index}"]`);
       if (element instanceof HTMLElement) {
-        const elementTop = element.offsetTop;
-        const viewportHeight = viewport.clientHeight;
+        // offsetTop can be relative to a positioned table cell or another
+        // nested block. Convert screen coordinates to this scroll viewport.
+        const elementRect = element.getBoundingClientRect();
+        const viewportRect = viewport.getBoundingClientRect();
         const scrollTarget =
-          elementTop - viewportHeight / 2 + element.offsetHeight / 2;
+          viewport.scrollTop +
+          elementRect.top -
+          viewportRect.top -
+          viewport.clientTop -
+          viewport.clientHeight / 2 +
+          elementRect.height / 2;
         viewport.scrollTo({ top: scrollTarget, behavior: "smooth" });
       }
     },

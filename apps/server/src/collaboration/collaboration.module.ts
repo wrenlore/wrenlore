@@ -13,6 +13,7 @@ import { CollabWsAdapter } from './adapter/collab-ws.adapter';
 import { IncomingMessage } from 'http';
 import { WebSocket } from 'ws';
 import { TokenModule } from '../core/auth/token.module';
+import { HistoryScheduler } from './services/history-scheduler.service';
 import { HistoryProcessor } from './processors/history.processor';
 import { LoggerExtension } from './extensions/logger.extension';
 import { CollaborationHandler } from './collaboration.handler';
@@ -29,6 +30,7 @@ import { DocumentWriteQueue } from './document-write-queue';
     PersistenceExtension,
     LoggerExtension,
     HistoryProcessor,
+    HistoryScheduler,
     CollabHistoryService,
     CollaborationHandler,
     AgentDocumentService,

@@ -276,6 +276,14 @@ export interface InstanceSettings {
   value: Json;
 }
 
+export interface PageHistoryPending {
+  pageId: string;
+  dueAt: Timestamp;
+  contributorIds: Generated<string[]>;
+  attempts: Generated<number>;
+  lastError: string | null;
+}
+
 export interface PageHistory {
   agentName: string | null;
   content: Json | null;
@@ -533,6 +541,7 @@ export interface DB {
   pageAccess: PageAccess;
   pagePermissions: PagePermissions;
   pageHistory: PageHistory;
+  pageHistoryPending: PageHistoryPending;
   pages: Pages;
   shares: Shares;
   spaceMembers: SpaceMembers;
