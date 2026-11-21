@@ -5,8 +5,10 @@ on:
     paths:
       - "apps/server/**"
       - "apps/client/src/wrenlore/mcp/**"
+      - "apps/client/src/wrenlore/audit/lib/**"
       - "packages/editor-ext/**"
       - "scripts/mcp-*"
+      - "scripts/audit-attribution.test.ts"
       - "pnpm-lock.yaml"
       - ".github/workflows/mcp-regressions.yml"
   push:
@@ -14,8 +16,10 @@ on:
     paths:
       - "apps/server/**"
       - "apps/client/src/wrenlore/mcp/**"
+      - "apps/client/src/wrenlore/audit/lib/**"
       - "packages/editor-ext/**"
       - "scripts/mcp-*"
+      - "scripts/audit-attribution.test.ts"
       - "pnpm-lock.yaml"
       - ".github/workflows/mcp-regressions.yml"
 
@@ -55,6 +59,8 @@ jobs:
       - run: pnpm --filter client exec tsc --noEmit
       - run: pnpm --filter server exec jest --runInBand --testPathPatterns='core/(page|comment|sso)'
       - run: node --test scripts/mcp-document.test.cjs
+      - run: pnpm exec tsx --test scripts/audit-attribution.test.ts
+      - run: pnpm --filter server exec jest --runInBand --testPathPatterns='common/audit|core/agent-tokens'
       - run: node scripts/mcp-ci.cjs
         env:
           WRENLORE_MCP_TEST: disposable
