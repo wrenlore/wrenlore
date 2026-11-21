@@ -8,3 +8,13 @@ export async function getAuditLogs(
   const req = await api.post<IPagination<IAuditLog>>("/audit", params);
   return req.data;
 }
+
+export type AuditAccess = {
+  visible: boolean;
+  scope: "workspace" | "spaces" | "none";
+};
+
+export async function getAuditAccess(): Promise<AuditAccess> {
+  const req = await api.post<AuditAccess>("/audit/access", {});
+  return req.data;
+}

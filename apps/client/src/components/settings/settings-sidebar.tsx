@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Group, Text, ScrollArea, ActionIcon } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
 import {
   IconUser,
   IconSettings,
@@ -28,6 +29,7 @@ import {
   prefetchAuditLogs,
 } from "@/components/settings/settings-queries.tsx";
 import AppVersion from "@/components/settings/app-version.tsx";
+import { getAuditAccess } from "@/wrenlore/audit/services/audit-service";
 import { mobileSidebarAtom } from "@/components/layouts/global/hooks/atoms/sidebar-atom.ts";
 import { useToggleSidebar } from "@/components/layouts/global/hooks/hooks/use-toggle-sidebar.ts";
 import { useSettingsNavigation } from "@/hooks/use-settings-navigation";
@@ -36,7 +38,7 @@ type DataItem = {
   label: string;
   icon: React.ElementType;
   path: string;
-  role?: "admin" | "owner";
+  role?: "admin" | "owner" | "audit";
   env?: "cloud" | "selfhosted";
 };
 
@@ -86,7 +88,9 @@ const groupedData: DataGroup[] = [
         label: "Audit log",
         icon: IconHistory,
         path: "/settings/audit",
-        role: "admin",
+        // Workspace admins see the full log; space administrators see their
+        // spaces' activity. Access is resolved server-side (#151).
+        role: "audit",
         env: "selfhosted",
       },
     ],
@@ -101,6 +105,12 @@ export default function SettingsSidebar() {
   const { isAdmin, isOwner } = useUserRole();
   const [mobileSidebarOpened] = useAtom(mobileSidebarAtom);
   const toggleMobileSidebar = useToggleSidebar(mobileSidebarAtom);
+  const { data: auditAccess } = useQuery({
+    queryKey: ["audit-access"],
+    queryFn: getAuditAccess,
+    enabled: !isCloud(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     setActive(location.pathname);
@@ -111,6 +121,7 @@ export default function SettingsSidebar() {
     if (item.env === "selfhosted" && isCloud()) return false;
     if (item.role === "admin" && !isAdmin) return false;
     if (item.role === "owner" && !isOwner) return false;
+    if (item.role === "audit" && !auditAccess?.visible) return false;
     return true;
   };
 

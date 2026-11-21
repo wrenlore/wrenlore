@@ -132,7 +132,8 @@ describe('AuthService MFA login flow', () => {
   };
 
   it('keeps password login unchanged for users without MFA', async () => {
-    const { service, userRepo, tokenService } = await createService();
+    const { service, userRepo, tokenService, auditService } =
+      await createService();
 
     await expect(
       service.login(
@@ -144,6 +145,12 @@ describe('AuthService MFA login flow', () => {
     expect(userRepo.updateLastLogin).toHaveBeenCalledWith(userId, workspaceId);
     expect(tokenService.generateAccessToken).toHaveBeenCalled();
     expect(tokenService.generateMfaToken).not.toHaveBeenCalled();
+    // The login route is public; the audit actor must be set explicitly so
+    // user.login events are not recorded with a NULL actor (#151).
+    expect(auditService.setActorId).toHaveBeenCalledWith(userId);
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'user.login' }),
+    );
   });
 
   it('logs in normally when MFA is not required even if user MFA is enrolled', async () => {

@@ -93,6 +93,15 @@ export const AuditEvent = {
   // Attachment
   ATTACHMENT_UPLOADED: 'attachment.uploaded',
   // ATTACHMENT_DELETED: 'attachment.deleted',
+
+  // Audit configuration
+  AUDIT_RETENTION_UPDATED: 'audit.retention_updated',
+
+  // Agent (MCP) token management and agent-performed actions.
+  // agent.token_created / agent.token_revoked are manual management by the
+  // token owner; agent.<tool> events are performed via agent credentials.
+  AGENT_TOKEN_CREATED: 'agent.token_created',
+  AGENT_TOKEN_REVOKED: 'agent.token_revoked',
 } as const;
 
 export type AuditEventType = (typeof AuditEvent)[keyof typeof AuditEvent];

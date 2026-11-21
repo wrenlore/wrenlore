@@ -216,6 +216,9 @@ export class AuthService {
     user.lastLoginAt = new Date();
     await this.userRepo.updateLastLogin(user.id, workspaceId);
 
+    // The login route is public, so the actor interceptor cannot fill the
+    // audit context; record the authenticated user explicitly (#151).
+    this.auditService.setActorId(user.id);
     this.auditService.log({
       event: AuditEvent.USER_LOGIN,
       resourceType: AuditResource.USER,

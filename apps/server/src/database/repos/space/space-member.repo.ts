@@ -10,6 +10,7 @@ import {
 } from '@wrenlore/db/types/entity.types';
 import { PaginationOptions } from '../../pagination/pagination-options';
 import { MemberInfo, UserSpaceRole } from './types';
+import { SpaceRole } from '../../../common/helpers/types/permission';
 import { executeWithCursorPagination } from '@wrenlore/db/pagination/cursor-pagination';
 import { GroupRepo } from '@wrenlore/db/repos/group/group.repo';
 import { SpaceRepo } from '@wrenlore/db/repos/space/space.repo';
@@ -290,6 +291,41 @@ export class SpaceMemberRepo {
   async getUserSpaceIds(userId: string): Promise<string[]> {
     const membership = await this.getUserSpaceIdsQuery(userId).execute();
     return membership.map((space) => space.id);
+  }
+
+  /*
+   * Spaces where the user is a space administrator (directly or via a group),
+   * used for server-side audit visibility scoping (issue #151).
+   */
+  async getUserAdminSpaceIds(
+    userId: string,
+    workspaceId: string,
+  ): Promise<string[]> {
+    const direct = this.db
+      .selectFrom('spaceMembers')
+      .innerJoin('spaces', 'spaces.id', 'spaceMembers.spaceId')
+      .select('spaces.id')
+      .where('spaceMembers.userId', '=', userId)
+      .where('spaceMembers.role', '=', SpaceRole.ADMIN)
+      .where('spaces.workspaceId', '=', workspaceId)
+      .where('spaces.deletedAt', 'is', null);
+
+    const viaGroup = this.db
+      .selectFrom('spaceMembers')
+      .innerJoin('groupUsers', 'groupUsers.groupId', 'spaceMembers.groupId')
+      .innerJoin('spaces', 'spaces.id', 'spaceMembers.spaceId')
+      .select('spaces.id')
+      .where('groupUsers.userId', '=', userId)
+      .where('spaceMembers.role', '=', SpaceRole.ADMIN)
+      .where('spaces.workspaceId', '=', workspaceId)
+      .where('spaces.deletedAt', 'is', null);
+
+    const rows = await this.db
+      .selectFrom(direct.union(viaGroup).as('admin_spaces'))
+      .select('id')
+      .execute();
+
+    return rows.map((row) => row.id);
   }
 
   async getUserSpaces(userId: string, pagination: PaginationOptions) {
