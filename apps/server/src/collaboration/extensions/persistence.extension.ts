@@ -24,17 +24,11 @@ import {
 import { isDeepStrictEqual } from 'node:util';
 import {
   IPageBacklinkJob,
-  IPageHistoryJob,
   IPageMentionNotificationJob,
 } from '../../integrations/queue/constants/queue.interface';
 import { Page } from '@wrenlore/db/types/entity.types';
-import { CollabHistoryService } from '../services/collab-history.service';
 import { DocumentWriteQueue } from '../document-write-queue';
-import {
-  HISTORY_FAST_INTERVAL,
-  HISTORY_FAST_THRESHOLD,
-  HISTORY_INTERVAL,
-} from '../constants';
+import { PageHistoryRepo } from '@wrenlore/db/repos/page/page-history.repo';
 
 @Injectable()
 export class PersistenceExtension implements Extension {
@@ -46,9 +40,8 @@ export class PersistenceExtension implements Extension {
     @InjectKysely() private readonly db: KyselyDB,
     @InjectQueue(QueueName.GENERAL_QUEUE) private generalQueue: Queue,
     @InjectQueue(QueueName.AI_QUEUE) private aiQueue: Queue,
-    @InjectQueue(QueueName.HISTORY_QUEUE) private historyQueue: Queue,
+    private readonly pageHistoryRepo: PageHistoryRepo,
     @InjectQueue(QueueName.NOTIFICATION_QUEUE) private notificationQueue: Queue,
-    private readonly collabHistory: CollabHistoryService,
     private readonly documentWrites: DocumentWriteQueue,
   ) {}
 
@@ -170,21 +163,24 @@ export class PersistenceExtension implements Extension {
           trx,
         );
 
+        await this.pageHistoryRepo.scheduleHistory(page, editingUserIds, trx);
+
         this.logger.debug(`Page updated: ${pageId} - SlugId: ${page.slugId}`);
       });
     } catch (err) {
+      const pending = this.contributors.get(documentName) ?? new Set<string>();
+      editingUserIds.forEach((id) => pending.add(id));
+      this.contributors.set(documentName, pending);
       this.logger.error(`Failed to update page ${pageId}`, err);
+      throw err;
     }
 
     if (page) {
-      await this.collabHistory.addContributors(pageId, editingUserIds);
       await this.afterContentSave(page, tiptapJson);
-      await this.enqueuePageHistory(page);
     }
   }
 
   async afterAgentSave(previousPage: Page, content: any, userId: string) {
-    await this.collabHistory.addContributors(previousPage.id, [userId]);
     await this.afterContentSave(previousPage, content);
   }
 
@@ -250,19 +246,5 @@ export class PersistenceExtension implements Extension {
     const userIds = [...contributorSet];
     this.contributors.delete(documentName);
     return userIds;
-  }
-
-  private async enqueuePageHistory(page: Page): Promise<void> {
-    const pageAge = Date.now() - new Date(page.createdAt).getTime();
-    const delay =
-      pageAge < HISTORY_FAST_THRESHOLD
-        ? HISTORY_FAST_INTERVAL
-        : HISTORY_INTERVAL;
-
-    await this.historyQueue.add(
-      QueueJob.PAGE_HISTORY,
-      { pageId: page.id } as IPageHistoryJob,
-      { jobId: page.id, delay },
-    );
   }
 }

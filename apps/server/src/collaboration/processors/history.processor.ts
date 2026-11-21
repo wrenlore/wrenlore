@@ -5,9 +5,9 @@ import { QueueJob, QueueName } from '../../integrations/queue/constants';
 import { IPageHistoryJob } from '../../integrations/queue/constants/queue.interface';
 import { PageHistoryRepo } from '@wrenlore/db/repos/page/page-history.repo';
 import { PageRepo } from '@wrenlore/db/repos/page/page.repo';
-import { isDeepStrictEqual } from 'node:util';
+import { InjectKysely } from 'nestjs-kysely';
+import { KyselyDB } from '@wrenlore/db/types/kysely.types';
 import { CollabHistoryService } from '../services/collab-history.service';
-import { WatcherService } from '../../core/watcher/watcher.service';
 
 @Processor(QueueName.HISTORY_QUEUE)
 export class HistoryProcessor extends WorkerHost implements OnModuleDestroy {
@@ -17,7 +17,7 @@ export class HistoryProcessor extends WorkerHost implements OnModuleDestroy {
     private readonly pageHistoryRepo: PageHistoryRepo,
     private readonly pageRepo: PageRepo,
     private readonly collabHistory: CollabHistoryService,
-    private readonly watcherService: WatcherService,
+    @InjectKysely() private readonly db: KyselyDB,
   ) {
     super();
   }
@@ -25,51 +25,26 @@ export class HistoryProcessor extends WorkerHost implements OnModuleDestroy {
   async process(job: Job<IPageHistoryJob, void>): Promise<void> {
     if (job.name !== QueueJob.PAGE_HISTORY) return;
 
+    // Drain jobs created by older deployments into the durable database queue.
+    const { pageId } = job.data;
+    const contributorIds = await this.collabHistory.popContributors(pageId);
     try {
-      const { pageId } = job.data;
-
-      const page = await this.pageRepo.findById(pageId, {
-        includeContent: true,
+      await this.db.transaction().execute(async (trx) => {
+        const page = await this.pageRepo.findById(pageId, {
+          withLock: true,
+          trx,
+        });
+        if (page)
+          await this.pageHistoryRepo.scheduleHistory(
+            page,
+            contributorIds,
+            trx,
+            0,
+          );
       });
-
-      if (!page) {
-        this.logger.warn(`Page ${pageId} not found, skipping history`);
-        await this.collabHistory.clearContributors(pageId);
-        return;
-      }
-
-      const lastHistory = await this.pageHistoryRepo.findPageLastHistory(
-        pageId,
-        { includeContent: true },
-      );
-
-      if (
-        !lastHistory ||
-        !isDeepStrictEqual(lastHistory.content, page.content)
-      ) {
-        const contributorIds =
-          await this.collabHistory.popContributors(pageId);
-
-        try {
-          await this.watcherService.addPageWatchers(
-            contributorIds,
-            pageId,
-            page.spaceId,
-            page.workspaceId,
-          );
-
-          await this.pageHistoryRepo.saveHistory(page, { contributorIds });
-          this.logger.debug(`History created for page: ${pageId}`);
-        } catch (err) {
-          await this.collabHistory.addContributors(
-            pageId,
-            contributorIds,
-          );
-          throw err;
-        }
-      }
-    } catch (err) {
-      throw err;
+    } catch (error) {
+      await this.collabHistory.addContributors(pageId, contributorIds);
+      throw error;
     }
   }
 
