@@ -51,3 +51,7 @@ Known product gaps remain documented in `README.md` and `docs/PUBLIC_RELEASE_CHE
 ## Explicit URL sources for Ask AI
 
 The URL retrieval service, status events, bounds and tests are original WrenLore work based on the explicit-URL product requirement, existing WrenLore APIs, and standard Node.js/HTTP behavior. The editor insertion fix was derived from reproducing WrenLore's toolbar and collaboration lifecycle in Chromium and WebKit. No proprietary Docmost material or post-fork upstream implementation was used. The changes retain WrenLore's AGPL-3.0 provenance boundary.
+
+## Ask AI streaming preview
+
+The preview auto-follow behavior and paced browser regression fixture are original WrenLore work based on its existing AI menu and the requirement to follow streamed output while respecting manual scrolling. No proprietary Docmost material or post-fork upstream implementation was used. The change does not alter the AGPL-3.0 provenance boundary.
