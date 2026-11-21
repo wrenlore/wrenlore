@@ -73,3 +73,14 @@ upstream security advisories and release records, and WrenLore regression tests.
 They do not incorporate Docmost source or change the clean-cut provenance policy.
 The reviewed versions and the deferred coordinated NestJS migration are recorded
 in [the maintenance note](../security/dependencies-2026-11-21.md).
+
+## Page history and agent-connection fixes in v0.1.11
+
+The durable snapshot scheduling, chronological pagination, history viewer fixes,
+user guide, actor-attribution correction and UI consistency changes are original
+WrenLore work based on its existing code, user reports and reproduced behaviour.
+Clipboard handling extends the existing open-source clipboard implementation in
+this repository. The history tests use synthetic content; private page snapshots
+used for local diagnosis are not included in the repository or release.
+No proprietary Docmost material or post-fork upstream implementation was used.
+These changes retain the documented clean-cut and AGPL-3.0 provenance boundary.

@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.1.11 - 2026-11-21
+
+### Page history
+- Persist pending snapshots with page edits, so restarts or failures in notification/indexing queues cannot silently discard history work. Failed snapshots remain queued and retry automatically (#159).
+- Capture title-only and icon edits, retain icon/cover metadata in agent snapshots, and order versions by capture time, including versions created by agents (#159).
+- Keep history controls visible on short and narrow screens. Refresh the open version list, explain pending/retrying snapshots, and identify title, metadata and formatting-only changes (#159).
+- Fix change navigation inside tables and other positioned content (#159).
+- Fix the page-loading crash caused by editing placeholders when viewing snapshots containing empty paragraphs (#160, fixes #158).
+- Add a [page-history user guide](docs/user-guide/page-history.md) covering snapshot timing, local timestamps, navigation and restoration.
+
+### Agent connections and interface
+- Make Copy token and Copy config work on HTTP deployments where supported clipboard fallback is available. Report copying failures without falsely showing success (#154, fixes #148).
+- Attribute manual agent-token management to the human actor; reserve **User, via Agent** for actions performed through an agent token (#157, fixes #149).
+- Align Agent connections, AI settings and audit-log typography, spacing and reusable components with the rest of WrenLore (#156, fixes #150).
+
+### Validation
+- Client type checks, production builds, 228 server tests, 35 editor tests, history persistence/concurrency regressions and MCP integration checks passed during the included changes.
+- Chromium and WebKit checks cover clipboard success/failure, small-screen controls, history refresh, formatting notices, change navigation and the full-editor rendering regression.
+- The history-loading regression reproduces the failure before the fix and passes afterwards with synthetic content. The two reported pages also rendered successfully with the fix in local verification and user acceptance testing.
+- Included fixes were deployed and accepted on the maintainer's instance with the existing database and storage preserved.
+
+### Upgrade notes and known follow-ups
+- Rebuild/recreate the application while reusing the existing database and storage volumes. Startup applies an additive migration for pending history work and two indexes; do not reset the database or remove its volumes.
+- Browser edits still group into snapshots, usually within five minutes on established pages and one minute on newly created pages. This release does not reconstruct historical versions that were never captured. See the [history operations notes](docs/page-history.md).
+- Audit-log coverage remains incomplete (#151), including browser title/content edits. The draft audit expansion (#155) is not included; correcting actor attribution does not close the coverage gaps.
+- WrenLore remains Docmost-derived AGPL-3.0 software. These fixes retain the documented clean-cut provenance policy.
+
 ## v0.1.10 - 2026-11-21
 
 ### MCP agent connections
