@@ -4,7 +4,6 @@ import {
   Badge,
   Button,
   Code,
-  CopyButton,
   Group,
   Modal,
   MultiSelect,
@@ -14,6 +13,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { CopyButton } from "@/components/common/copy-button";
 import { notifications } from "@mantine/notifications";
 import {
   useInfiniteQuery,
@@ -82,6 +82,14 @@ export default function AgentConnections() {
     2,
   );
 
+  function clipboardFailure() {
+    notifications.show({
+      color: "red",
+      title: "Couldn't copy to clipboard",
+      message:
+        "Your browser blocked clipboard access. Select the text and copy it with the keyboard instead.",
+    });
+  }
   function failure(error: any) {
     const message = error?.response?.data?.message;
     notifications.show({
@@ -310,7 +318,7 @@ export default function AgentConnections() {
           add this MCP connection to its configuration.
         </Text>
         <Code block>{config}</Code>
-        <CopyButton value={config}>
+        <CopyButton value={config} onError={clipboardFailure}>
           {({ copied, copy }) => (
             <Button variant="light" onClick={copy}>
               {copied ? "Copied" : "Copy OpenCode configuration"}
@@ -334,9 +342,15 @@ export default function AgentConnections() {
           >
             {secret}
           </Code>
-          <CopyButton value={secret ?? ""}>
+          <CopyButton
+            value={secret ?? ""}
+            timeout={2000}
+            onError={clipboardFailure}
+          >
             {({ copied, copy }) => (
-              <Button onClick={copy}>{copied ? "Copied" : "Copy token"}</Button>
+              <Button onClick={copy}>
+                {copied ? "Copied" : "Copy token"}
+              </Button>
             )}
           </CopyButton>
           <Button variant="default" onClick={() => setSecret(null)}>

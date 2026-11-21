@@ -386,12 +386,19 @@ const alphabet = "abcdefghijklmnopqrstuvwxyz";
 export const generateNodeId = customAlphabet(alphabet, 12);
 
 export function copyToClipboard(text: string): void {
-  if ("clipboard" in navigator) {
-    navigator.clipboard.writeText(text).catch(() => {
+  // Best-effort fire-and-forget copy used by editor interactions. Keep it
+  // non-throwing: execCommandCopy reports failures by throwing.
+  const fallback = () => {
+    try {
       execCommandCopy(text);
-    });
+    } catch {
+      // Clipboard unavailable; nothing else to do here.
+    }
+  };
+  if ("clipboard" in navigator) {
+    navigator.clipboard.writeText(text).catch(fallback);
   } else {
-    execCommandCopy(text);
+    fallback();
   }
 }
 
@@ -403,6 +410,16 @@ export function execCommandCopy(text: string): void {
   textarea.style.top = "-9999px";
   document.body.appendChild(textarea);
   textarea.select();
-  document.execCommand("copy");
-  document.body.removeChild(textarea);
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
+  // execCommand returns false when the browser refuses the copy (for example
+  // in non-secure contexts or without a user gesture). Surface that failure
+  // instead of silently reporting success.
+  if (!copied) {
+    throw new Error("Clipboard copy was rejected by the browser");
+  }
 }

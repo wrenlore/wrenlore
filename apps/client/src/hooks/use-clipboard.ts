@@ -5,6 +5,8 @@ import { execCommandCopy } from "@wrenlore/editor-ext";
 
 export type UseClipboardOptions = {
   timeout?: number;
+  /** Called whenever a copy attempt fails, with the underlying error. */
+  onError?: (error: Error) => void;
 };
 
 export type UseClipboardReturnValue = {
@@ -27,7 +29,17 @@ export function useClipboard(
     setCopied(value);
   };
 
+  const toError = (err: unknown) =>
+    err instanceof Error ? err : new Error("Failed to copy");
+
+  const fail = (err: unknown) => {
+    const copyError = toError(err);
+    setError(copyError);
+    options.onError?.(copyError);
+  };
+
   const copy = (value: string) => {
+    setError(null);
     if ("clipboard" in navigator) {
       navigator.clipboard
         .writeText(value)
@@ -37,7 +49,7 @@ export function useClipboard(
             execCommandCopy(value);
             handleCopyResult(true);
           } catch (err) {
-            setError(err instanceof Error ? err : new Error("Failed to copy"));
+            fail(err);
           }
         });
     } else {
@@ -45,7 +57,7 @@ export function useClipboard(
         execCommandCopy(value);
         handleCopyResult(true);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error("Failed to copy"));
+        fail(err);
       }
     }
   };
