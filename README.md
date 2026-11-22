@@ -9,7 +9,7 @@
 
 WrenLore is a collaborative wiki for teams that want clean human editing, private deployment and useful AI access without giving an agent a shared administrator account.
 
-[Website](https://wrenlore.com/) · [Releases](https://github.com/wrenlore/wrenlore/releases) · [Deployment guide](README-deploy.md) · [MCP setup](docs/MCP.md) · [Security](SECURITY.md)
+[Website](https://wrenlore.com/) · [Releases](https://github.com/wrenlore/wrenlore/releases) · [Deployment guide](README-deploy.md) · [MCP setup](docs/MCP.md) · [Official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.wrenlore%2Fwrenlore/versions/latest) · [Security](SECURITY.md)
 
 ![WrenLore knowledge workspace showing people, documents and systems connected to permission-aware search, versioned editing and scoped MCP access](docs/assets/screenshots/wrenlore-showcase-overview.jpg)
 
@@ -63,6 +63,8 @@ The user's live workspace, space and page permissions remain authoritative on ev
 Current MCP tools cover context, spaces, page trees, search, page reads, page creation, direct document edits, comments and history. Deletion, moves, sharing and permission changes are deliberately outside MCP V1.
 
 See [MCP setup, client examples and editing semantics](docs/MCP.md).
+
+WrenLore is published as `io.github.wrenlore/wrenlore` in the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.wrenlore%2Fwrenlore/versions/latest). The registry record uses a self-hosted hostname variable and a secret Authorization header, so it describes operator-run deployments without pretending WrenLore is a hosted SaaS endpoint.
 
 ![WrenLore MCP sequence showing scoped tokens, permission checks and revision-safe agent editing](docs/assets/screenshots/agents-at-the-gate.jpg)
 
