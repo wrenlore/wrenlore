@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.1.12 - 2026-11-23
+
+### GitHub and Google social login
+- Add GitHub OAuth and Google OpenID Connect login, with independent client credentials, enablement and new-user signup controls in **Settings > Security**. Both providers start disabled (#165).
+- Identify linked accounts by stable provider IDs. Existing members connect identities under **Account settings > Connected accounts** after recent authentication; matching email addresses never silently link accounts.
+- Trust provider-verified email for permitted new-user registration without sending a second verification email. Preserve workspace signup, invitation and email-domain restrictions, account status checks, MFA and enforced enterprise SAML.
+- Protect authorization attempts with single-use browser-bound state and PKCE S256. Validate Google identity-token signatures and claims; encrypt client secrets at rest and redact them from responses and audit records.
+- Record provider configuration, account-link and authentication events with the correct human actor. Disabling a provider also rejects callbacks from attempts already in progress.
+
+### Documentation and discovery
+- Add [provider setup and authentication notes](docs/SOCIAL_LOGIN_SETUP.md), including callback URLs, account linking, MFA and regression commands.
+- Publish self-hosted connection metadata in the official MCP Registry and surface it in the product README and MCP setup guide (#162, #164).
+- Refresh the README with the product overview and screenshots (#163).
+
+### Validation
+- GitHub login passed live user acceptance testing on the deployed build. Google has automated coverage with mocked provider endpoints and signed test tokens; a live Google account round-trip remains unverified.
+- The reviewed implementation passed 298 server tests, 13 PostgreSQL/Redis integration tests, production builds, Chromium social-login/MFA checks, and Chromium/WebKit history regressions. PR checks for social authentication, MCP, page history and DCO passed.
+- The additive migration applied successfully to the existing deployment, with its content and storage preserved. HTTPS login, application health and the collaboration WebSocket passed deployment smoke checks.
+
+### Upgrade notes
+- Rebuild/recreate the application using the existing configuration, database and storage volumes. Startup adds two unique indexes for workspace social providers and external identities; do not reset the database or remove volumes.
+- Register each provider's exact HTTPS callback URL, configure its client credentials, and enable it explicitly. **Allow new sign-ups** is separate and defaults to off. Existing users connect their identity before using social login.
+- WrenLore remains Docmost-derived AGPL-3.0 software. These additions retain the documented clean-cut provenance policy.
+
 ## v0.1.11 - 2026-11-21
 
 ### Page history
