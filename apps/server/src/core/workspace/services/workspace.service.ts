@@ -285,10 +285,13 @@ export class WorkspaceService {
 
   async update(workspaceId: string, updateWorkspaceDto: UpdateWorkspaceDto) {
     if (updateWorkspaceDto.enforceSso) {
+      // Social login (GitHub/Google) never satisfies enforced SSO; only an
+      // enabled enterprise SAML provider can back the enforcement.
       const sso = await this.db
         .selectFrom('authProviders')
         .select(['id'])
         .where('isEnabled', '=', true)
+        .where('type', '=', 'saml')
         .where('workspaceId', '=', workspaceId)
         .execute();
 

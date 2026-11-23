@@ -120,4 +120,16 @@ export class UpdateSsoProviderDto {
   @IsOptional()
   @IsBoolean()
   groupSync?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(255)
+  @Transform(({ value }: TransformFnParams) => value?.trim())
+  clientId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  clientSecret?: string;
 }

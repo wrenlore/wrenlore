@@ -38,8 +38,32 @@ export function MfaChallengePage() {
   const [mode, setMode] = useState<"totp" | "recovery">("totp");
   const [token, setToken] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
+  const [fragmentToken, setFragmentToken] = useState<string | null>(null);
+
+  // Social login callbacks hand the MFA token over in the URL fragment so it
+  // never reaches server logs; pick it up and clean the address bar.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.includes("mfa_token=")) {
+      return;
+    }
+    const params = new URLSearchParams(hash.replace(/^#/, ""));
+    const mfaTokenFromFragment = params.get("mfa_token");
+    if (mfaTokenFromFragment) {
+      sessionStorage.setItem("wrenlore:mfaToken", mfaTokenFromFragment);
+      setFragmentToken(mfaTokenFromFragment);
+    }
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
+  }, []);
+
   const mfaToken =
-    location.state?.mfaToken ?? sessionStorage.getItem("wrenlore:mfaToken");
+    location.state?.mfaToken ??
+    fragmentToken ??
+    sessionStorage.getItem("wrenlore:mfaToken");
 
   const totpMutation = useMutation({
     mutationFn: completeMfaLogin,

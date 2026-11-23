@@ -79,6 +79,28 @@ export class TokenService {
     return this.jwtService.sign(payload, { expiresIn: '1h' });
   }
 
+  /**
+   * True when the given access token was issued within `maxAgeSeconds`,
+   * used as the "recently authenticated" check for sensitive operations.
+   */
+  isRecentlyAuthenticated(token: string, maxAgeSeconds: number): boolean {
+    try {
+      const payload = this.jwtService.decode<JwtPayload & { iat?: number }>(
+        token,
+      );
+      if (
+        !payload ||
+        payload.type !== JwtType.ACCESS ||
+        typeof payload.iat !== 'number'
+      ) {
+        return false;
+      }
+      return Date.now() / 1000 - payload.iat <= maxAgeSeconds;
+    } catch {
+      return false;
+    }
+  }
+
   async generateMfaToken(user: User, workspaceId: string): Promise<string> {
     if (isUserDisabled(user)) {
       throw new ForbiddenException();
