@@ -4,10 +4,23 @@ import { SsoService } from './sso.service';
 import { SamlAuthGuard } from './saml-auth.guard';
 import { WorkspaceModule } from '../workspace/workspace.module';
 import { TokenModule } from '../auth/token.module';
+import { SocialAuthController } from './social/social-auth.controller';
+import { SocialAuthService } from './social/social-auth.service';
+import { GithubOauthProvider } from './social/providers/github-oauth.provider';
+import { GoogleOidcProvider } from './social/providers/google-oidc.provider';
+import { AuthModule } from '../auth/auth.module';
+import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
 
 @Module({
-  imports: [WorkspaceModule, TokenModule],
-  controllers: [SsoController],
-  providers: [SsoService, SamlAuthGuard],
+  imports: [WorkspaceModule, TokenModule, AuthModule],
+  controllers: [SsoController, SocialAuthController],
+  providers: [
+    SsoService,
+    SamlAuthGuard,
+    SocialAuthService,
+    GithubOauthProvider,
+    GoogleOidcProvider,
+    AppSecretCryptoService,
+  ],
 })
 export class SsoModule {}

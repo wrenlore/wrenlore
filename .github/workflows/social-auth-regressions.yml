@@ -1,0 +1,67 @@
+name: Social authentication regressions
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/**"
+      - "apps/client/src/wrenlore/mfa/**"
+      - "apps/client/src/features/auth/**"
+      - "apps/client/src/features/user/components/connected-accounts.tsx"
+      - "scripts/social-*"
+      - "scripts/social-ui/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/social-auth-regressions.yml"
+  push:
+    branches: [master]
+    paths:
+      - "apps/server/**"
+      - "apps/client/src/wrenlore/mfa/**"
+      - "apps/client/src/features/auth/**"
+      - "apps/client/src/features/user/components/connected-accounts.tsx"
+      - "scripts/social-*"
+      - "scripts/social-ui/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/social-auth-regressions.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  social-auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: wrenlore
+          POSTGRES_PASSWORD: disposable-test-only
+          POSTGRES_DB: wrenlore_social_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wrenlore -d wrenlore_social_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @wrenlore/editor-ext build
+      - run: pnpm --filter server build
+      - run: pnpm --filter client exec tsc --noEmit
+      - run: pnpm --filter server exec jest --runInBand core/auth core/sso
+      - run: node scripts/social-ci.cjs
+        env:
+          WRENLORE_SOCIAL_TEST: disposable
+          SOCIAL_INTEGRATION_DB: postgresql://wrenlore:disposable-test-only@127.0.0.1:5432/wrenlore_social_test
+          SOCIAL_INTEGRATION_REDIS: redis://127.0.0.1:6379
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: node scripts/social-ui.cjs

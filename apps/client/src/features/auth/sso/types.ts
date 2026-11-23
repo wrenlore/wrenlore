@@ -30,6 +30,10 @@ export interface IAuthProvider {
   oidcIssuer: string;
   oidcClientId: string;
   oidcClientSecret: string;
+  hasClientSecret?: boolean;
+  callbackUrl?: string;
+  clientId?: string;
+  clientSecret?: string;
   ldapUrl: string;
   ldapBindDn: string;
   ldapBindPassword: string;

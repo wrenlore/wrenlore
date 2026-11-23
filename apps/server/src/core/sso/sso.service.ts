@@ -42,6 +42,11 @@ import {
 } from './sso.utils';
 import { AuthProvider, User, Workspace } from '@wrenlore/db/types/entity.types';
 import { executeTx } from '@wrenlore/db/utils';
+import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
+import {
+  isSocialProviderType,
+  SocialProviderType,
+} from './social/social.constants';
 import * as passport from 'passport';
 import { MultiSamlStrategy } from '@node-saml/passport-saml';
 import { isUserDisabled, nanoIdGen } from '../../common/helpers';
@@ -78,6 +83,7 @@ export class SsoService implements OnModuleInit {
     private readonly tokenService: TokenService,
     private readonly environmentService: EnvironmentService,
     private readonly domainService: DomainService,
+    private readonly cryptoService: AppSecretCryptoService,
     private readonly redisService: RedisService,
     @Inject(AUDIT_SERVICE) private readonly auditService: IAuditService,
   ) {
@@ -124,8 +130,10 @@ export class SsoService implements OnModuleInit {
       .orderBy('createdAt', 'asc')
       .execute();
 
+    const baseUrl = await this.getWorkspaceBaseUrl(workspaceId);
+
     return {
-      items: items.map((item) => this.serializeProvider(item)),
+      items: items.map((item) => this.serializeProvider(item, baseUrl)),
       meta: {
         limit: items.length,
         hasNextPage: false,
@@ -142,7 +150,10 @@ export class SsoService implements OnModuleInit {
       throw new NotFoundException('SSO provider not found');
     }
 
-    return this.serializeProvider(provider);
+    return this.serializeProvider(
+      provider,
+      await this.getWorkspaceBaseUrl(workspaceId),
+    );
   }
 
   async createProvider(
@@ -150,6 +161,10 @@ export class SsoService implements OnModuleInit {
     creatorId: string,
     dto: CreateSsoProviderDto,
   ) {
+    if (isSocialProviderType(dto.type)) {
+      return this.createSocialProvider(workspaceId, creatorId, dto);
+    }
+
     if (dto.type !== SAML_PROVIDER_TYPE) {
       throw new BadRequestException('Only SAML providers are supported.');
     }
@@ -187,10 +202,81 @@ export class SsoService implements OnModuleInit {
     return this.serializeProvider(provider);
   }
 
+  private async createSocialProvider(
+    workspaceId: string,
+    creatorId: string,
+    dto: CreateSsoProviderDto,
+  ) {
+    const type = dto.type as SocialProviderType;
+    const clientId = dto.clientId?.trim() || null;
+    const clientSecret = dto.clientSecret?.trim() || null;
+    const isEnabled = dto.isEnabled ?? false;
+
+    if (isEnabled && (!clientId || !clientSecret)) {
+      throw new BadRequestException(
+        'Client ID and client secret are required before enabling the provider.',
+      );
+    }
+
+    try {
+      const provider = await this.db
+        .insertInto('authProviders')
+        .values({
+          name: dto.name,
+          type,
+          isEnabled,
+          allowSignup: dto.allowSignup ?? false,
+          groupSync: false,
+          creatorId,
+          workspaceId,
+          oidcClientId: clientId,
+          oidcClientSecret: clientSecret
+            ? this.cryptoService.encrypt(clientSecret)
+            : null,
+          requestedAuthnContextMode: 'omit',
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      this.auditService.log({
+        event: AuditEvent.SSO_PROVIDER_CREATED,
+        resourceType: AuditResource.SSO_PROVIDER,
+        resourceId: provider.id,
+        changes: {
+          after: {
+            name: provider.name,
+            type: provider.type,
+            isEnabled: provider.isEnabled,
+            allowSignup: provider.allowSignup,
+            clientIdConfigured: Boolean(provider.oidcClientId),
+            clientSecretConfigured: Boolean(provider.oidcClientSecret),
+          },
+        },
+        metadata: { workspaceId },
+      });
+
+      return this.serializeProvider(
+        provider,
+        await this.getWorkspaceBaseUrl(workspaceId),
+      );
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        throw new BadRequestException(
+          'This workspace already has a provider of this type.',
+        );
+      }
+      throw error;
+    }
+  }
+
   async updateProvider(workspaceId: string, dto: UpdateSsoProviderDto) {
     const provider = await this.findProviderById(workspaceId, dto.providerId);
     if (!provider) {
       throw new NotFoundException('SSO provider not found');
+    }
+
+    if (isSocialProviderType(provider.type as SocialProviderType)) {
+      return this.updateSocialProvider(workspaceId, provider, dto);
     }
 
     const nextName = typeof dto.name !== 'undefined' ? dto.name : provider.name;
@@ -357,6 +443,84 @@ export class SsoService implements OnModuleInit {
     });
 
     return this.serializeProvider(updated);
+  }
+
+  private async updateSocialProvider(
+    workspaceId: string,
+    provider: AuthProvider,
+    dto: UpdateSsoProviderDto,
+  ) {
+    const updateData: Record<string, any> = { updatedAt: new Date() };
+
+    if (typeof dto.name !== 'undefined') {
+      updateData.name = dto.name;
+    }
+    if (typeof dto.clientId !== 'undefined') {
+      updateData.oidcClientId = dto.clientId.trim() || null;
+    }
+    if (typeof dto.clientSecret !== 'undefined' && dto.clientSecret.trim()) {
+      updateData.oidcClientSecret = this.cryptoService.encrypt(
+        dto.clientSecret.trim(),
+      );
+    }
+    if (typeof dto.allowSignup !== 'undefined') {
+      updateData.allowSignup = dto.allowSignup;
+    }
+    if (typeof dto.isEnabled !== 'undefined') {
+      updateData.isEnabled = dto.isEnabled;
+    }
+
+    const nextClientId =
+      typeof updateData.oidcClientId !== 'undefined'
+        ? updateData.oidcClientId
+        : provider.oidcClientId;
+    const nextSecretConfigured =
+      typeof updateData.oidcClientSecret !== 'undefined'
+        ? true
+        : Boolean(provider.oidcClientSecret);
+
+    if (updateData.isEnabled && (!nextClientId || !nextSecretConfigured)) {
+      throw new BadRequestException(
+        'Client ID and client secret are required before enabling the provider.',
+      );
+    }
+
+    const updated = await this.db
+      .updateTable('authProviders')
+      .set(updateData)
+      .where('id', '=', provider.id)
+      .where('workspaceId', '=', workspaceId)
+      .where('deletedAt', 'is', null)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    this.auditService.log({
+      event: AuditEvent.SSO_PROVIDER_UPDATED,
+      resourceType: AuditResource.SSO_PROVIDER,
+      resourceId: updated.id,
+      changes: {
+        before: {
+          name: provider.name,
+          isEnabled: provider.isEnabled,
+          allowSignup: provider.allowSignup,
+          clientIdConfigured: Boolean(provider.oidcClientId),
+          clientSecretConfigured: Boolean(provider.oidcClientSecret),
+        },
+        after: {
+          name: updated.name,
+          isEnabled: updated.isEnabled,
+          allowSignup: updated.allowSignup,
+          clientIdConfigured: Boolean(updated.oidcClientId),
+          clientSecretConfigured: Boolean(updated.oidcClientSecret),
+        },
+      },
+      metadata: { workspaceId },
+    });
+
+    return this.serializeProvider(
+      updated,
+      await this.getWorkspaceBaseUrl(workspaceId),
+    );
   }
 
   async deleteProvider(workspaceId: string, dto: ProviderIdDto) {
@@ -1000,11 +1164,40 @@ export class SsoService implements OnModuleInit {
     return currentName.toLowerCase() === defaultName;
   }
 
-  private serializeProvider(provider: AuthProvider) {
-    return {
-      ...provider,
-      spAcsUrlKey: undefined,
+  private serializeProvider(provider: AuthProvider, baseUrl?: string) {
+    // Never expose stored secrets: client secrets and bind passwords are
+    // stripped, and social providers only report whether they are set.
+    const {
+      oidcClientSecret,
+      ldapBindPassword,
+      spAcsUrlKey,
+      ...safe
+    } = provider as Record<string, any>;
+
+    const serialized: Record<string, any> = {
+      ...safe,
       providerId: provider.id,
+      hasClientSecret: Boolean(provider.oidcClientSecret),
     };
+
+    if (isSocialProviderType(provider.type as SocialProviderType)) {
+      serialized.samlCertificate = undefined;
+      serialized.callbackUrl = baseUrl
+        ? `${baseUrl}/api/auth/social/${provider.type}/callback`
+        : undefined;
+    }
+
+    return serialized;
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    const code =
+      (error as any)?.code ?? (error as any)?.driverError?.code ?? null;
+    return code === '23505';
+  }
+
+  private async getWorkspaceBaseUrl(workspaceId: string): Promise<string | undefined> {
+    const workspace = await this.workspaceRepo.findById(workspaceId);
+    return workspace ? this.domainService.getUrl(workspace.hostname) : undefined;
   }
 }

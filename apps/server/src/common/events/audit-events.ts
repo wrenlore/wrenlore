@@ -10,6 +10,7 @@ export const AuditEvent = {
   USER_CREATED: 'user.created',
   USER_DELETED: 'user.deleted',
   USER_LOGIN: 'user.login',
+  USER_LOGIN_FAILED: 'user.login_failed',
   USER_LOGOUT: 'user.logout',
   USER_ROLE_CHANGED: 'user.role_changed',
   USER_PASSWORD_CHANGED: 'user.password_changed',
@@ -73,6 +74,10 @@ export const AuditEvent = {
   SSO_PROVIDER_CREATED: 'sso.provider_created',
   SSO_PROVIDER_UPDATED: 'sso.provider_updated',
   SSO_PROVIDER_DELETED: 'sso.provider_deleted',
+
+  // Social login account linking
+  USER_AUTH_ACCOUNT_LINKED: 'user.auth_account_linked',
+  USER_AUTH_ACCOUNT_UNLINKED: 'user.auth_account_unlinked',
 
   // MFA
   USER_MFA_ENABLED: 'user.mfa_enabled',

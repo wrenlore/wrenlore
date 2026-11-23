@@ -38,8 +38,26 @@ export function MfaChallengePage() {
   const [mode, setMode] = useState<"totp" | "recovery">("totp");
   const [token, setToken] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
+  const [fragmentToken] = useState(() =>
+    new URLSearchParams(window.location.hash.slice(1)).get("mfa_token"),
+  );
+
+  // Social login callbacks hand the MFA token over in the URL fragment so it
+  // never reaches server logs; pick it up and clean the address bar.
+  useEffect(() => {
+    if (!fragmentToken) return;
+    sessionStorage.setItem("wrenlore:mfaToken", fragmentToken);
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
+  }, [fragmentToken]);
+
   const mfaToken =
-    location.state?.mfaToken ?? sessionStorage.getItem("wrenlore:mfaToken");
+    fragmentToken ??
+    location.state?.mfaToken ??
+    sessionStorage.getItem("wrenlore:mfaToken");
 
   const totpMutation = useMutation({
     mutationFn: completeMfaLogin,
@@ -50,7 +68,8 @@ export function MfaChallengePage() {
     onError: (err: any) => {
       notifications.show({
         color: "red",
-        message: err.response?.data?.message ?? t("Invalid authentication code"),
+        message:
+          err.response?.data?.message ?? t("Invalid authentication code"),
       });
     },
   });
@@ -126,9 +145,7 @@ export function MfaChallengePage() {
                 label={t("Recovery code")}
                 placeholder="XXXX-XXXX-XXXX-XXXX"
                 value={recoveryCode}
-                onChange={(event) =>
-                  setRecoveryCode(event.currentTarget.value)
-                }
+                onChange={(event) => setRecoveryCode(event.currentTarget.value)}
                 variant="filled"
                 data-autofocus
               />
@@ -162,7 +179,9 @@ export function MfaChallengePage() {
 export function MfaSetupRequiredPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [setup, setSetup] = useState<Awaited<ReturnType<typeof startMfaSetup>> | null>(null);
+  const [setup, setSetup] = useState<Awaited<
+    ReturnType<typeof startMfaSetup>
+  > | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [token, setToken] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
@@ -187,7 +206,8 @@ export function MfaSetupRequiredPage() {
     onError: (err: any) => {
       notifications.show({
         color: "red",
-        message: err.response?.data?.message ?? t("Invalid authentication code"),
+        message:
+          err.response?.data?.message ?? t("Invalid authentication code"),
       });
     },
   });

@@ -1,5 +1,6 @@
 import { SsoService } from './sso.service';
 import { SsoController } from './sso.controller';
+import { BadRequestException } from '@nestjs/common';
 import { SAML } from '@node-saml/passport-saml';
 import {
   SAML_DEFAULT_NAME_ID_FORMAT,
@@ -100,6 +101,7 @@ describe('SsoService SAML configuration', () => {
       {} as any,
       {} as any,
       domainService as any,
+      { encrypt: jest.fn((v: string) => `enc:${v}`), decrypt: jest.fn() } as any,
       redisService as any,
       { log: jest.fn() } as any,
     );
@@ -413,5 +415,204 @@ describe('SsoController SAML callbacks', () => {
       'https://tenant.example.com/home',
     );
     expect(res.send).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SsoService social provider management', () => {
+  const workspaceId = '019e6a1c-3969-704e-b0fb-57549f2cb3ee';
+  const providerId = '019e6a1c-3969-704e-b0fb-57549f2cb3ef';
+
+  function createSocialHarness(options: { insertError?: unknown } = {}) {
+    let insertedValues: Record<string, unknown> | null = null;
+    let updatedValues: Record<string, unknown> | null = null;
+
+    const providerRow = {
+      id: providerId,
+      workspaceId,
+      type: 'github',
+      name: 'GitHub',
+      isEnabled: false,
+      allowSignup: false,
+      oidcClientId: 'client-id',
+      oidcClientSecret: 'enc:secret',
+      samlCertificate: null,
+      spAcsUrlKey: null,
+      deletedAt: null,
+    };
+
+    const selectChain: any = {
+      selectAll: () => selectChain,
+      select: () => selectChain,
+      where: () => selectChain,
+      orderBy: () => selectChain,
+      executeTakeFirst: jest.fn().mockResolvedValue(providerRow),
+      execute: jest.fn().mockResolvedValue([providerRow]),
+    };
+
+    const insertChain: any = {
+      values: (v: any) => {
+        insertedValues = v;
+        return insertChain;
+      },
+      returningAll: () => insertChain,
+      executeTakeFirstOrThrow: jest.fn().mockImplementation(async () => {
+        if (options.insertError) throw options.insertError;
+        return { ...providerRow, ...insertedValues };
+      }),
+    };
+
+    const updateChain: any = {
+      set: (v: any) => {
+        updatedValues = v;
+        return updateChain;
+      },
+      where: () => updateChain,
+      returningAll: () => updateChain,
+      executeTakeFirstOrThrow: jest.fn().mockImplementation(async () => ({
+        ...providerRow,
+        ...updatedValues,
+      })),
+    };
+
+    const db = {
+      selectFrom: jest.fn().mockReturnValue(selectChain),
+      insertInto: jest.fn().mockReturnValue(insertChain),
+      updateTable: jest.fn().mockReturnValue(updateChain),
+    };
+
+    const cryptoService = {
+      encrypt: jest.fn((v: string) => `enc:${v}`),
+      decrypt: jest.fn(),
+    };
+    const auditService = { log: jest.fn(), setActorId: jest.fn() };
+    const service = new SsoService(
+      db as any,
+      { findById: jest.fn().mockResolvedValue({ id: workspaceId, hostname: 'tenant' }) } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { getUrl: jest.fn().mockReturnValue('https://tenant.example.com') } as any,
+      cryptoService as any,
+      { getOrThrow: jest.fn().mockReturnValue({}) } as any,
+      auditService as any,
+    );
+
+    return { service, db, cryptoService, auditService, providerRow,
+      getInserted: () => insertedValues,
+      getUpdated: () => updatedValues,
+    };
+  }
+
+  it('encrypts the client secret and never returns or audits it', async () => {
+    const ctx = createSocialHarness();
+
+    const result = await ctx.service.createProvider(workspaceId, 'creator-1', {
+      type: 'github',
+      name: 'GitHub',
+      clientId: 'client-id',
+      clientSecret: 'super-secret',
+      isEnabled: false,
+    } as any);
+
+    expect(ctx.cryptoService.encrypt).toHaveBeenCalledWith('super-secret');
+    expect(ctx.getInserted()).toMatchObject({
+      type: 'github',
+      oidcClientSecret: 'enc:super-secret',
+    });
+    expect(JSON.stringify(result)).not.toContain('super-secret');
+    expect(result).not.toHaveProperty('oidcClientSecret');
+    expect(result.hasClientSecret).toBe(true);
+    expect(result.callbackUrl).toBe(
+      'https://tenant.example.com/api/auth/social/github/callback',
+    );
+    const auditPayload = JSON.stringify(ctx.auditService.log.mock.calls);
+    expect(auditPayload).not.toContain('super-secret');
+    expect(auditPayload).not.toContain('enc:super-secret');
+  });
+
+  it('refuses to enable a provider without complete credentials', async () => {
+    const ctx = createSocialHarness();
+
+    await expect(
+      ctx.service.createProvider(workspaceId, 'creator-1', {
+        type: 'google',
+        name: 'Google',
+        clientId: 'client-id',
+        isEnabled: true,
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('maps a duplicate social provider to a readable error', async () => {
+    const ctx = createSocialHarness({ insertError: { code: '23505' } });
+
+    await expect(
+      ctx.service.createProvider(workspaceId, 'creator-1', {
+        type: 'github',
+        name: 'GitHub',
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('keeps the stored secret when the update omits it', async () => {
+    const ctx = createSocialHarness();
+
+    await ctx.service.updateProvider(workspaceId, {
+      providerId,
+      isEnabled: true,
+    } as any);
+
+    expect(ctx.getUpdated()).not.toHaveProperty('oidcClientSecret');
+    expect(ctx.cryptoService.encrypt).not.toHaveBeenCalled();
+  });
+
+  function chainReturning(row: unknown): any {
+    const chain: any = {
+      selectAll: () => chain,
+      select: () => chain,
+      where: () => chain,
+      orderBy: () => chain,
+      executeTakeFirst: jest.fn().mockResolvedValue(row),
+      execute: jest.fn().mockResolvedValue(row ? [row] : []),
+    };
+    return chain;
+  }
+
+  it('refuses to enable via update when no secret is configured', async () => {
+    const ctx = createSocialHarness();
+    ctx.db.selectFrom.mockReturnValue(
+      chainReturning({ ...ctx.providerRow, oidcClientSecret: null }),
+    );
+
+    await expect(
+      ctx.service.updateProvider(workspaceId, {
+        providerId,
+        isEnabled: true,
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('strips secrets from serialized SAML providers too', async () => {
+    const ctx = createSocialHarness();
+    ctx.db.selectFrom.mockReturnValue(
+      chainReturning({
+        ...ctx.providerRow,
+        type: 'saml',
+        oidcClientSecret: 'legacy-plain',
+        ldapBindPassword: 'ldap-pass',
+      }),
+    );
+
+    const result = await ctx.service.getProvider(workspaceId, {
+      providerId,
+    } as any);
+
+    expect(result).not.toHaveProperty('oidcClientSecret');
+    expect(result).not.toHaveProperty('ldapBindPassword');
+    expect(JSON.stringify(result)).not.toContain('legacy-plain');
+    expect(JSON.stringify(result)).not.toContain('ldap-pass');
   });
 });
