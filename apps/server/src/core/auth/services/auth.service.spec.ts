@@ -30,7 +30,11 @@ describe('AuthService MFA login flow', () => {
 
   const createService = async (opts?: {
     mfaEnabled?: boolean;
-    mfaRecord?: { id: string; enabledAt: Date | null; confirmedAt?: Date | null };
+    mfaRecord?: {
+      id: string;
+      enabledAt: Date | null;
+      confirmedAt?: Date | null;
+    };
     requireLocalMfa?: boolean;
   }) => {
     const mfaRecord =
@@ -130,6 +134,43 @@ describe('AuthService MFA login flow', () => {
       instanceSettingRepo,
     };
   };
+
+  it.each(['github', 'google'] as const)(
+    'preserves %s attribution after MFA, without auditing failed challenges as logins',
+    async (source) => {
+      const ctx = await createService({
+        mfaEnabled: true,
+        requireLocalMfa: true,
+      });
+      ctx.tokenService.verifyJwt.mockResolvedValue({
+        sub: userId,
+        workspaceId,
+        type: 'mfa_token',
+        social: { source, providerId: 'provider-id' },
+      } as any);
+      jest.spyOn(ctx.mfaService, 'verifyTotpToken').mockReturnValue(false);
+      await expect(
+        ctx.service.completeMfaLogin('challenge', 'bad'),
+      ).rejects.toThrow();
+      expect(ctx.userRepo.updateLastLogin).not.toHaveBeenCalled();
+      expect(
+        ctx.auditService.log.mock.calls.filter(
+          ([e]) => e.event === 'user.login',
+        ),
+      ).toHaveLength(0);
+      jest.spyOn(ctx.mfaService, 'verifyTotpToken').mockReturnValue(true);
+      await ctx.service.completeMfaLogin('challenge', 'valid');
+      expect(ctx.userRepo.updateLastLogin).toHaveBeenCalledTimes(1);
+      const events = ctx.auditService.log.mock.calls.filter(
+        ([e]) => e.event === 'user.login',
+      );
+      expect(events).toHaveLength(1);
+      expect(events[0][0]).toMatchObject({
+        metadata: { source, providerId: 'provider-id', workspaceId },
+      });
+      expect(ctx.auditService.setActorId).toHaveBeenCalledWith(userId);
+    },
+  );
 
   it('keeps password login unchanged for users without MFA', async () => {
     const { service, userRepo, tokenService } = await createService();
@@ -384,9 +425,7 @@ describe('AuthService MFA login flow', () => {
       requireLocalMfa: true,
       mfaEnabled: true,
     });
-    const codeHash = await mfaService.hashRecoveryCode(
-      'AAAA-BBBB-CCCC-DDDD',
-    );
+    const codeHash = await mfaService.hashRecoveryCode('AAAA-BBBB-CCCC-DDDD');
     userMfaRepo.findRecoveryCodesByMfaId
       .mockResolvedValueOnce([
         {
@@ -404,20 +443,14 @@ describe('AuthService MFA login flow', () => {
       ]);
 
     await expect(
-      service.completeMfaRecoveryLogin(
-        'mfa-token',
-        'AAAA-BBBB-CCCC-DDDD',
-      ),
+      service.completeMfaRecoveryLogin('mfa-token', 'AAAA-BBBB-CCCC-DDDD'),
     ).resolves.toEqual({ authToken: 'access-token' });
     expect(userMfaRepo.markRecoveryCodeUsed).toHaveBeenCalledWith(
       'recovery-code-id',
     );
 
     await expect(
-      service.completeMfaRecoveryLogin(
-        'mfa-token',
-        'AAAA-BBBB-CCCC-DDDD',
-      ),
+      service.completeMfaRecoveryLogin('mfa-token', 'AAAA-BBBB-CCCC-DDDD'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

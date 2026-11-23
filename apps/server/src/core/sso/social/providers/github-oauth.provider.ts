@@ -1,8 +1,5 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   SocialAuthorizeRequest,
   SocialIdentity,
@@ -27,13 +24,18 @@ export class GithubOauthProvider implements SocialProviderDriver {
     state: string;
     codeVerifier?: string;
   }): Promise<SocialAuthorizeRequest> {
-    // GitHub's OAuth app flow does not support PKCE, so no code challenge is
-    // sent; the single-use random state binds the callback to this browser.
+    if (!opts.codeVerifier)
+      throw new BadRequestException('PKCE verifier is required.');
     const url = new URL(GITHUB_AUTHORIZE_URL);
     url.searchParams.set('client_id', opts.clientId);
     url.searchParams.set('redirect_uri', opts.redirectUri);
     url.searchParams.set('scope', GITHUB_SCOPES);
     url.searchParams.set('state', opts.state);
+    url.searchParams.set('code_challenge_method', 'S256');
+    url.searchParams.set(
+      'code_challenge',
+      createHash('sha256').update(opts.codeVerifier).digest('base64url'),
+    );
     url.searchParams.set('allow_signup', 'false');
 
     return { authorizeUrl: url.toString(), state: opts.state };
@@ -88,7 +90,10 @@ export class GithubOauthProvider implements SocialProviderDriver {
     clientSecret: string;
     redirectUri: string;
     code: string;
+    codeVerifier?: string;
   }): Promise<string> {
+    if (!opts.codeVerifier)
+      throw new BadRequestException('PKCE verifier is required.');
     const response = await this.fetchImpl(GITHUB_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -99,6 +104,7 @@ export class GithubOauthProvider implements SocialProviderDriver {
         client_id: opts.clientId,
         client_secret: opts.clientSecret,
         code: opts.code,
+        code_verifier: opts.codeVerifier,
         redirect_uri: opts.redirectUri,
       }),
     });
@@ -145,8 +151,7 @@ export class GithubOauthProvider implements SocialProviderDriver {
             entry.email.includes('@'),
         );
         const primary =
-          verified.find((entry: any) => entry.primary === true) ??
-          verified[0];
+          verified.find((entry: any) => entry.primary === true) ?? verified[0];
         if (primary) {
           return {
             email: String(primary.email).toLowerCase(),
@@ -162,7 +167,10 @@ export class GithubOauthProvider implements SocialProviderDriver {
 
     // The account-level email is not guaranteed to be verified; treat it as
     // unverified so signup is never based on an unverified address.
-    return { email: fallbackEmail?.toLowerCase() ?? null, emailVerified: false };
+    return {
+      email: fallbackEmail?.toLowerCase() ?? null,
+      emailVerified: false,
+    };
   }
 
   private async githubFetchJson(url: string, accessToken: string) {

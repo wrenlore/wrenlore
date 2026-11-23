@@ -13,6 +13,7 @@ import {
   JwtMfaTokenPayload,
   JwtPayload,
   JwtType,
+  SocialLoginContext,
 } from '../dto/jwt-payload';
 import { User } from '@wrenlore/db/types/entity.types';
 import { isUserDisabled } from '../../../common/helpers';
@@ -101,7 +102,11 @@ export class TokenService {
     }
   }
 
-  async generateMfaToken(user: User, workspaceId: string): Promise<string> {
+  async generateMfaToken(
+    user: User,
+    workspaceId: string,
+    social?: SocialLoginContext,
+  ): Promise<string> {
     if (isUserDisabled(user)) {
       throw new ForbiddenException();
     }
@@ -110,6 +115,7 @@ export class TokenService {
       sub: user.id,
       workspaceId,
       type: JwtType.MFA_TOKEN,
+      ...(social ? { social } : {}),
     };
     return this.jwtService.sign(payload, { expiresIn: '5m' });
   }

@@ -16,6 +16,7 @@ describe('GithubOauthProvider', () => {
 
   it('builds an authorize URL with identity scopes and state', async () => {
     const { authorizeUrl, state } = await provider.buildAuthorizeUrl({
+      codeVerifier: 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk',
       clientId: 'cid',
       redirectUri: 'https://app.example.com/api/auth/social/github/callback',
       state: 'xyz',
@@ -30,13 +31,22 @@ describe('GithubOauthProvider', () => {
     expect(url.searchParams.get('scope')).toBe('read:user user:email');
     expect(url.searchParams.get('state')).toBe('xyz');
     expect(url.searchParams.get('allow_signup')).toBe('false');
+    expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(url.searchParams.get('code_challenge')).toBe(
+      'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+    );
   });
 
   it('exchanges the code and resolves the verified primary email', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ access_token: 'ghp_token' }))
       .mockResolvedValueOnce(
-        jsonResponse({ id: 12345, login: 'octo', name: 'Octo Cat', email: 'public@github.com' }),
+        jsonResponse({
+          id: 12345,
+          login: 'octo',
+          name: 'Octo Cat',
+          email: 'public@github.com',
+        }),
       )
       .mockResolvedValueOnce(
         jsonResponse([
@@ -46,6 +56,7 @@ describe('GithubOauthProvider', () => {
       );
 
     const identity = await provider.resolveIdentity({
+      codeVerifier: 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk',
       clientId: 'cid',
       clientSecret: 'secret',
       redirectUri: 'https://app.example.com/cb',
@@ -66,6 +77,7 @@ describe('GithubOauthProvider', () => {
       client_id: 'cid',
       client_secret: 'secret',
       code: 'code-1',
+      code_verifier: 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk',
     });
     // The access token must not leak into the identity result.
     expect(JSON.stringify(identity)).not.toContain('ghp_token');
@@ -80,6 +92,7 @@ describe('GithubOauthProvider', () => {
       .mockResolvedValueOnce(jsonResponse({}, false));
 
     const identity = await provider.resolveIdentity({
+      codeVerifier: 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk',
       clientId: 'cid',
       clientSecret: 'secret',
       redirectUri: 'https://app.example.com/cb',
@@ -98,6 +111,7 @@ describe('GithubOauthProvider', () => {
 
     await expect(
       provider.resolveIdentity({
+        codeVerifier: 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk',
         clientId: 'cid',
         clientSecret: 'secret',
         redirectUri: 'https://app.example.com/cb',

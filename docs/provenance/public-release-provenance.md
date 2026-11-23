@@ -84,3 +84,12 @@ this repository. The history tests use synthetic content; private page snapshots
 used for local diagnosis are not included in the repository or release.
 No proprietary Docmost material or post-fork upstream implementation was used.
 These changes retain the documented clean-cut and AGPL-3.0 provenance boundary.
+
+## GitHub and Google social login
+
+The social authentication review fixes and regression tests are original WrenLore
+work derived from the feature requirements, existing WrenLore authentication and
+storage code, reproduced failures, GitHub's public OAuth documentation and the
+installed open-source OIDC library. The tests use synthetic identities, signed
+test tokens and disposable databases. No proprietary Docmost material or
+post-fork upstream implementation was used; the AGPL-3.0 boundary is unchanged.

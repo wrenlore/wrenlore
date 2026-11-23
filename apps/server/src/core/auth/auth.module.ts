@@ -20,6 +20,6 @@ import { MfaManagementService } from './services/mfa-management.service';
     MfaManagementService,
     AppSecretCryptoService,
   ],
-  exports: [SignupService],
+  exports: [SignupService, AuthService],
 })
 export class AuthModule {}

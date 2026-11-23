@@ -8,11 +8,11 @@ import { SocialAuthController } from './social/social-auth.controller';
 import { SocialAuthService } from './social/social-auth.service';
 import { GithubOauthProvider } from './social/providers/github-oauth.provider';
 import { GoogleOidcProvider } from './social/providers/google-oidc.provider';
-import { MfaService } from '../auth/services/mfa.service';
+import { AuthModule } from '../auth/auth.module';
 import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.service';
 
 @Module({
-  imports: [WorkspaceModule, TokenModule],
+  imports: [WorkspaceModule, TokenModule, AuthModule],
   controllers: [SsoController, SocialAuthController],
   providers: [
     SsoService,
@@ -20,7 +20,6 @@ import { AppSecretCryptoService } from '../../common/crypto/app-secret-crypto.se
     SocialAuthService,
     GithubOauthProvider,
     GoogleOidcProvider,
-    MfaService,
     AppSecretCryptoService,
   ],
 })

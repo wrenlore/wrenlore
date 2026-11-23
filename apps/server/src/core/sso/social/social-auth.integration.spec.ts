@@ -1,3 +1,4 @@
+import { AuthService } from '../../auth/services/auth.service';
 /**
  * Integration coverage for the social login flow against a real PostgreSQL
  * and Redis, with the provider HTTP endpoints mocked at the fetch boundary.
@@ -33,10 +34,12 @@ const describeIf =
     ? describe
     : describe.skip;
 
+const browserBinding = 'test-browser-secret';
+const sessionToken = 'test-session-token';
 const HOSTNAME = 'socialtest';
 const APP_URL = 'https://socialtest.example.com';
 
-describeIf('Social auth integration (real db + redis, mocked provider endpoints)', () => {
+describeIf('Social auth with real DB/Redis and mocked providers', () => {
   let db: Kysely<any>;
   let redis: Redis;
   let workspaceId: string;
@@ -112,6 +115,10 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
         reply.headers[name] = value;
         return reply;
       },
+      clearCookie(name: string) {
+        delete reply.cookies[name];
+        return reply;
+      },
       setCookie(name: string, value: string, opts: any) {
         reply.cookies[name] = { value, ...opts };
         return reply;
@@ -136,13 +143,19 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
     await db
       .deleteFrom('authAccounts')
       .where('workspaceId', 'in', (eb) =>
-        eb.selectFrom('workspaces').select('id').where('hostname', '=', HOSTNAME),
+        eb
+          .selectFrom('workspaces')
+          .select('id')
+          .where('hostname', '=', HOSTNAME),
       )
       .execute();
     await db
       .deleteFrom('authProviders')
       .where('workspaceId', 'in', (eb) =>
-        eb.selectFrom('workspaces').select('id').where('hostname', '=', HOSTNAME),
+        eb
+          .selectFrom('workspaces')
+          .select('id')
+          .where('hostname', '=', HOSTNAME),
       )
       .execute();
     await db
@@ -198,19 +211,32 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
     const googleProvider = new GoogleOidcProvider();
 
     const tokenService = {
+      verifyJwt: async (token: string) => JSON.parse(token),
       generateAccessToken: async () => 'integration-auth-token',
       generateMfaToken: async () => 'integration-mfa-token',
     };
 
+    const authService = new AuthService(
+      {} as any,
+      tokenService as any,
+      userRepo,
+      {} as any,
+      {} as any,
+      domainService as any,
+      environmentService as any,
+      { findByUserId: async () => null } as any,
+      { decryptTotpSecret: () => 'x' } as any,
+      instanceSettingRepo,
+      db as any,
+      auditService() as any,
+    );
     socialService = new SocialAuthService(
       db as any,
       userRepo as any,
-      { findByUserId: async () => null } as any,
-      instanceSettingRepo as any,
       groupUserRepo as any,
       workspaceService as any,
       tokenService as any,
-      { decryptTotpSecret: () => 'x' } as any,
+      authService,
       domainService as any,
       environmentService as any,
       cryptoService as any,
@@ -242,9 +268,18 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
   });
 
   beforeEach(async () => {
-    await db.deleteFrom('authAccounts').execute();
-    await db.deleteFrom('authProviders').execute();
-    await db.deleteFrom('users').where('workspaceId', '=', workspaceId).execute();
+    await db
+      .deleteFrom('authAccounts')
+      .where('workspaceId', '=', workspaceId)
+      .execute();
+    await db
+      .deleteFrom('authProviders')
+      .where('workspaceId', '=', workspaceId)
+      .execute();
+    await db
+      .deleteFrom('users')
+      .where('workspaceId', '=', workspaceId)
+      .execute();
     const keys = await redis.keys('sso:social:state:*');
     if (keys.length) {
       await redis.del(...keys);
@@ -253,14 +288,18 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
   });
 
   it('stores the secret encrypted and exposes only a configured flag', async () => {
-    const created = await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-      clientId: 'gh-client',
-      clientSecret: 'gh-secret-value',
-      isEnabled: true,
-      allowSignup: true,
-    } as any);
+    const created = await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+        clientId: 'gh-client',
+        clientSecret: 'gh-secret-value',
+        isEnabled: true,
+        allowSignup: true,
+      } as any,
+    );
 
     expect(created.hasClientSecret).toBe(true);
     expect(created.callbackUrl).toBe(
@@ -279,28 +318,40 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
   });
 
   it('enforces one provider per workspace type at the database level', async () => {
-    await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-    } as any);
+    await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+      } as any,
+    );
 
     await expect(
-      ssoService.createProvider(workspaceId, null as any, {
-        type: 'github',
-        name: 'GitHub 2',
-      } as any),
+      ssoService.createProvider(
+        workspaceId,
+        null as any,
+        {
+          type: 'github',
+          name: 'GitHub 2',
+        } as any,
+      ),
     ).rejects.toThrow();
   });
 
   it('runs the full controller callback flow: start, callback, signup, replay rejection', async () => {
-    await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-      clientId: 'gh-client',
-      clientSecret: 'gh-secret-value',
-      isEnabled: true,
-      allowSignup: true,
-    } as any);
+    await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+        clientId: 'gh-client',
+        clientSecret: 'gh-secret-value',
+        isEnabled: true,
+        allowSignup: true,
+      } as any,
+    );
     mockGithubEndpoints({
       githubUserId: 9001,
       email: 'New.User@Example.com',
@@ -312,7 +363,12 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
 
     // Start: 302 to GitHub with state.
     const startReply = fakeReply();
-    await controller.startLogin('github', makeWorkspace(), undefined, startReply);
+    await controller.startLogin(
+      'github',
+      makeWorkspace(),
+      undefined,
+      startReply,
+    );
     expect(startReply.statusCode).toBe(HttpStatus.FOUND);
     const authorizeUrl = new URL(startReply.headers.Location);
     expect(authorizeUrl.origin).toBe('https://github.com');
@@ -325,6 +381,15 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
       'github',
       makeWorkspace(),
       { code: 'code-abc', state },
+      {
+        headers: {},
+        cookies: Object.fromEntries(
+          Object.entries(startReply.cookies).map(([name, entry]: any) => [
+            name,
+            entry.value,
+          ]),
+        ),
+      } as any,
       cbReply,
     );
     expect(cbReply.statusCode).toBe(HttpStatus.SEE_OTHER);
@@ -359,6 +424,7 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
       'github',
       makeWorkspace(),
       { code: 'code-abc', state },
+      { headers: {}, cookies: {} } as any,
       replayReply,
     );
     expect(replayReply.statusCode).toBe(HttpStatus.SEE_OTHER);
@@ -368,19 +434,29 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
   });
 
   it('logs into the same account by provider id and blocks email-based takeover', async () => {
-    await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-      clientId: 'gh-client',
-      clientSecret: 'gh-secret-value',
-      isEnabled: true,
-      allowSignup: true,
-    } as any);
+    await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+        clientId: 'gh-client',
+        clientSecret: 'gh-secret-value',
+        isEnabled: true,
+        allowSignup: true,
+      } as any,
+    );
     mockGithubEndpoints({ githubUserId: 9002, email: 'shared@example.com' });
 
-    const state1 = await socialService.startLogin(makeWorkspace(), 'github');
+    const state1 = await socialService.startLogin(
+      makeWorkspace(),
+      'github',
+      browserBinding,
+    );
     const s1 = new URL(state1).searchParams.get('state')!;
     await socialService.handleCallback({
+      browserBinding,
+      sessionToken,
       workspace: makeWorkspace(),
       type: 'github',
       query: { code: 'c', state: s1 },
@@ -389,10 +465,16 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
     // A second GitHub identity with the same email must NOT attach to the
     // existing account (no silent email linking).
     mockGithubEndpoints({ githubUserId: 9003, email: 'shared@example.com' });
-    const state2 = await socialService.startLogin(makeWorkspace(), 'github');
+    const state2 = await socialService.startLogin(
+      makeWorkspace(),
+      'github',
+      browserBinding,
+    );
     const s2 = new URL(state2).searchParams.get('state')!;
     await expect(
       socialService.handleCallback({
+        browserBinding,
+        sessionToken,
         workspace: makeWorkspace(),
         type: 'github',
         query: { code: 'c', state: s2 },
@@ -401,9 +483,15 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
 
     // The original provider identity keeps logging into the same user.
     mockGithubEndpoints({ githubUserId: 9002, email: 'shared@example.com' });
-    const state3 = await socialService.startLogin(makeWorkspace(), 'github');
+    const state3 = await socialService.startLogin(
+      makeWorkspace(),
+      'github',
+      browserBinding,
+    );
     const s3 = new URL(state3).searchParams.get('state')!;
     const result = await socialService.handleCallback({
+      browserBinding,
+      sessionToken,
       workspace: makeWorkspace(),
       type: 'github',
       query: { code: 'c', state: s3 },
@@ -412,17 +500,25 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
   });
 
   it('blocks an in-flight callback when the provider is disabled mid-flow', async () => {
-    const provider = await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-      clientId: 'gh-client',
-      clientSecret: 'gh-secret-value',
-      isEnabled: true,
-      allowSignup: true,
-    } as any);
+    const provider = await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+        clientId: 'gh-client',
+        clientSecret: 'gh-secret-value',
+        isEnabled: true,
+        allowSignup: true,
+      } as any,
+    );
     mockGithubEndpoints({ githubUserId: 9004, email: 'mid@example.com' });
 
-    const url = await socialService.startLogin(makeWorkspace(), 'github');
+    const url = await socialService.startLogin(
+      makeWorkspace(),
+      'github',
+      browserBinding,
+    );
     const state = new URL(url).searchParams.get('state')!;
 
     await db
@@ -433,6 +529,8 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
 
     await expect(
       socialService.handleCallback({
+        browserBinding,
+        sessionToken,
         workspace: makeWorkspace(),
         type: 'github',
         query: { code: 'c', state },
@@ -441,32 +539,41 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
   });
 
   it('rejects social login when the workspace enforces SAML SSO', async () => {
-    await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-      clientId: 'gh-client',
-      clientSecret: 'gh-secret-value',
-      isEnabled: true,
-      allowSignup: true,
-    } as any);
+    await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+        clientId: 'gh-client',
+        clientSecret: 'gh-secret-value',
+        isEnabled: true,
+        allowSignup: true,
+      } as any,
+    );
 
     await expect(
       socialService.startLogin(
         makeWorkspace({ enforceSso: true }),
         'github',
+        browserBinding,
       ),
     ).rejects.toMatchObject({ code: 'sso_enforced' });
   });
 
   it('the unique index prevents concurrent duplicate links', async () => {
-    const provider = await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-      clientId: 'gh-client',
-      clientSecret: 'gh-secret-value',
-      isEnabled: true,
-      allowSignup: true,
-    } as any);
+    const provider = await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+        clientId: 'gh-client',
+        clientSecret: 'gh-secret-value',
+        isEnabled: true,
+        allowSignup: true,
+      } as any,
+    );
 
     const userA = await db
       .insertInto('users')
@@ -513,19 +620,29 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
   });
 
   it('lists and unlinks connected accounts', async () => {
-    await ssoService.createProvider(workspaceId, null as any, {
-      type: 'github',
-      name: 'GitHub',
-      clientId: 'gh-client',
-      clientSecret: 'gh-secret-value',
-      isEnabled: true,
-      allowSignup: true,
-    } as any);
+    await ssoService.createProvider(
+      workspaceId,
+      null as any,
+      {
+        type: 'github',
+        name: 'GitHub',
+        clientId: 'gh-client',
+        clientSecret: 'gh-secret-value',
+        isEnabled: true,
+        allowSignup: true,
+      } as any,
+    );
     mockGithubEndpoints({ githubUserId: 9006, email: 'unlink@example.com' });
 
-    const url = await socialService.startLogin(makeWorkspace(), 'github');
+    const url = await socialService.startLogin(
+      makeWorkspace(),
+      'github',
+      browserBinding,
+    );
     const state = new URL(url).searchParams.get('state')!;
     await socialService.handleCallback({
+      browserBinding,
+      sessionToken,
       workspace: makeWorkspace(),
       type: 'github',
       query: { code: 'c', state },
@@ -537,14 +654,178 @@ describeIf('Social auth integration (real db + redis, mocked provider endpoints)
       .where('workspaceId', '=', workspaceId)
       .executeTakeFirstOrThrow();
 
-    const accounts = await socialService.listAccounts(user as any, makeWorkspace());
+    const accounts = await socialService.listAccounts(
+      user as any,
+      makeWorkspace(),
+    );
     expect(accounts.items).toHaveLength(1);
     expect(accounts.items[0]).toMatchObject({ providerType: 'github' });
     // The provider user id is internal and not exposed to the client.
     expect(JSON.stringify(accounts)).not.toContain('9006');
 
     await socialService.unlink(user as any, makeWorkspace(), 'github');
-    const after = await socialService.listAccounts(user as any, makeWorkspace());
+    const after = await socialService.listAccounts(
+      user as any,
+      makeWorkspace(),
+    );
     expect(after.items).toHaveLength(0);
+  });
+  describe('disconnect/reconnect with real uniqueness constraints', () => {
+    async function setup() {
+      await ssoService.createProvider(
+        workspaceId,
+        null as any,
+        {
+          type: 'github',
+          name: 'GitHub',
+          clientId: 'gh-client',
+          clientSecret: 'gh-secret-value',
+          isEnabled: true,
+        } as any,
+      );
+      return db
+        .insertInto('users')
+        .values({
+          name: 'Member',
+          email: 'member@example.com',
+          password: 'test',
+          workspaceId,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    }
+    async function pending(user: any) {
+      // Session verification is mocked here; the HTTP suite exercises signed JWTs.
+      const session = JSON.stringify({ sub: user.id, workspaceId });
+      const url = await socialService.startLink(
+        user,
+        makeWorkspace(),
+        'github',
+        browserBinding,
+        session,
+      );
+      return {
+        workspace: makeWorkspace(),
+        type: 'github' as const,
+        browserBinding,
+        sessionToken: session,
+        query: {
+          code: 'test-code',
+          state: new URL(url).searchParams.get('state')!,
+        },
+      };
+    }
+    async function link(user: any) {
+      return socialService.handleCallback(await pending(user));
+    }
+    it.each([9100, 9101])(
+      'reconnects after unlinking, including a different identity (%s)',
+      async (nextId) => {
+        const user = await setup();
+        mockGithubEndpoints({
+          githubUserId: 9100,
+          email: 'provider@example.com',
+        });
+        await link(user);
+        await socialService.unlink(user as any, makeWorkspace(), 'github');
+        mockGithubEndpoints({
+          githubUserId: nextId,
+          email: 'provider@example.com',
+        });
+        expect((await link(user)).kind).toBe('linked');
+        const rows = await db
+          .selectFrom('authAccounts')
+          .selectAll()
+          .where('workspaceId', '=', workspaceId)
+          .execute();
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({
+          userId: user.id,
+          providerUserId: String(nextId),
+          deletedAt: null,
+        });
+      },
+    );
+    it('never overwrites an active association with a different identity', async () => {
+      const user = await setup();
+      mockGithubEndpoints({
+        githubUserId: 9200,
+        email: 'provider@example.com',
+      });
+      await link(user);
+      mockGithubEndpoints({
+        githubUserId: 9201,
+        email: 'provider@example.com',
+      });
+      await expect(link(user)).rejects.toMatchObject({
+        code: 'link_collision',
+      });
+      const row = await db
+        .selectFrom('authAccounts')
+        .selectAll()
+        .where('userId', '=', user.id)
+        .executeTakeFirstOrThrow();
+      expect(row.providerUserId).toBe('9200');
+    });
+    it('only allows one owner when concurrent callbacks claim the same identity', async () => {
+      const a = await setup();
+      const b = await db
+        .insertInto('users')
+        .values({
+          name: 'B',
+          email: 'member-b@example.com',
+          password: 'test',
+          workspaceId,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      mockGithubEndpoints({
+        githubUserId: 9300,
+        email: 'provider@example.com',
+      });
+      const flows = await Promise.all([pending(a), pending(b)]);
+      const results = await Promise.allSettled(
+        flows.map((flow) => socialService.handleCallback(flow)),
+      );
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const failure = results.find(
+        (r) => r.status === 'rejected',
+      ) as PromiseRejectedResult;
+      expect(failure.reason.code).toBe('link_collision');
+      const rows = await db
+        .selectFrom('authAccounts')
+        .selectAll()
+        .where('workspaceId', '=', workspaceId)
+        .where('deletedAt', 'is', null)
+        .execute();
+      expect(rows).toHaveLength(1);
+    });
+    it('cannot reconnect an identity that another user claimed after unlinking', async () => {
+      const a = await setup();
+      const b = await db
+        .insertInto('users')
+        .values({
+          name: 'B',
+          email: 'member-b@example.com',
+          password: 'test',
+          workspaceId,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      mockGithubEndpoints({
+        githubUserId: 9400,
+        email: 'provider@example.com',
+      });
+      await link(a);
+      await socialService.unlink(a as any, makeWorkspace(), 'github');
+      await link(b);
+      await expect(link(a)).rejects.toMatchObject({ code: 'link_collision' });
+      expect(
+        (await socialService.listAccounts(a as any, makeWorkspace())).items,
+      ).toHaveLength(0);
+      expect(
+        (await socialService.listAccounts(b as any, makeWorkspace())).items,
+      ).toHaveLength(1);
+    });
   });
 });

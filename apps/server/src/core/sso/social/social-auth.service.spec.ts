@@ -1,269 +1,17 @@
-import { SocialAuthService, SocialAuthFlowError } from './social-auth.service';
-
-const providerId = '019e6a1c-3969-704e-b0fb-57549f2cb3ef';
-const workspaceId = '019e6a1c-3969-704e-b0fb-57549f2cb3ee';
-const userId = '019e6a1c-3969-704e-b0fb-57549f2cb3ef';
-const baseUrl = 'https://tenant.example.com';
-
-class FakeRedis {
-  private nowMs = 0;
-  readonly entries = new Map<string, { value: string; expiresAt: number }>();
-
-  async set(key: string, value: string, ...args: unknown[]) {
-    const pxIndex = args.indexOf('PX');
-    const ttlMs =
-      pxIndex >= 0 && typeof args[pxIndex + 1] === 'number'
-        ? (args[pxIndex + 1] as number)
-        : 60_000;
-    if (args.includes('NX') && (await this.get(key)) !== null) {
-      return null;
-    }
-    this.entries.set(key, { value, expiresAt: this.nowMs + ttlMs });
-    return 'OK';
-  }
-
-  async get(key: string) {
-    const entry = this.entries.get(key);
-    if (!entry) return null;
-    if (entry.expiresAt <= this.nowMs) {
-      this.entries.delete(key);
-      return null;
-    }
-    return entry.value;
-  }
-
-  async getdel(key: string) {
-    const value = await this.get(key);
-    this.entries.delete(key);
-    return value;
-  }
-
-  advanceBy(ms: number) {
-    this.nowMs += ms;
-  }
-}
-
-class FakeDb {
-  private selectQueues: Record<string, unknown[]> = {};
-  readonly inserted: { table: string; values: any }[] = [];
-  readonly updated: { table: string; values: any }[] = [];
-  insertConflicts = false;
-
-  queueSelect(table: string, ...results: unknown[]) {
-    (this.selectQueues[table] ??= []).push(...results);
-  }
-
-  private nextSelect(table: string, terminal: string) {
-    const queue = this.selectQueues[table] ?? [];
-    if (terminal === 'execute') {
-      return queue.length ? (queue.shift() as unknown[]) ?? [] : [];
-    }
-    return queue.length ? queue.shift() : undefined;
-  }
-
-  private chain(table: string, kind: 'select' | 'insert' | 'update'): any {
-    const self = this;
-    let values: any = {};
-
-    const target: any = {
-      selectAll: () => target,
-      select: () => target,
-      innerJoin: () => target,
-      where: () => target,
-      orderBy: () => target,
-      set: (v: any) => {
-        values = v;
-        return target;
-      },
-      values: (v: any) => {
-        values = v;
-        return target;
-      },
-      onConflict: (cb?: (oc: any) => unknown) => {
-        cb?.(target);
-        return target;
-      },
-      doNothing: () => target,
-      returning: () => target,
-      returningAll: () => target,
-      executeTakeFirst: async () => {
-        if (kind === 'select') return self.nextSelect(table, 'first');
-        if (kind === 'insert') {
-          self.inserted.push({ table, values });
-          return self.insertConflicts ? undefined : { id: 'link-id' };
-        }
-        self.updated.push({ table, values });
-        return { id: 'row-id', ...values };
-      },
-      executeTakeFirstOrThrow: async () => {
-        const row = await target.executeTakeFirst();
-        if (!row) throw new Error('no row');
-        return row;
-      },
-      execute: async () => {
-        if (kind === 'select') return self.nextSelect(table, 'execute');
-        if (kind === 'insert') {
-          self.inserted.push({ table, values });
-          return [];
-        }
-        self.updated.push({ table, values });
-        return [{ numUpdatedRows: 1n }];
-      },
-    };
-    return target;
-  }
-
-  selectFrom = (table: string) => this.chain(table, 'select');
-  insertInto = (table: string) => this.chain(table, 'insert');
-  updateTable = (table: string) => this.chain(table, 'update');
-  transaction = () => ({
-    execute: async (cb: any) => cb(this),
-  });
-}
-
-function githubProviderRow(overrides: Record<string, unknown> = {}) {
-  return {
-    id: providerId,
-    workspaceId,
-    type: 'github',
-    name: 'GitHub',
-    isEnabled: true,
-    allowSignup: false,
-    oidcClientId: 'client-id',
-    oidcClientSecret: 'enc:secret',
-    deletedAt: null,
-    ...overrides,
-  };
-}
-
-function makeWorkspace(overrides: Record<string, unknown> = {}) {
-  return {
-    id: workspaceId,
-    hostname: 'tenant',
-    enforceSso: false,
-    emailDomains: [],
-    ...overrides,
-  } as any;
-}
-
-function makeUser(overrides: Record<string, unknown> = {}) {
-  return {
-    id: userId,
-    email: 'user@example.com',
-    name: 'User',
-    workspaceId,
-    deactivatedAt: null,
-    deletedAt: null,
-    emailVerifiedAt: new Date(),
-    ...overrides,
-  } as any;
-}
-
-function identity(overrides: Record<string, unknown> = {}) {
-  return {
-    providerUserId: 'gh-123',
-    email: 'user@example.com',
-    emailVerified: true,
-    displayName: 'User',
-    ...overrides,
-  };
-}
-
-function createService(options: { provider?: any; cloud?: boolean } = {}) {
-  const db = new FakeDb();
-  const redis = new FakeRedis();
-
-  const userRepo = {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    findByEmail: jest.fn().mockResolvedValue(null),
-    insertUser: jest.fn().mockImplementation(async (data: any) => ({
-      id: 'new-user-id',
-      ...data,
-    })),
-    updateUser: jest.fn().mockResolvedValue(undefined),
-  };
-  const userMfaRepo = { findByUserId: jest.fn().mockResolvedValue(null) };
-  const instanceSettingRepo = {
-    isLocalMfaRequired: jest.fn().mockResolvedValue(false),
-  };
-  const groupUserRepo = { addUserToDefaultGroup: jest.fn() };
-  const workspaceService = { addUserToWorkspace: jest.fn() };
-  const tokenService = {
-    generateAccessToken: jest.fn().mockResolvedValue('auth-token'),
-    generateMfaToken: jest.fn().mockResolvedValue('mfa-token'),
-  };
-  const mfaService = {
-    decryptTotpSecret: jest.fn().mockReturnValue('totp-secret'),
-  };
-  const domainService = { getUrl: jest.fn().mockReturnValue(baseUrl) };
-  const environmentService = {
-    isHttps: jest.fn().mockReturnValue(true),
-    getCookieExpiresIn: jest.fn().mockReturnValue(new Date()),
-    isCloud: jest.fn().mockReturnValue(options.cloud ?? false),
-  };
-  const cryptoService = {
-    encrypt: jest.fn((value: string) => `enc:${value}`),
-    decrypt: jest.fn((value: string) =>
-      value.startsWith('enc:') ? value.slice(4) : value,
-    ),
-  };
-  const githubDriver = {
-    type: 'github',
-    buildAuthorizeUrl: jest
-      .fn()
-      .mockImplementation(async ({ state }: any) => ({
-        authorizeUrl: `https://github.com/login/oauth/authorize?state=${state}&client_id=client-id&scope=read:user+user:email`,
-      })),
-    resolveIdentity: jest.fn().mockResolvedValue(identity()),
-  };
-  const googleDriver = {
-    type: 'google',
-    buildAuthorizeUrl: jest
-      .fn()
-      .mockImplementation(async ({ state }: any) => ({
-        authorizeUrl: `https://accounts.google.com/o/oauth2/v2/auth?state=${state}`,
-      })),
-    resolveIdentity: jest.fn().mockResolvedValue(identity()),
-  };
-  const auditService = { log: jest.fn(), setActorId: jest.fn() };
-  const redisService = { getOrThrow: jest.fn().mockReturnValue(redis) };
-
-  const service = new SocialAuthService(
-    db as any,
-    userRepo as any,
-    userMfaRepo as any,
-    instanceSettingRepo as any,
-    groupUserRepo as any,
-    workspaceService as any,
-    tokenService as any,
-    mfaService as any,
-    domainService as any,
-    environmentService as any,
-    cryptoService as any,
-    githubDriver as any,
-    googleDriver as any,
-    auditService as any,
-    redisService as any,
-  );
-
-  return {
-    service,
-    db,
-    redis,
-    userRepo,
-    userMfaRepo,
-    instanceSettingRepo,
-    groupUserRepo,
-    workspaceService,
-    tokenService,
-    mfaService,
-    environmentService,
-    cryptoService,
-    githubDriver,
-    googleDriver,
-    auditService,
-  };
-}
+import { SocialAuthFlowError } from './social-auth.service';
+import {
+  createService,
+  makeWorkspace,
+  makeUser,
+  githubProviderRow,
+  identity,
+  providerId,
+  workspaceId,
+  userId,
+  browserBinding,
+  sessionToken,
+  baseUrl,
+} from './social-auth.test-fixture';
 
 describe('SocialAuthService', () => {
   describe('startLogin', () => {
@@ -275,10 +23,10 @@ describe('SocialAuthService', () => {
       );
 
       await expect(
-        ctx.service.startLogin(makeWorkspace(), 'github'),
+        ctx.service.startLogin(makeWorkspace(), 'github', browserBinding),
       ).rejects.toThrow(SocialAuthFlowError);
       await expect(
-        ctx.service.startLogin(makeWorkspace(), 'github'),
+        ctx.service.startLogin(makeWorkspace(), 'github', browserBinding),
       ).rejects.toMatchObject({ code: 'provider_disabled' });
     });
 
@@ -290,7 +38,7 @@ describe('SocialAuthService', () => {
       );
 
       await expect(
-        ctx.service.startLogin(makeWorkspace(), 'github'),
+        ctx.service.startLogin(makeWorkspace(), 'github', browserBinding),
       ).rejects.toMatchObject({ code: 'provider_not_configured' });
     });
 
@@ -299,15 +47,23 @@ describe('SocialAuthService', () => {
       ctx.db.queueSelect('authProviders', githubProviderRow());
 
       await expect(
-        ctx.service.startLogin(makeWorkspace({ enforceSso: true }), 'github'),
+        ctx.service.startLogin(
+          makeWorkspace({ enforceSso: true }),
+          'github',
+          browserBinding,
+        ),
       ).rejects.toMatchObject({ code: 'sso_enforced' });
     });
 
-    it('stores a single-use state and starts the GitHub flow without PKCE', async () => {
+    it('stores a single-use state and starts the GitHub flow with PKCE', async () => {
       const ctx = createService();
       ctx.db.queueSelect('authProviders', githubProviderRow());
 
-      const url = await ctx.service.startLogin(makeWorkspace(), 'github');
+      const url = await ctx.service.startLogin(
+        makeWorkspace(),
+        'github',
+        browserBinding,
+      );
       const state = new URL(url).searchParams.get('state') as string;
       expect(state).toBeTruthy();
 
@@ -320,7 +76,9 @@ describe('SocialAuthService', () => {
         providerType: 'github',
         operation: 'login',
       });
-      expect(parsed.codeVerifier).toBeUndefined();
+      expect(parsed.codeVerifier).toHaveLength(43);
+      expect(parsed.browserBindingHash).toBeTruthy();
+      expect(stored).not.toContain(browserBinding);
       expect(ctx.githubDriver.buildAuthorizeUrl).toHaveBeenCalledWith(
         expect.objectContaining({ clientId: 'client-id' }),
       );
@@ -333,7 +91,11 @@ describe('SocialAuthService', () => {
         githubProviderRow({ type: 'google' }),
       );
 
-      const url = await ctx.service.startLogin(makeWorkspace(), 'google');
+      const url = await ctx.service.startLogin(
+        makeWorkspace(),
+        'google',
+        browserBinding,
+      );
       const state = new URL(url).searchParams.get('state') as string;
       const parsed = JSON.parse(
         (await ctx.redis.get(`sso:social:state:${state}`)) as string,
@@ -349,6 +111,7 @@ describe('SocialAuthService', () => {
       const url = await ctx.service.startLogin(
         makeWorkspace(),
         'github',
+        browserBinding,
         'https://evil.example.com/steal',
       );
       const state = new URL(url).searchParams.get('state') as string;
@@ -373,6 +136,7 @@ describe('SocialAuthService', () => {
       const url = await ctx.service.startLogin(
         options.workspace ?? makeWorkspace(),
         'github',
+        browserBinding,
       );
       const state = new URL(url).searchParams.get('state') as string;
       return { ctx, state };
@@ -380,6 +144,8 @@ describe('SocialAuthService', () => {
 
     function callback(ctx: ReturnType<typeof createService>, state: string) {
       return ctx.service.handleCallback({
+        browserBinding,
+        sessionToken,
         workspace: makeWorkspace(),
         type: 'github',
         query: { code: 'code-123', state },
@@ -412,6 +178,8 @@ describe('SocialAuthService', () => {
 
       await expect(
         ctx.service.handleCallback({
+          browserBinding,
+          sessionToken,
           workspace: { ...makeWorkspace(), id: 'other-workspace' },
           type: 'github',
           query: { code: 'code-123', state },
@@ -424,6 +192,8 @@ describe('SocialAuthService', () => {
 
       await expect(
         ctx.service.handleCallback({
+          browserBinding,
+          sessionToken,
           workspace: makeWorkspace(),
           type: 'google',
           query: { code: 'code-123', state },
@@ -433,7 +203,10 @@ describe('SocialAuthService', () => {
 
     it('blocks in-flight callbacks when the provider gets disabled', async () => {
       const { ctx, state } = await prepareLogin();
-      ctx.db.queueSelect('authProviders', githubProviderRow({ isEnabled: false }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ isEnabled: false }),
+      );
 
       await expect(callback(ctx, state)).rejects.toMatchObject({
         code: 'provider_disabled',
@@ -446,6 +219,8 @@ describe('SocialAuthService', () => {
 
       await expect(
         ctx.service.handleCallback({
+          browserBinding,
+          sessionToken,
           workspace: makeWorkspace({ enforceSso: true }),
           type: 'github',
           query: { code: 'code-123', state },
@@ -510,19 +285,27 @@ describe('SocialAuthService', () => {
 
     it('never silently links by email match', async () => {
       const { ctx, state } = await prepareLogin();
-      ctx.db.queueSelect('authProviders', githubProviderRow({ allowSignup: true }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ allowSignup: true }),
+      );
       ctx.db.queueSelect('authAccounts', null);
       ctx.userRepo.findByEmail.mockResolvedValue(makeUser());
 
       await expect(callback(ctx, state)).rejects.toMatchObject({
         code: 'account_not_linked',
       });
-      expect(ctx.db.inserted.filter((i) => i.table === 'authAccounts')).toHaveLength(0);
+      expect(
+        ctx.db.inserted.filter((i) => i.table === 'authAccounts'),
+      ).toHaveLength(0);
     });
 
     it('rejects signup when the provider does not allow it', async () => {
       const { ctx, state } = await prepareLogin();
-      ctx.db.queueSelect('authProviders', githubProviderRow({ allowSignup: false }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ allowSignup: false }),
+      );
       ctx.db.queueSelect('authAccounts', null);
 
       await expect(callback(ctx, state)).rejects.toMatchObject({
@@ -532,7 +315,10 @@ describe('SocialAuthService', () => {
 
     it('rejects signup without a provider-verified email', async () => {
       const { ctx, state } = await prepareLogin();
-      ctx.db.queueSelect('authProviders', githubProviderRow({ allowSignup: true }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ allowSignup: true }),
+      );
       ctx.db.queueSelect('authAccounts', null);
       ctx.githubDriver.resolveIdentity.mockResolvedValue(
         identity({ emailVerified: false }),
@@ -545,11 +331,16 @@ describe('SocialAuthService', () => {
 
     it('rejects signup for a domain outside the workspace allowlist', async () => {
       const { ctx, state } = await prepareLogin();
-      ctx.db.queueSelect('authProviders', githubProviderRow({ allowSignup: true }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ allowSignup: true }),
+      );
       ctx.db.queueSelect('authAccounts', null);
 
       await expect(
         ctx.service.handleCallback({
+          browserBinding,
+          sessionToken,
           workspace: makeWorkspace({ emailDomains: ['corp.example.com'] }),
           type: 'github',
           query: { code: 'code-123', state },
@@ -559,7 +350,10 @@ describe('SocialAuthService', () => {
 
     it('rejects cloud signup without an invitation', async () => {
       const { ctx, state } = await prepareLogin({ cloud: true });
-      ctx.db.queueSelect('authProviders', githubProviderRow({ allowSignup: true }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ allowSignup: true }),
+      );
       ctx.db.queueSelect('authAccounts', null);
       ctx.db.queueSelect('workspaceInvitations', undefined);
 
@@ -570,7 +364,10 @@ describe('SocialAuthService', () => {
 
     it('creates a verified account when signup is allowed', async () => {
       const { ctx, state } = await prepareLogin();
-      ctx.db.queueSelect('authProviders', githubProviderRow({ allowSignup: true }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ allowSignup: true }),
+      );
       ctx.db.queueSelect('authAccounts', null);
 
       const result = await callback(ctx, state);
@@ -596,7 +393,10 @@ describe('SocialAuthService', () => {
 
     it('reports a link collision when the identity raced to another account', async () => {
       const { ctx, state } = await prepareLogin();
-      ctx.db.queueSelect('authProviders', githubProviderRow({ allowSignup: true }));
+      ctx.db.queueSelect(
+        'authProviders',
+        githubProviderRow({ allowSignup: true }),
+      );
       ctx.db.queueSelect('authAccounts', null);
       ctx.db.insertConflicts = true;
 
@@ -648,6 +448,8 @@ describe('SocialAuthService', () => {
         makeUser(),
         makeWorkspace(),
         'github',
+        browserBinding,
+        sessionToken,
       );
       const state = new URL(url).searchParams.get('state') as string;
       return { ctx, state };
@@ -659,6 +461,8 @@ describe('SocialAuthService', () => {
       ctx.db.queueSelect('authAccounts', null);
 
       const result = await ctx.service.handleCallback({
+        browserBinding,
+        sessionToken,
         workspace: makeWorkspace(),
         type: 'github',
         query: { code: 'code-123', state },
@@ -687,6 +491,8 @@ describe('SocialAuthService', () => {
 
       await expect(
         ctx.service.handleCallback({
+          browserBinding,
+          sessionToken,
           workspace: makeWorkspace(),
           type: 'github',
           query: { code: 'code-123', state },
@@ -700,15 +506,17 @@ describe('SocialAuthService', () => {
       ctx.db.queueSelect('authAccounts', { userId, providerUserId: 'gh-123' });
 
       const result = await ctx.service.handleCallback({
+        browserBinding,
+        sessionToken,
         workspace: makeWorkspace(),
         type: 'github',
         query: { code: 'code-123', state },
       });
 
       expect(result.kind).toBe('linked');
-      expect(ctx.db.inserted.filter((i) => i.table === 'authAccounts')).toHaveLength(
-        0,
-      );
+      expect(
+        ctx.db.inserted.filter((i) => i.table === 'authAccounts'),
+      ).toHaveLength(0);
     });
   });
 
@@ -723,10 +531,110 @@ describe('SocialAuthService', () => {
       expect(update?.values.deletedAt).toBeInstanceOf(Date);
       expect(
         ctx.auditService.log.mock.calls.some(
-          ([payload]: any[]) =>
-            payload.event === 'user.auth_account_unlinked',
+          ([payload]: any[]) => payload.event === 'user.auth_account_unlinked',
         ),
       ).toBe(true);
     });
+  });
+});
+
+describe('Social authentication review regressions', () => {
+  async function login(
+    ctx: ReturnType<typeof createService>,
+    overrides: any = {},
+  ) {
+    ctx.db.queueSelect(
+      'authProviders',
+      githubProviderRow(),
+      githubProviderRow(),
+    );
+    ctx.db.queueSelect('authAccounts', { userId, providerUserId: 'gh-123' });
+    const url = await ctx.service.startLogin(
+      makeWorkspace(),
+      'github',
+      browserBinding,
+    );
+    const state = new URL(url).searchParams.get('state')!;
+    return ctx.service.handleCallback({
+      workspace: makeWorkspace(),
+      type: 'github',
+      query: { code: 'code', state },
+      browserBinding,
+      ...overrides,
+    });
+  }
+
+  it.each([
+    ['different@example.net', true, false],
+    ['USER@EXAMPLE.COM', true, true],
+    ['user@example.com', false, false],
+    [null, true, false],
+  ])(
+    'only verifies the exact provider-verified local address (%s, %s)',
+    async (email, verified, shouldVerify) => {
+      const ctx = createService();
+      ctx.userRepo.findById.mockResolvedValue(
+        makeUser({ emailVerifiedAt: null }),
+      );
+      ctx.githubDriver.resolveIdentity.mockResolvedValue(
+        identity({ email, emailVerified: verified }),
+      );
+      await login(ctx);
+      const verifiedWrites = ctx.userRepo.updateUser.mock.calls.filter(
+        ([data]) => data.emailVerifiedAt,
+      );
+      expect(verifiedWrites).toHaveLength(shouldVerify ? 1 : 0);
+    },
+  );
+
+  it('does not record login success or lastLoginAt until MFA succeeds', async () => {
+    const ctx = createService();
+    ctx.instanceSettingRepo.isLocalMfaRequired.mockResolvedValue(true);
+    ctx.userMfaRepo.findByUserId.mockResolvedValue({
+      enabledAt: new Date(),
+      totpSecret: 'encrypted',
+    });
+    expect((await login(ctx)).kind).toBe('mfa');
+    expect(ctx.userRepo.updateLastLogin).not.toHaveBeenCalled();
+    expect(
+      ctx.auditService.log.mock.calls.some(
+        ([event]) => event.event === 'user.login',
+      ),
+    ).toBe(false);
+    expect(ctx.tokenService.generateMfaToken).toHaveBeenCalledWith(
+      expect.anything(),
+      workspaceId,
+      { source: 'github', providerId },
+    );
+  });
+
+  it('records exactly one successful non-MFA login with the human actor and provider', async () => {
+    const ctx = createService();
+    await login(ctx);
+    expect(ctx.userRepo.updateLastLogin).toHaveBeenCalledTimes(1);
+    expect(ctx.auditService.setActorId).toHaveBeenCalledWith(userId);
+    expect(
+      ctx.auditService.log.mock.calls.filter(
+        ([event]) => event.event === 'user.login',
+      ),
+    ).toEqual([
+      [
+        expect.objectContaining({
+          metadata: { source: 'github', providerId, workspaceId },
+        }),
+      ],
+    ]);
+  });
+
+  it('disables account-link controls while enterprise SSO is enforced', async () => {
+    const ctx = createService();
+    expect(
+      (
+        await ctx.service.listAccounts(
+          makeUser(),
+          makeWorkspace({ enforceSso: true }),
+        )
+      ).linkingAllowed,
+    ).toBe(false);
   });
 });

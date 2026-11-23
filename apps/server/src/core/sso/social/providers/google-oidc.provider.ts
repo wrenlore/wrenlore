@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { Client, Issuer } from 'openid-client';
 import {
@@ -43,7 +39,10 @@ export class GoogleOidcProvider implements SocialProviderDriver {
     codeVerifier?: string;
     nonce?: string;
   }): Promise<SocialAuthorizeRequest> {
-    const client = await this.buildClient(opts.clientId, opts.clientSecret ?? '');
+    const client = await this.buildClient(
+      opts.clientId,
+      opts.clientSecret ?? '',
+    );
 
     const authorizationUrl = client.authorizationUrl({
       redirect_uri: opts.redirectUri,
@@ -90,9 +89,7 @@ export class GoogleOidcProvider implements SocialProviderDriver {
         } as any,
       );
     } catch (error) {
-      this.logger.warn(
-        `Google id_token validation failed: ${(error as Error).message}`,
-      );
+      this.logger.warn('Google id_token validation failed');
       throw new BadRequestException('Google identity response rejected.');
     } finally {
       // tokenset (access/refresh/id tokens) is intentionally dropped after

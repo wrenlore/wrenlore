@@ -12,11 +12,10 @@ import { KyselyDB } from '@wrenlore/db/types/kysely.types';
 import { executeTx } from '@wrenlore/db/utils';
 import { UserRepo } from '@wrenlore/db/repos/user/user.repo';
 import { GroupUserRepo } from '@wrenlore/db/repos/group/group-user.repo';
-import { UserMfaRepo } from '@wrenlore/db/repos/user/user-mfa.repo';
-import { InstanceSettingRepo } from '@wrenlore/db/repos/instance-setting/instance-setting.repo';
 import { WorkspaceService } from '../../workspace/services/workspace.service';
+import { AuthService } from '../../auth/services/auth.service';
+import { JwtType } from '../../auth/dto/jwt-payload';
 import { TokenService } from '../../auth/services/token.service';
-import { MfaService } from '../../auth/services/mfa.service';
 import { validateAllowedEmail } from '../../auth/auth.util';
 import { DomainService } from '../../../integrations/environment/domain.service';
 import { EnvironmentService } from '../../../integrations/environment/environment.service';
@@ -27,7 +26,7 @@ import {
   IAuditService,
 } from '../../../integrations/audit/audit.service';
 import { RedisService } from '@nestjs-labs/nestjs-ioredis';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { FastifyReply } from 'fastify';
 import type { Redis } from 'ioredis';
 import { AuthProvider, User, Workspace } from '@wrenlore/db/types/entity.types';
@@ -61,6 +60,8 @@ interface StoredSocialState {
   codeVerifier?: string;
   nonce?: string;
   createdAt: number;
+  browserBindingHash: string;
+  sessionTokenHash?: string;
 }
 
 export type SocialCallbackResult =
@@ -82,12 +83,10 @@ export class SocialAuthService {
   constructor(
     @InjectKysely() private readonly db: KyselyDB,
     private readonly userRepo: UserRepo,
-    private readonly userMfaRepo: UserMfaRepo,
-    private readonly instanceSettingRepo: InstanceSettingRepo,
     private readonly groupUserRepo: GroupUserRepo,
     private readonly workspaceService: WorkspaceService,
     private readonly tokenService: TokenService,
-    private readonly mfaService: MfaService,
+    private readonly authService: AuthService,
     private readonly domainService: DomainService,
     private readonly environmentService: EnvironmentService,
     private readonly cryptoService: AppSecretCryptoService,
@@ -121,9 +120,42 @@ export class SocialAuthService {
     });
   }
 
+  browserCookieName(state: unknown): string | null {
+    if (typeof state !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(state))
+      return null;
+    const prefix = this.environmentService.isHttps() ? '__Host-' : '';
+    return `${prefix}wl-social-${state}`;
+  }
+
+  setBrowserCookie(res: FastifyReply, authorizeUrl: string, binding: string) {
+    const name = this.browserCookieName(
+      new URL(authorizeUrl).searchParams.get('state'),
+    );
+    if (!name) throw new SocialAuthFlowError('state_invalid');
+    res.setCookie(name, binding, {
+      httpOnly: true,
+      secure: this.environmentService.isHttps(),
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SOCIAL_STATE_TTL_MS / 1000,
+    });
+  }
+
+  clearBrowserCookie(res: FastifyReply, state: unknown) {
+    const name = this.browserCookieName(state);
+    if (name)
+      res.clearCookie(name, {
+        httpOnly: true,
+        secure: this.environmentService.isHttps(),
+        sameSite: 'lax',
+        path: '/',
+      });
+  }
+
   async startLogin(
     workspace: Workspace,
     type: SocialProviderType,
+    browserBinding: string,
     redirect?: string,
   ): Promise<string> {
     if (workspace.enforceSso) {
@@ -138,6 +170,7 @@ export class SocialAuthService {
       provider,
       type,
       operation: 'login',
+      browserBinding,
       state,
       redirect,
     });
@@ -147,9 +180,12 @@ export class SocialAuthService {
     user: User,
     workspace: Workspace,
     type: SocialProviderType,
+    browserBinding: string,
+    sessionToken: string,
     redirect?: string,
   ): Promise<string> {
-    if (isUserDisabled(user)) {
+    if (workspace.enforceSso) throw new SocialAuthFlowError('sso_enforced');
+    if (isUserDisabled(user) || user.workspaceId !== workspace.id) {
       throw new UnauthorizedException('User account is disabled.');
     }
 
@@ -161,6 +197,8 @@ export class SocialAuthService {
       provider,
       type,
       operation: 'link',
+      browserBinding,
+      sessionToken,
       userId: user.id,
       state,
       redirect,
@@ -171,6 +209,8 @@ export class SocialAuthService {
     workspace: Workspace;
     type: SocialProviderType;
     query: Record<string, string | undefined>;
+    browserBinding?: string;
+    sessionToken?: string;
   }): Promise<SocialCallbackResult> {
     const { workspace, type, query } = opts;
 
@@ -181,11 +221,14 @@ export class SocialAuthService {
       throw new SocialAuthFlowError('provider_rejected');
     }
 
+    if (!this.browserCookieName(stateValue))
+      throw new SocialAuthFlowError('state_invalid');
     const stored = await this.consumeState(stateValue);
     if (
       !stored ||
       stored.providerType !== type ||
-      stored.workspaceId !== workspace.id
+      stored.workspaceId !== workspace.id ||
+      !this.matchesBinding(stored.browserBindingHash, opts.browserBinding)
     ) {
       this.logLoginFailure(workspace, type, 'state_invalid');
       throw new SocialAuthFlowError('state_invalid');
@@ -205,9 +248,29 @@ export class SocialAuthService {
       throw new SocialAuthFlowError('provider_disabled');
     }
 
-    if (stored.operation === 'login' && workspace.enforceSso) {
+    if (workspace.enforceSso) {
       this.logLoginFailure(workspace, type, 'sso_enforced');
       throw new SocialAuthFlowError('sso_enforced');
+    }
+
+    if (stored.operation === 'link') {
+      if (!this.matchesBinding(stored.sessionTokenHash, opts.sessionToken)) {
+        throw new SocialAuthFlowError('state_invalid');
+      }
+      try {
+        const payload = await this.tokenService.verifyJwt(
+          opts.sessionToken,
+          JwtType.ACCESS,
+        );
+        if (
+          payload.sub !== stored.userId ||
+          payload.workspaceId !== workspace.id
+        ) {
+          throw new Error('Session changed');
+        }
+      } catch {
+        throw new SocialAuthFlowError('state_invalid');
+      }
     }
 
     const clientSecret = this.decryptSecret(provider.oidcClientSecret);
@@ -225,9 +288,7 @@ export class SocialAuthService {
         nonce: stored.nonce,
       });
     } catch (error) {
-      this.logger.warn(
-        `Social identity resolution failed (${type}): ${(error as Error).message}`,
-      );
+      this.logger.warn(`Social identity resolution failed (${type})`);
       this.logLoginFailure(workspace, type, 'identity_failed');
       throw new SocialAuthFlowError('identity_failed');
     }
@@ -248,7 +309,11 @@ export class SocialAuthService {
   async listAccounts(user: User, workspace: Workspace) {
     const rows = await this.db
       .selectFrom('authAccounts')
-      .innerJoin('authProviders', 'authProviders.id', 'authAccounts.authProviderId')
+      .innerJoin(
+        'authProviders',
+        'authProviders.id',
+        'authAccounts.authProviderId',
+      )
       .select([
         'authAccounts.id',
         'authAccounts.providerUserId',
@@ -265,6 +330,7 @@ export class SocialAuthService {
       .execute();
 
     return {
+      linkingAllowed: !workspace.enforceSso,
       items: rows.map((row) => ({
         id: row.id,
         providerType: row.type as SocialProviderType,
@@ -313,15 +379,17 @@ export class SocialAuthService {
     operation: 'login' | 'link';
     userId?: string;
     state: string;
+    browserBinding: string;
+    sessionToken?: string;
     redirect?: string;
   }): Promise<string> {
     const { workspace, provider, type, operation, userId, state, redirect } =
       opts;
 
     const driver = this.drivers[type];
-    const codeVerifier =
-      type === 'google' ? GoogleOidcProvider.generateCodeVerifier() : undefined;
-    const nonce = type === 'google' ? GoogleOidcProvider.generateNonce() : undefined;
+    const codeVerifier = randomBytes(32).toString('base64url');
+    const nonce =
+      type === 'google' ? GoogleOidcProvider.generateNonce() : undefined;
 
     const record: StoredSocialState = {
       workspaceId: workspace.id,
@@ -333,6 +401,10 @@ export class SocialAuthService {
       codeVerifier,
       nonce,
       createdAt: Date.now(),
+      browserBindingHash: this.hashBinding(opts.browserBinding),
+      sessionTokenHash: opts.sessionToken
+        ? this.hashBinding(opts.sessionToken)
+        : undefined,
     };
 
     const key = `${SOCIAL_STATE_KEY_PREFIX}${state}`;
@@ -382,9 +454,13 @@ export class SocialAuthService {
       let resolvedUser: User | undefined;
 
       if (existingLink) {
-        resolvedUser = await this.userRepo.findById(existingLink.userId, workspace.id, {
-          trx,
-        });
+        resolvedUser = await this.userRepo.findById(
+          existingLink.userId,
+          workspace.id,
+          {
+            trx,
+          },
+        );
         if (!resolvedUser || isUserDisabled(resolvedUser)) {
           throw new SocialAuthFlowError('account_disabled');
         }
@@ -486,7 +562,13 @@ export class SocialAuthService {
         }
       }
 
-      if (!resolvedUser.emailVerifiedAt && identity.emailVerified) {
+      if (
+        !resolvedUser.emailVerifiedAt &&
+        identity.emailVerified &&
+        identity.email &&
+        identity.email.trim().toLowerCase() ===
+          resolvedUser.email.trim().toLowerCase()
+      ) {
         await this.userRepo.updateUser(
           { emailVerifiedAt: new Date() },
           resolvedUser.id,
@@ -496,56 +578,35 @@ export class SocialAuthService {
         resolvedUser.emailVerifiedAt = new Date();
       }
 
-      await this.userRepo.updateUser(
-        { lastLoginAt: new Date() },
-        resolvedUser.id,
-        workspace.id,
-        trx,
-      );
-      resolvedUser.lastLoginAt = new Date();
-
       return resolvedUser;
     });
 
-    this.auditService.setActorId(user.id);
-    this.auditService.log({
-      event: AuditEvent.USER_LOGIN,
-      resourceType: AuditResource.USER,
-      resourceId: user.id,
-      metadata: {
+    const target = stored.redirect
+      ? `${baseUrl}${stored.redirect}`
+      : `${baseUrl}/home`;
+
+    const result = await this.authService.loginAuthenticatedUser(
+      user,
+      workspace.id,
+      {
         source: type,
         providerId: provider.id,
-        workspaceId: workspace.id,
       },
-    });
-
-    const target = stored.redirect ? `${baseUrl}${stored.redirect}` : `${baseUrl}/home`;
-
-    const mfaRequired = await this.instanceSettingRepo.isLocalMfaRequired();
-    if (mfaRequired) {
-      const mfa = await this.getChallengeReadyMfa(user.id, workspace.id);
-      if (mfa) {
-        const mfaToken = await this.tokenService.generateMfaToken(
-          user,
-          workspace.id,
-        );
-        return {
-          kind: 'mfa',
-          mfaToken,
-          redirectUrl: `${baseUrl}/login/mfa#mfa_token=${encodeURIComponent(mfaToken)}`,
-        };
-      }
-      const authToken = await this.tokenService.generateAccessToken(user);
+    );
+    if (typeof result !== 'string' && 'mfaToken' in result) {
       return {
-        kind: 'session',
-        authToken,
-        requiresMfaSetup: true,
-        redirectUrl: `${baseUrl}/login/mfa/setup`,
+        kind: 'mfa',
+        mfaToken: result.mfaToken,
+        redirectUrl: `${baseUrl}/login/mfa#mfa_token=${encodeURIComponent(result.mfaToken)}`,
       };
     }
-
-    const authToken = await this.tokenService.generateAccessToken(user);
-    return { kind: 'session', authToken, requiresMfaSetup: false, redirectUrl: target };
+    const requiresMfaSetup = typeof result !== 'string';
+    return {
+      kind: 'session',
+      authToken: typeof result === 'string' ? result : result.authToken,
+      requiresMfaSetup,
+      redirectUrl: requiresMfaSetup ? `${baseUrl}/login/mfa/setup` : target,
+    };
   }
 
   private async completeLink(opts: {
@@ -567,39 +628,58 @@ export class SocialAuthService {
       throw new SocialAuthFlowError('account_disabled');
     }
 
-    await executeTx(this.db, async (trx) => {
-      const existing = await trx
-        .selectFrom('authAccounts')
-        .select(['id', 'userId'])
-        .where('workspaceId', '=', workspace.id)
-        .where('authProviderId', '=', provider.id)
-        .where('providerUserId', '=', identity.providerUserId)
-        .where('deletedAt', 'is', null)
-        .executeTakeFirst();
+    try {
+      await executeTx(this.db, async (trx) => {
+        const existing = await trx
+          .selectFrom('authAccounts')
+          .select(['id', 'userId'])
+          .where('workspaceId', '=', workspace.id)
+          .where('authProviderId', '=', provider.id)
+          .where('providerUserId', '=', identity.providerUserId)
+          .where('deletedAt', 'is', null)
+          .executeTakeFirst();
 
-      if (existing) {
-        if (existing.userId === user.id) {
-          return;
+        if (existing) {
+          if (existing.userId === user.id) {
+            return;
+          }
+          throw new SocialAuthFlowError('link_collision');
         }
+
+        const inserted = await trx
+          .insertInto('authAccounts')
+          .values({
+            userId: user.id,
+            providerUserId: identity.providerUserId,
+            authProviderId: provider.id,
+            workspaceId: workspace.id,
+          })
+          .onConflict((oc) =>
+            oc
+              .columns(['userId', 'authProviderId'])
+              .doUpdateSet({
+                providerUserId: identity.providerUserId,
+                deletedAt: null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where('authAccounts.workspaceId', '=', workspace.id)
+              .where('authAccounts.deletedAt', 'is not', null),
+          )
+          .returning('id')
+          .executeTakeFirst();
+
+        if (!inserted) {
+          throw new SocialAuthFlowError('link_collision');
+        }
+      });
+    } catch (error) {
+      // A concurrent link may claim the provider identity first.
+      if ((error as { code?: string }).code === '23505') {
         throw new SocialAuthFlowError('link_collision');
       }
-
-      const inserted = await trx
-        .insertInto('authAccounts')
-        .values({
-          userId: user.id,
-          providerUserId: identity.providerUserId,
-          authProviderId: provider.id,
-          workspaceId: workspace.id,
-        })
-        .onConflict((oc) => oc.doNothing())
-        .returning('id')
-        .executeTakeFirst();
-
-      if (!inserted) {
-        throw new SocialAuthFlowError('link_collision');
-      }
-    });
+      throw error;
+    }
 
     this.auditService.setActorId(user.id);
     this.auditService.log({
@@ -629,7 +709,9 @@ export class SocialAuthService {
     return provider;
   }
 
-  private async findProviderRow(providerId: string): Promise<AuthProvider | null> {
+  private async findProviderRow(
+    providerId: string,
+  ): Promise<AuthProvider | null> {
     return this.db
       .selectFrom('authProviders')
       .selectAll()
@@ -712,19 +794,21 @@ export class SocialAuthService {
     }
   }
 
-  private async getChallengeReadyMfa(userId: string, workspaceId: string) {
-    const mfa = await this.userMfaRepo.findByUserId(userId, workspaceId, {
-      includeTotpSecret: true,
-    });
-    if (!mfa?.enabledAt || !mfa.totpSecret) {
-      return null;
-    }
-    try {
-      this.mfaService.decryptTotpSecret(mfa.totpSecret);
-    } catch {
-      return null;
-    }
-    return mfa;
+  private hashBinding(value: string): string {
+    if (!value) throw new SocialAuthFlowError('state_invalid');
+    return createHash('sha256').update(value).digest('hex');
+  }
+
+  private matchesBinding(
+    expected: string | undefined,
+    actual: string | undefined,
+  ): boolean {
+    if (!expected || !actual) return false;
+    const supplied = Buffer.from(this.hashBinding(actual), 'hex');
+    const stored = Buffer.from(expected, 'hex');
+    return (
+      stored.length === supplied.length && timingSafeEqual(stored, supplied)
+    );
   }
 
   private logLoginFailure(

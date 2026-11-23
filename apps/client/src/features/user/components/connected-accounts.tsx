@@ -16,11 +16,7 @@ import {
   IconLink,
   IconLinkOff,
 } from "@tabler/icons-react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -38,10 +34,14 @@ const PROVIDERS = [
   { type: "google", label: "Google", icon: IconBrandGoogle },
 ] as const;
 
-async function getConnectedAccounts(): Promise<{ items: ISocialAccount[] }> {
-  const req = await api.post<{ items: ISocialAccount[] }>(
-    "/auth/social/accounts",
-  );
+async function getConnectedAccounts(): Promise<{
+  items: ISocialAccount[];
+  linkingAllowed: boolean;
+}> {
+  const req = await api.post<{
+    items: ISocialAccount[];
+    linkingAllowed: boolean;
+  }>("/auth/social/accounts");
   return req.data;
 }
 
@@ -127,6 +127,11 @@ export function ConnectedAccounts() {
         )}
       </Text>
 
+      {data && !data.linkingAllowed && (
+        <Text size="sm" c="dimmed" mb="md">
+          {t("This workspace enforces enterprise single sign-on.")}
+        </Text>
+      )}
       {isLoading ? (
         <Loader size="sm" />
       ) : (
@@ -168,6 +173,7 @@ export function ConnectedAccounts() {
                     variant="light"
                     leftSection={<IconLink size={14} />}
                     loading={connectMutation.isPending}
+                    disabled={!data?.linkingAllowed}
                     data-testid={`social-connect-${provider.type}`}
                     onClick={() => connectMutation.mutate(provider.type)}
                   >

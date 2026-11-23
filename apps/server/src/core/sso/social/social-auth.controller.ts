@@ -14,7 +14,8 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
+import { randomBytes } from 'node:crypto';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { Public } from '../../../common/decorators/public.decorator';
 import { SkipTransform } from '../../../common/decorators/skip-transform.decorator';
 import { AuthUser } from '../../../common/decorators/auth-user.decorator';
@@ -23,7 +24,11 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { User, Workspace } from '@wrenlore/db/types/entity.types';
 import { extractBearerTokenFromHeader } from '../../../common/helpers';
 import { TokenService } from '../../auth/services/token.service';
-import { SocialAuthService, SocialAuthFlowError, SocialCallbackResult } from './social-auth.service';
+import {
+  SocialAuthService,
+  SocialAuthFlowError,
+  SocialCallbackResult,
+} from './social-auth.service';
 import {
   isSocialProviderType,
   SOCIAL_LINK_RECENT_AUTH_TTL_S,
@@ -56,11 +61,14 @@ export class SocialAuthController {
   ) {
     const type = this.parseProvider(provider);
     try {
+      const binding = randomBytes(32).toString('base64url');
       const authorizeUrl = await this.socialAuthService.startLogin(
         workspace,
         type,
+        binding,
         redirect,
       );
+      this.socialAuthService.setBrowserCookie(res, authorizeUrl, binding);
       return res
         .status(HttpStatus.FOUND)
         .header('Location', authorizeUrl)
@@ -77,14 +85,20 @@ export class SocialAuthController {
     @Param('provider') provider: string,
     @AuthWorkspace() workspace: Workspace,
     @Query() query: Record<string, string | undefined>,
+    @Req() req: FastifyRequest,
     @Res() res: FastifyReply,
   ) {
     const type = this.parseProvider(provider);
+    const cookieName = this.socialAuthService.browserCookieName(query.state);
+    this.socialAuthService.clearBrowserCookie(res, query.state);
     try {
       const result = await this.socialAuthService.handleCallback({
         workspace,
         type,
         query,
+        browserBinding: cookieName ? req.cookies?.[cookieName] : undefined,
+        sessionToken:
+          req.cookies?.authToken || extractBearerTokenFromHeader(req),
       });
       return this.sendCallbackResult(res, workspace, result);
     } catch (error) {
@@ -100,6 +114,7 @@ export class SocialAuthController {
     @AuthWorkspace() workspace: Workspace,
     @Req() req: any,
     @Body() dto: StartSocialLinkDto,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const type = this.parseProvider(dto.providerType);
 
@@ -116,9 +131,18 @@ export class SocialAuthController {
       );
     }
 
+    const binding = randomBytes(32).toString('base64url');
     const url = await this.handleLinkStartErrors(() =>
-      this.socialAuthService.startLink(user, workspace, type, dto.redirect),
+      this.socialAuthService.startLink(
+        user,
+        workspace,
+        type,
+        binding,
+        token,
+        dto.redirect,
+      ),
     );
+    this.socialAuthService.setBrowserCookie(res, url, binding);
     return { url };
   }
 
@@ -129,7 +153,10 @@ export class SocialAuthController {
       return await fn();
     } catch (error) {
       if (error instanceof SocialAuthFlowError) {
-        throw new BadRequestException(SOCIAL_LINK_ERROR_MESSAGES[error.code] ?? 'Social login is not available.');
+        throw new BadRequestException(
+          SOCIAL_LINK_ERROR_MESSAGES[error.code] ??
+            'Social login is not available.',
+        );
       }
       throw error;
     }

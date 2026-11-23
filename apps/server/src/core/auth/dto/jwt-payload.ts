@@ -32,7 +32,13 @@ export type JwtAttachmentPayload = {
   type: 'attachment';
 };
 
+export interface SocialLoginContext {
+  source: 'github' | 'google';
+  providerId: string;
+}
+
 export interface JwtMfaTokenPayload {
+  social?: SocialLoginContext;
   sub: string;
   workspaceId: string;
   type: 'mfa_token';

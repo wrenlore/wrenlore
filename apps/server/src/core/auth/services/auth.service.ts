@@ -39,7 +39,7 @@ import {
 } from '../../../integrations/audit/audit.service';
 import { EnvironmentService } from '../../../integrations/environment/environment.service';
 import { UserMfaRepo } from '@wrenlore/db/repos/user/user-mfa.repo';
-import { JwtType } from '../dto/jwt-payload';
+import { SocialLoginContext, JwtType } from '../dto/jwt-payload';
 import { MfaService } from './mfa.service';
 import { InstanceSettingRepo } from '@wrenlore/db/repos/instance-setting/instance-setting.repo';
 
@@ -87,23 +87,43 @@ export class AuthService {
       appSecret: this.environmentService.getAppSecret(),
     });
 
+    return this.loginAuthenticatedUser(user, workspaceId);
+  }
+
+  /** Complete a verified first factor using the same MFA/session policy. */
+  async loginAuthenticatedUser(
+    user: User,
+    workspaceId: string,
+    social?: SocialLoginContext,
+  ) {
+    if (user.workspaceId !== workspaceId || isUserDisabled(user)) {
+      throw new UnauthorizedException('Invalid authentication');
+    }
     const mfaRequired = await this.instanceSettingRepo.isLocalMfaRequired();
     if (!mfaRequired) {
-      return this.completeLogin(user, workspaceId, 'password');
+      return this.completeLogin(
+        user,
+        workspaceId,
+        social?.source ?? 'password',
+        social?.providerId,
+      );
     }
 
     const mfa = await this.getChallengeReadyMfaForLogin(user.id, workspaceId);
     if (mfa) {
       return {
         userHasMfa: true,
-        mfaToken: await this.tokenService.generateMfaToken(user, workspaceId),
+        mfaToken: social
+          ? await this.tokenService.generateMfaToken(user, workspaceId, social)
+          : await this.tokenService.generateMfaToken(user, workspaceId),
       };
     }
 
     const authToken = await this.completeLogin(
       user,
       workspaceId,
-      'password_mfa_setup_required',
+      social?.source ?? 'password_mfa_setup_required',
+      social?.providerId,
     );
     return {
       requiresMfaSetup: true,
@@ -115,7 +135,7 @@ export class AuthService {
     mfaToken: string,
     token: string,
   ): Promise<{ authToken: string }> {
-    const user = await this.getUserFromMfaToken(mfaToken, {
+    const { user, social } = await this.getUserFromMfaToken(mfaToken, {
       includePassword: false,
     });
     await this.assertNativeMfaEnabled();
@@ -151,7 +171,12 @@ export class AuthService {
       metadata: { method: 'totp' },
     });
 
-    const authToken = await this.completeLogin(user, user.workspaceId, 'mfa');
+    const authToken = await this.completeLogin(
+      user,
+      user.workspaceId,
+      social?.source ?? 'mfa',
+      social?.providerId,
+    );
     return { authToken };
   }
 
@@ -159,7 +184,7 @@ export class AuthService {
     mfaToken: string,
     recoveryCode: string,
   ): Promise<{ authToken: string }> {
-    const user = await this.getUserFromMfaToken(mfaToken, {
+    const { user, social } = await this.getUserFromMfaToken(mfaToken, {
       includePassword: false,
     });
     await this.assertNativeMfaEnabled();
@@ -203,7 +228,8 @@ export class AuthService {
     const authToken = await this.completeLogin(
       user,
       user.workspaceId,
-      'mfa_recovery_code',
+      social?.source ?? 'mfa_recovery_code',
+      social?.providerId,
     );
     return { authToken };
   }
@@ -212,18 +238,21 @@ export class AuthService {
     user: User,
     workspaceId: string,
     source: string,
+    providerId?: string,
   ): Promise<string> {
+    const authToken = await this.tokenService.generateAccessToken(user);
     user.lastLoginAt = new Date();
     await this.userRepo.updateLastLogin(user.id, workspaceId);
 
+    this.auditService.setActorId(user.id);
     this.auditService.log({
       event: AuditEvent.USER_LOGIN,
       resourceType: AuditResource.USER,
       resourceId: user.id,
-      metadata: { source },
+      metadata: { source, workspaceId, ...(providerId ? { providerId } : {}) },
     });
 
-    return this.tokenService.generateAccessToken(user);
+    return authToken;
   }
 
   private async getUserFromMfaToken(
@@ -234,15 +263,19 @@ export class AuthService {
       mfaToken,
       JwtType.MFA_TOKEN,
     );
-    const user = await this.userRepo.findById(payload.sub, payload.workspaceId, {
-      includePassword: opts?.includePassword,
-    });
+    const user = await this.userRepo.findById(
+      payload.sub,
+      payload.workspaceId,
+      {
+        includePassword: opts?.includePassword,
+      },
+    );
 
     if (!user || isUserDisabled(user)) {
       throw new UnauthorizedException('Invalid MFA challenge');
     }
 
-    return user;
+    return { user, social: payload.social as SocialLoginContext | undefined };
   }
 
   private async getEnabledMfaForLogin(
