@@ -39,6 +39,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and publish
         uses: docker/build-push-action@v6
         with:
@@ -51,6 +57,9 @@ jobs:
             ghcr.io/wrenlore/wrenlore:${{ inputs.version }}
             ghcr.io/wrenlore/wrenlore:latest
             ghcr.io/wrenlore/wrenlore:sha-${{ github.sha }}
+            docker.io/wrenlore/wrenlore:${{ inputs.version }}
+            docker.io/wrenlore/wrenlore:latest
+            docker.io/wrenlore/wrenlore:sha-${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
