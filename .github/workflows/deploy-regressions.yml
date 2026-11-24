@@ -1,0 +1,32 @@
+name: Deployment installer regressions
+
+on:
+  pull_request:
+    paths:
+      - "install.sh"
+      - "deploy/**"
+      - "scripts/deploy/**"
+      - "docs/DEPLOYMENT_CONTRACT.md"
+      - ".github/workflows/deploy-regressions.yml"
+  push:
+    branches: [master]
+    paths:
+      - "install.sh"
+      - "deploy/**"
+      - "scripts/deploy/**"
+      - "docs/DEPLOYMENT_CONTRACT.md"
+      - ".github/workflows/deploy-regressions.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check shell scripts
+        run: shellcheck install.sh scripts/deploy/test-installer-contract.sh
+      - name: Exercise installation, updates and resource ownership
+        run: bash scripts/deploy/test-installer-contract.sh

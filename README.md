@@ -28,23 +28,19 @@ WrenLore has no per-user licence fee. You run the infrastructure and choose any 
 
 ## Quick start
 
-Requirements: Docker Engine, the Docker Compose plugin and Git.
+Install WrenLore with one command:
 
 ```bash
-git clone https://github.com/wrenlore/wrenlore.git
-cd wrenlore
-cp .env.example .env
-
-# Edit .env: set APP_SECRET to a random value of at least 32 characters.
-# For non-local use, also set APP_URL and explicit database credentials.
-
-docker compose up -d --build
-curl -f http://localhost:3000/api/health
+curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The application runs migrations on startup. Keep the database and storage volumes when upgrading.
+The installer requires a running Docker Engine with the Docker Compose plugin, accessible to the current user. It does not install or configure Docker or elevate privileges.
 
-For TLS, reverse-proxy configuration, backups and production environment values, use the [deployment runbook](README-deploy.md).
+It generates strong secrets, starts PostgreSQL/pgvector and Redis, and reports success only after WrenLore is healthy.
+
+Open [http://localhost:3000](http://localhost:3000). Rerunning the installer preserves secrets and persistent data.
+
+For domains, TLS, reverse-proxy configuration, backups, source builds and production values, use the [deployment runbook](README-deploy.md). The exact Docker-only support boundary is recorded in the [deployment contract](docs/DEPLOYMENT_CONTRACT.md).
 
 ## Built for agent access without the shared admin token
 

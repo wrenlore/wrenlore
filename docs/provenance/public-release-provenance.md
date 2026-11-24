@@ -93,3 +93,12 @@ storage code, reproduced failures, GitHub's public OAuth documentation and the
 installed open-source OIDC library. The tests use synthetic identities, signed
 test tokens and disposable databases. No proprietary Docmost material or
 post-fork upstream implementation was used; the AGPL-3.0 boundary is unchanged.
+
+## Docker installer ownership and update safeguards
+
+The installer ownership checks, staged configuration updates and deployment
+regressions are original WrenLore work based on its deployment requirements,
+existing Compose definitions and reproduced installer failures. The tests use
+synthetic credentials and simulated Docker resources alongside the real Compose
+parser. No proprietary Docmost material or post-fork upstream implementation was
+used; the AGPL-3.0 boundary and clean-cut policy are unchanged.
