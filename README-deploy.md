@@ -25,7 +25,9 @@ Useful options:
 --version VERSION
 ```
 
-The default installation directory is `~/.wrenlore`. Its mode-600 `.env` contains generated secrets and must be included in secure operational backups. Reruns preserve it and all named volumes.
+The default installation directory is `~/.wrenlore`. Its mode-600 `.env` contains generated secrets and the installation's resource ownership ID, and must be included in secure operational backups. Plain reruns preserve it and all owned volumes. Explicit `--version`, `--port` and `--app-url` options update those settings while preserving secrets; omitted options keep their saved values.
+
+Different directories receive separate Compose project names. The installer refuses to take over another installation's resources, including an existing source-build deployment. Keep using the original deployment commands for those instances; automatic adoption is not supported. See the contract below for configuration recovery and rerun behaviour.
 
 See [the deployment contract](docs/DEPLOYMENT_CONTRACT.md) for the exact support, persistence, health and backup boundary.
 

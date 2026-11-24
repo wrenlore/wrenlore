@@ -22,10 +22,27 @@ The installer:
 2. If they are missing, explains the prerequisite and asks before using Docker's official Linux convenience installer.
 3. Never installs Docker silently. Unattended installation requires both --yes and --install-docker.
 4. Creates an installation directory (default ~/.wrenlore).
-5. Generates and preserves strong application/database secrets in a mode-600 .env.
+5. Checks for resource collisions, then generates and preserves strong application/database secrets in a mode-600 .env.
 6. Downloads the canonical Compose definition.
 7. Validates it, pulls configured images, starts the stack, and waits for health.
-8. Is safe to rerun: existing secrets and persistent volumes are preserved.
+8. Preserves existing secrets and persistent volumes on reruns; explicit configuration options update their corresponding settings.
+
+Each installation directory gets a stable, distinct Compose project name and a
+random ownership ID stored in `.env`. Containers, volumes and the network carry
+that ID. Before generating credentials or reconciling resources, the installer
+checks both Compose project labels and conventional volume/network names. It
+refuses resources owned by another installation, including volumes left after
+`docker compose down`. It never removes orphan services.
+
+`WRENLORE_PROJECT_NAME` can select a custom project on first installation. It
+cannot switch the project of an existing installation. Use the same directory
+for updates; use another directory and an available port for a separate instance.
+
+Automatic adoption of source-build deployments or earlier draft installer
+configurations without an ownership ID is unsupported. Keep using their original
+Compose files and secrets. Do not point this installer at their volumes or
+generate replacement credentials. If an installer `.env` is lost, restore the
+original configuration from backup rather than regenerating it over existing data.
 
 ## Runtime services
 
@@ -47,6 +64,7 @@ Generated automatically:
 
 - APP_SECRET
 - POSTGRES_PASSWORD
+- WRENLORE_INSTALL_ID (resource ownership marker, not an authentication secret)
 
 Stable defaults:
 
@@ -66,9 +84,38 @@ Operators must set the real external APP_URL when using a domain or reverse prox
 
 ## Reruns and updates
 
-A rerun refreshes the canonical Compose file, preserves .env, pulls the selected WrenLore tag, and reconciles the stack.
+A plain rerun refreshes the canonical Compose file, preserves `.env` byte for
+byte, pulls the configured WrenLore tag, and reconciles the owned stack.
+
+Explicit `--version`, `--port` and `--app-url` options update only those settings;
+omitted options retain their existing values. The corresponding
+`WRENLORE_VERSION`, `WRENLORE_PORT` and `WRENLORE_APP_URL` environment options
+have the same effect. Secrets, the project name, ownership ID, comments and other
+operator configuration are preserved. Port and public URL are independent: set
+both when changing a directly accessed localhost URL; a reverse-proxied public
+URL can remain unchanged when its local backend port changes.
+
+The installer stages configuration privately and validates it before replacing
+files. Failed validation, ownership checks or image pulls leave the saved files
+unchanged. If startup fails after reconciliation begins, the new configuration is
+retained for diagnosis; this is not automatic database or application rollback.
+The readiness message shows the effective configured public URL and local port.
+
+`WRENLORE_IMAGE` is an optional custom-image override for testing. An explicit
+`--version` is rejected while that override is active, rather than silently
+ignoring the requested tag. Normal installations use the official image.
 
 Release deployments should use immutable semantic tags. latest is a convenience default during the initial distribution phase, not the recommended production pin.
+
+## Regression verification
+
+Run `bash scripts/deploy/test-installer-contract.sh` with Python 3 and Docker
+Compose available. These tests invoke the real Compose parser and simulate daemon
+state; they never install Docker, pull images or start containers. They cover
+separate installations, explicit updates, secret/configuration preservation,
+foreign and leftover volumes, missing configuration, failed startup and failed
+downloads. The deployment-installer workflow runs them and ShellCheck on PRs.
+These checks complement, and do not claim to replace, a real-container smoke test.
 
 ## Backup boundary
 

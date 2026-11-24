@@ -10,8 +10,8 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      APP_URL: ${APP_URL}
-      APP_SECRET: ${APP_SECRET}
+      APP_URL: ${APP_URL:?APP_URL is required}
+      APP_SECRET: ${APP_SECRET:?APP_SECRET is required}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379
       MAIL_DRIVER: ${MAIL_DRIVER:-log}
@@ -26,6 +26,8 @@ services:
     ports:
       - "127.0.0.1:${PORT:-3000}:3000"
     restart: unless-stopped
+    labels:
+      io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}
     volumes:
       - wrenlore_storage:/app/data/storage
     extra_hosts:
@@ -44,6 +46,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: unless-stopped
+    labels:
+      io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}
     volumes:
       - db_data:/var/lib/postgresql
     healthcheck:
@@ -57,6 +61,8 @@ services:
     image: redis:8-alpine@sha256:5af80107c1eeecb484a2269b80a26d12bfa6521787da4663bd9f19f60a163483
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     restart: unless-stopped
+    labels:
+      io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}
     volumes:
       - redis_data:/data
     healthcheck:
@@ -68,5 +74,16 @@ services:
 
 volumes:
   wrenlore_storage:
+    labels:
+      io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}
   db_data:
+    labels:
+      io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}
   redis_data:
+    labels:
+      io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}
+
+networks:
+  default:
+    labels:
+      io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}
