@@ -1,6 +1,37 @@
 # WrenLore Deployment Runbook (Docker Compose + Nginx TLS)
 
-This runbook is for deploying the current WrenLore stack from this Git repo (not upstream Docmost images/update flow).
+This runbook is for deploying WrenLore with the supported Docker-only deployment model (not upstream Docmost images or update flows).
+
+## Single-command installation
+
+Interactive installation:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash
+```
+
+If Docker Engine or the Compose plugin is absent, the installer asks before using Docker's official Linux convenience installer. It never changes the host silently. Unattended Docker installation requires explicit authorization:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash -s -- --yes --install-docker
+```
+
+Useful options:
+
+```text
+--dir PATH
+--port PORT
+--app-url URL
+--version VERSION
+```
+
+The default installation directory is `~/.wrenlore`. Its mode-600 `.env` contains generated secrets and must be included in secure operational backups. Reruns preserve it and all named volumes.
+
+See [the deployment contract](docs/DEPLOYMENT_CONTRACT.md) for the exact support, persistence, health and backup boundary.
+
+## Source-build deployment
+
+The commands below remain available for developers and operators who deliberately build the application image from the current checkout.
 
 ## Prerequisites
 
