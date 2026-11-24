@@ -49,7 +49,7 @@ shutil.copyfile(os.environ['INSTALLER_TEST_COMPOSE'],args[args.index('-o')+1])
 
     def run_installer(self, *args, directory=None, extra_env=None, success=True):
         result = subprocess.run(
-            ['bash', INSTALLER, '--yes', '--dir', str(directory or self.install), *args],
+            ['bash', INSTALLER, '--dir', str(directory or self.install), *args],
             env={**self.env, **(extra_env or {})}, capture_output=True, text=True, timeout=15,
         )
         if success:
@@ -226,9 +226,9 @@ shutil.copyfile(os.environ['INSTALLER_TEST_COMPOSE'],args[args.index('-o')+1])
                 self.run_installer(*args, success=False)
                 self.assertFalse(self.state()['calls'])
 
-    def test_unattended_missing_docker_requires_explicit_permission(self):
+    def test_missing_docker_reports_prerequisite_without_host_changes(self):
         result = self.run_installer(extra_env={'INSTALLER_TEST_NO_DOCKER': '1'}, success=False)
-        self.assertIn('Docker installation was not authorized', result.stderr)
+        self.assertIn('Docker Engine and the Docker Compose plugin are prerequisites', result.stderr)
         self.assertFalse(self.state()['calls'])
 
 

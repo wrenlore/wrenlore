@@ -34,13 +34,9 @@ Install WrenLore with one command:
 curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash
 ```
 
-The installer uses Docker Compose, generates strong secrets, starts PostgreSQL/pgvector and Redis, and reports success only after WrenLore is healthy. If Docker Engine or the Compose plugin is missing, it explains what is needed and asks before installing Docker.
+The installer requires a running Docker Engine with the Docker Compose plugin, accessible to the current user. It does not install or configure Docker or elevate privileges.
 
-For unattended Linux installation, explicitly authorize both the defaults and Docker installation:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash -s -- --yes --install-docker
-```
+It generates strong secrets, starts PostgreSQL/pgvector and Redis, and reports success only after WrenLore is healthy.
 
 Open [http://localhost:3000](http://localhost:3000). Rerunning the installer preserves secrets and persistent data.
 

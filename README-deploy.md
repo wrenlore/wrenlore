@@ -10,11 +10,7 @@ Interactive installation:
 curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash
 ```
 
-If Docker Engine or the Compose plugin is absent, the installer asks before using Docker's official Linux convenience installer. It never changes the host silently. Unattended Docker installation requires explicit authorization:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash -s -- --yes --install-docker
-```
+Prerequisite: Docker Engine and the Docker Compose plugin must already be running and accessible to the current user. The WrenLore installer does not install Docker, change user groups or elevate privileges.
 
 Useful options:
 

@@ -12,8 +12,6 @@ APP_URL_EXPLICIT=0
 [ -z "${WRENLORE_VERSION+x}" ] || VERSION_EXPLICIT=1
 [ -z "${WRENLORE_PORT+x}" ] || PORT_EXPLICIT=1
 [ -z "${WRENLORE_APP_URL+x}" ] || APP_URL_EXPLICIT=1
-ASSUME_YES=0
-ALLOW_DOCKER_INSTALL=0
 BASE_URL="${WRENLORE_RELEASE_BASE_URL:-https://raw.githubusercontent.com/wrenlore/wrenlore/master}"
 
 say() { printf "%s\n" "$*"; }
@@ -24,8 +22,6 @@ usage() {
 Install WrenLore with Docker Compose.
 
 Usage: install.sh [options]
-  --yes                 Non-interactive mode; accept safe defaults
-  --install-docker      Permit Docker Engine + Compose installation when missing
   --dir PATH            Installation directory (default: $HOME/.wrenlore)
   --port PORT           Local HTTP port (default: 3000)
   --app-url URL         Public WrenLore URL (default: http://localhost:PORT)
@@ -38,14 +34,11 @@ on first install; an existing installation cannot switch projects.
 
 Examples:
   curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash
-  curl -fsSL https://raw.githubusercontent.com/wrenlore/wrenlore/master/install.sh | bash -s -- --yes --install-docker
 USAGE
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --yes) ASSUME_YES=1 ;;
-    --install-docker) ALLOW_DOCKER_INSTALL=1 ;;
     --dir) [ "$#" -ge 2 ] || die "--dir requires a value"; INSTALL_DIR="$2"; shift ;;
     --port) [ "$#" -ge 2 ] || die "--port requires a value"; PORT="$2"; PORT_EXPLICIT=1; shift ;;
     --app-url) [ "$#" -ge 2 ] || die "--app-url requires a value"; APP_URL="$2"; APP_URL_EXPLICIT=1; shift ;;
@@ -72,46 +65,11 @@ validate_version "$VERSION"
 [ -n "$APP_URL" ] || APP_URL="http://localhost:$PORT"
 validate_url "$APP_URL"
 
-confirm() {
-  local prompt="$1"
-  [ -r /dev/tty ] || die "$prompt Re-run in a terminal, or use --yes --install-docker."
-  printf "%s [y/N] " "$prompt" > /dev/tty
-  read -r answer < /dev/tty
-  case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
-}
-
-install_docker() {
-  [ "$(uname -s)" = "Linux" ] || die "automatic Docker installation is supported only on Linux"
-  command -v curl >/dev/null 2>&1 || die "curl is required to install Docker"
-  local run_prefix=()
-  if [ "$(id -u)" -ne 0 ]; then
-    command -v sudo >/dev/null 2>&1 || die "Docker installation requires root or sudo"
-    run_prefix=(sudo)
-  fi
-  say "Installing Docker Engine and the Compose plugin using Docker's official convenience installer..."
-  local tmp
-  tmp="$(mktemp)"
-  trap 'rm -f "$tmp"' RETURN
-  curl -fsSL https://get.docker.com -o "$tmp"
-  "${run_prefix[@]}" sh "$tmp"
-}
-
 docker_ready() {
   command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1
 }
 
-if ! docker_ready; then
-  say "Docker Engine and the Docker Compose plugin are required but were not detected."
-  if [ "$ALLOW_DOCKER_INSTALL" -eq 1 ]; then
-    install_docker
-  elif [ "$ASSUME_YES" -eq 1 ]; then
-    die "Docker installation was not authorized; rerun with --yes --install-docker"
-  elif confirm "Install Docker Engine and Docker Compose now?"; then
-    install_docker
-  else
-    die "install Docker Engine + Compose, then rerun this installer"
-  fi
-fi
+docker_ready || die "Docker Engine and the Docker Compose plugin are prerequisites. Install and start Docker, ensure this user can run docker commands, then rerun the WrenLore installer."
 
 docker info >/dev/null 2>&1 || die "Docker is installed but this user cannot reach the daemon. Start Docker or grant this user access, then retry."
 

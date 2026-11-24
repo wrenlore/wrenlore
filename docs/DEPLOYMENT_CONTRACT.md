@@ -18,14 +18,13 @@ A native Node.js/PostgreSQL/Redis installation is not supported. Docker is the r
 
 The installer:
 
-1. Detects Docker Engine and the Compose plugin.
-2. If they are missing, explains the prerequisite and asks before using Docker's official Linux convenience installer.
-3. Never installs Docker silently. Unattended installation requires both --yes and --install-docker.
-4. Creates an installation directory (default ~/.wrenlore).
-5. Checks for resource collisions, then generates and preserves strong application/database secrets in a mode-600 .env.
-6. Downloads the canonical Compose definition.
-7. Validates it, pulls configured images, starts the stack, and waits for health.
-8. Preserves existing secrets and persistent volumes on reruns; explicit configuration options update their corresponding settings.
+1. Verifies Docker Engine and the Compose plugin are already running and accessible to the current user.
+2. Stops with a clear prerequisite error if Docker is missing or inaccessible; it does not install Docker, change user groups or elevate privileges.
+3. Creates an installation directory (default ~/.wrenlore).
+4. Checks for resource collisions, then generates and preserves strong application/database secrets in a mode-600 .env.
+5. Downloads the canonical Compose definition.
+6. Validates it, pulls configured images, starts the stack, and waits for health.
+7. Preserves existing secrets and persistent volumes on reruns; explicit configuration options update their corresponding settings.
 
 Each installation directory gets a stable, distinct Compose project name and a
 random ownership ID stored in `.env`. Containers, volumes and the network carry
