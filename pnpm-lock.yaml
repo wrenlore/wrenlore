@@ -364,8 +364,8 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0
       i18next:
-        specifier: ^23.16.8
-        version: 23.16.8
+        specifier: ^26.3.4
+        version: 26.3.4(typescript@5.7.2)
       i18next-http-backend:
         specifier: ^4.0.2
         version: 4.0.4
@@ -422,7 +422,7 @@ importers:
         version: 2.0.5(react@18.3.1)
       react-i18next:
         specifier: ^15.0.1
-        version: 15.0.1(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.0.1(i18next@26.3.4(typescript@5.7.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-router:
         specifier: 8.3.0
         version: 8.3.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -3118,6 +3118,7 @@ packages:
   '@opentelemetry/sdk-trace-base@2.2.0':
     resolution: {integrity: sha512-xWQgL0Bmctsalg6PaXExmzdedSp3gyKV8mQBwK/j9VGdCDu2fmXIb2gAehBKbkXCpJ4HPkgv3QfoJWRT4dHWbw==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
@@ -4206,6 +4207,9 @@ packages:
   '@smithy/core@3.24.3':
     resolution: {integrity: sha512-Ep/7tPamGY8mgESE3LyLKtxJyy6U52WWAqr/3wial47Sj4u3PiIF73AOGI27UyLy9duTkhZbgzodOfLV4TduZg==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.3.3':
     resolution: {integrity: sha512-I2Bti0DKFo2IJyN28ijCsx51BAumEYR4/1yZ1FXyBygy9MqbnMqCev4JPth/MbpRfBSRAX35hITSnAdJRo1u5w==}
@@ -7066,8 +7070,13 @@ packages:
     resolution: {integrity: sha512-nG9OQKvUsPiTVUBg1rCGmvmWhzxC9GOxVbGdTYyejHVMSUjutt1hiBNVSzhB/ZE7keL9Xkb880kUfhDovV5T5g==}
     engines: {node: '>=18'}
 
-  i18next@23.16.8:
-    resolution: {integrity: sha512-06r/TitrM88Mg5FdUXAKL96dJMzgqLE5dv3ryBAra4KCwD9mJ4ndOTS95ZuymIGoE+2hzfdaMak2X11/es7ZWg==}
+  i18next@26.3.4:
+    resolution: {integrity: sha512-pa7m0d7pBDqGHZxljT+WPFeyFgQ7P7SciPPo1tTqYuO0z4sqADYhwnBESmmGp/wEof1inwdls/k8ZgTg8rxFHA==}
+    peerDependencies:
+      typescript: ^5 || ^6
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
@@ -7781,8 +7790,8 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  lib0@0.2.119:
-    resolution: {integrity: sha512-vh+TiejVy8Xm+hCdnRfn9BthGNvNUZdEXltNjVZL3TzRIKP3s1lnQh8pWd/Q0wCgY0FPAGVVjFF4ZiHUV3LFgA==}
+  lib0@0.2.120:
+    resolution: {integrity: sha512-/a2eRImR8sZbmMVKe2we1/KukDQkuPyPf8yol6epvCu2PH6hurjcRI3mdGFFAi0uGoRJGyns99JquZgxwW1tQg==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -8132,6 +8141,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-addon-api@8.5.0:
     resolution: {integrity: sha512-/bRZty2mXUIFY/xU5HLvveNHlswNJej+RnxBjOMkidWfwZzgTbPG1E3K5TOxRLOR+5hX7bSofy8yf1hZevMS8A==}
@@ -9738,6 +9748,9 @@ packages:
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
+
+  tslib@2.9.1:
+    resolution: {integrity: sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA==}
 
   tsx@4.19.3:
     resolution: {integrity: sha512-4H8vUNGNjQ4V2EOoGw005+c+dGuPSnhpPBPHBtsZdGZBk/iJb4kguGlPWaZTZ3q5nMtFOEsY0nRDlh9PJyd6SQ==}
@@ -14250,7 +14263,7 @@ snapshots:
   '@swc/helpers@0.5.5':
     dependencies:
       '@swc/counter': 0.1.3
-      tslib: 2.8.1
+      tslib: 2.9.1
     optional: true
 
   '@swc/types@0.1.28':
@@ -17366,9 +17379,9 @@ snapshots:
 
   i18next-http-backend@4.0.4: {}
 
-  i18next@23.16.8:
-    dependencies:
-      '@babel/runtime': 7.26.10
+  i18next@26.3.4(typescript@5.7.2):
+    optionalDependencies:
+      typescript: 5.7.2
 
   iconv-lite@0.6.3:
     dependencies:
@@ -18220,7 +18233,7 @@ snapshots:
     dependencies:
       isomorphic.js: 0.2.5
 
-  lib0@0.2.119:
+  lib0@0.2.120:
     dependencies:
       isomorphic.js: 0.2.5
 
@@ -19526,11 +19539,11 @@ snapshots:
       react-fast-compare: 3.2.2
       shallowequal: 1.1.0
 
-  react-i18next@15.0.1(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  react-i18next@15.0.1(i18next@26.3.4(typescript@5.7.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@babel/runtime': 7.26.10
       html-parse-stringify: 3.0.1
-      i18next: 23.16.8
+      i18next: 26.3.4(typescript@5.7.2)
       react: 18.3.1
     optionalDependencies:
       react-dom: 18.3.1(react@18.3.1)
@@ -20443,6 +20456,9 @@ snapshots:
 
   tslib@2.8.1: {}
 
+  tslib@2.9.1:
+    optional: true
+
   tsx@4.19.3:
     dependencies:
       esbuild: 0.28.1
@@ -20939,7 +20955,7 @@ snapshots:
 
   y-protocols@1.0.6(yjs@13.6.29):
     dependencies:
-      lib0: 0.2.119
+      lib0: 0.2.120
       yjs: 13.6.29
 
   y18n@4.0.3: {}
