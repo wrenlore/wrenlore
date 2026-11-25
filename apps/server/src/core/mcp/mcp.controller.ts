@@ -42,7 +42,7 @@ export class McpController {
       request.raw['workspaceId'],
     );
     const server = new Server(
-      { name: 'wrenlore', version: '0.1.12' },
+      { name: 'wrenlore', version: '0.1.13' },
       {
         capabilities: { tools: {} },
         instructions:

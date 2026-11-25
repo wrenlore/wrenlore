@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.1.13 - 2026-11-25
+
+### Frictionless self-hosting
+- Add the guarded one-command Docker installer with generated secrets, isolated Compose projects, collision detection and safe reruns that preserve secrets while applying explicit version, port and URL changes (#168).
+- Add an agent-assisted installation guide plus verified backup, upgrade and clean-restore operations with ShellCheck and CI coverage (#175, #176).
+- Put a direct **New page** action on the empty first-run home screen so a newly created workspace no longer leaves the user hunting through a space before they can write their first page.
+
+### Release distribution
+- Publish the same release tags to public GHCR and Docker Hub, automatically triggered by stable `vX.Y.Z` tags with a manual recovery route (#169–#174).
+- Build and verify both `linux/amd64` and `linux/arm64` manifests in both registries, including a native Apple Silicon runtime proof (#178).
+
+### Validation and upgrade notes
+- Installer regression coverage includes fresh installs, project collisions, rerun configuration changes and secret preservation. The deployment lifecycle was exercised through a real upgrade, backup, volume removal and clean restore.
+- The release pipeline verifies both architectures in both registries after publication. Native ARM64 and public-image installs reached healthy PostgreSQL, Redis and WrenLore services.
+- Existing deployments can update with the installer or Docker Compose while preserving the database and storage volumes. Back up first; do not remove volumes. See [operations](docs/OPERATIONS.md).
+- WrenLore remains Docmost-derived AGPL-3.0 software. These additions retain the documented clean-cut provenance policy.
+
 ## v0.1.12 - 2026-11-23
 
 ### GitHub and Google social login
