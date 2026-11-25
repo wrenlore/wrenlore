@@ -7,6 +7,7 @@ import {
   ActionIcon,
 } from "@mantine/core";
 import { Link } from "react-router";
+import type { ReactNode } from "react";
 import PageListSkeleton from "@/components/ui/page-list-skeleton.tsx";
 import { buildPageUrl } from "@/features/page/page.utils.ts";
 import { formattedDate } from "@/lib/time.ts";
@@ -19,9 +20,10 @@ import { getInitialsColor } from "@/lib/get-initials-color.ts";
 
 interface Props {
   spaceId?: string;
+  emptyAction?: ReactNode;
 }
 
-export default function RecentChanges({ spaceId }: Props) {
+export default function RecentChanges({ spaceId, emptyAction }: Props) {
   const { t } = useTranslation();
   const { data: pages, isLoading, isError } = useRecentChangesQuery(spaceId);
 
@@ -90,6 +92,7 @@ export default function RecentChanges({ spaceId }: Props) {
       icon={IconFiles}
       title={t("No pages yet")}
       description={t("Pages you create will show up here.")}
+      action={emptyAction}
     />
   );
 }

@@ -8,7 +8,7 @@
     "source": "github"
   },
   "websiteUrl": "https://wrenlore.com/",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "remotes": [
     {
       "type": "streamable-http",
