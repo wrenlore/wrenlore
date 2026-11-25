@@ -4,9 +4,9 @@ Status: initial Docker-only contract for the public single-command installer.
 
 ## Supported installation model
 
-- Linux host
+- Linux host, or macOS with Docker Desktop
 - Docker Engine with the Docker Compose plugin
-- amd64 for the initial release; arm64 is explicitly deferred
+- amd64 and arm64 container images
 - WrenLore application image plus digest-pinned PostgreSQL/pgvector and Redis containers
 - Named Docker volumes for database, file storage, and Redis persistence
 - Loopback-only HTTP publication by default (127.0.0.1:3000)
@@ -122,7 +122,6 @@ A complete backup requires a PostgreSQL dump, the `wrenlore_storage` contents, t
 
 ## Deferred
 
-- arm64 images
 - Native/non-Docker installation
 - Automatic TLS or reverse-proxy management
 - Kubernetes/Helm
