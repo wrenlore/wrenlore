@@ -88,6 +88,10 @@ export class AttachmentController {
     @AuthUser() user: User,
     @AuthWorkspace() workspace: Workspace,
   ) {
+    if (this.environmentService.isDemoMode()) {
+      throw new ForbiddenException('Uploads are disabled in the public demo');
+    }
+
     const maxFileSize = bytes(this.environmentService.getFileUploadSizeLimit());
 
     let file = null;
@@ -260,6 +264,10 @@ export class AttachmentController {
     @AuthUser() user: User,
     @AuthWorkspace() workspace: Workspace,
   ) {
+    if (this.environmentService.isDemoMode()) {
+      throw new ForbiddenException('Uploads are disabled in the public demo');
+    }
+
     const maxFileSize = bytes(MAX_AVATAR_SIZE);
 
     let file = null;

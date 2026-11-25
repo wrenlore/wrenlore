@@ -218,6 +218,25 @@ export class EnvironmentService {
     return this.configService.get<string>('POSTHOG_KEY');
   }
 
+  isDemoMode(): boolean {
+    return (
+      this.configService.get<string>('DEMO_MODE', 'false').toLowerCase() ===
+      'true'
+    );
+  }
+
+  getDemoEmail(): string {
+    return this.configService.get<string>('DEMO_EMAIL');
+  }
+
+  getDemoPassword(): string {
+    return this.configService.get<string>('DEMO_PASSWORD');
+  }
+
+  getDemoResetSchedule(): string {
+    return this.configService.get<string>('DEMO_RESET_SCHEDULE');
+  }
+
   getSearchDriver(): string {
     return this.configService
       .get<string>('SEARCH_DRIVER', 'database')

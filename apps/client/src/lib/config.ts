@@ -99,6 +99,22 @@ export function getPostHogKey() {
   return getConfigValue("POSTHOG_KEY");
 }
 
+export function isDemoMode(): boolean {
+  return castToBoolean(getConfigValue("DEMO_MODE"));
+}
+
+export function getDemoEmail(): string {
+  return getConfigValue("DEMO_EMAIL");
+}
+
+export function getDemoPassword(): string {
+  return getConfigValue("DEMO_PASSWORD");
+}
+
+export function getDemoResetSchedule(): string {
+  return getConfigValue("DEMO_RESET_SCHEDULE");
+}
+
 function getConfigValue(key: string, defaultValue: string = undefined): string {
   const rawValue = import.meta.env.DEV
     ? process?.env?.[key]
