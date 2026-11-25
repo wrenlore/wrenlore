@@ -11,6 +11,9 @@ import {
   Box,
   Anchor,
   Group,
+  Code,
+  Stack,
+  Text,
 } from "@mantine/core";
 import classes from "./auth.module.css";
 import { useRedirectIfAuthenticated } from "@/features/auth/hooks/use-redirect-if-authenticated.ts";
@@ -24,11 +27,15 @@ import SsoLogin from "@/features/auth/components/sso-login.tsx";
 import { useWorkspacePublicDataQuery } from "@/features/workspace/queries/workspace-query.ts";
 import { Error404 } from "@/components/ui/error-404.tsx";
 import React from "react";
+import {
+  getDemoEmail,
+  getDemoPassword,
+  getDemoResetSchedule,
+  isDemoMode,
+} from "@/lib/config.ts";
 
 const formSchema = z.object({
-  email: z
-    .email()
-    .min(1, { message: "email is required" }),
+  email: z.email().min(1, { message: "email is required" }),
   password: z.string().min(1, { message: "Password is required" }),
 });
 type FormValues = z.infer<typeof formSchema>;
@@ -51,8 +58,7 @@ const SOCIAL_LOGIN_ERROR_MESSAGES: Record<string, string> = {
     "New sign-ups are not allowed in this workspace. Ask an administrator for an invitation.",
   email_unverified:
     "Your provider account has no verified email address, so sign-up cannot continue.",
-  domain_not_allowed:
-    "This email domain is not approved for this workspace.",
+  domain_not_allowed: "This email domain is not approved for this workspace.",
   link_collision:
     "This provider identity is already connected to another account.",
 };
@@ -75,7 +81,9 @@ export function LoginForm() {
     if (loginError) {
       notifications.show({
         color: "red",
-        message: SOCIAL_LOGIN_ERROR_MESSAGES[loginError] ?? t("Social login failed. Please try again."),
+        message:
+          SOCIAL_LOGIN_ERROR_MESSAGES[loginError] ??
+          t("Social login failed. Please try again."),
       });
       searchParams.delete("error");
       window.history.replaceState(
@@ -89,8 +97,8 @@ export function LoginForm() {
   const form = useForm<FormValues>({
     validate: zod4Resolver(formSchema),
     initialValues: {
-      email: "",
-      password: "",
+      email: isDemoMode() ? getDemoEmail() : "",
+      password: isDemoMode() ? getDemoPassword() : "",
     },
   });
 
@@ -99,7 +107,7 @@ export function LoginForm() {
   }
 
   if (isDataLoading) {
-   return null;
+    return null;
   }
 
   if (isError && error?.["response"]?.status === 404) {
@@ -110,10 +118,35 @@ export function LoginForm() {
     <Container size={420} className={classes.container}>
       <Box p="xl" className={classes.containerBox}>
         <Title order={2} ta="center" fw={500} mb="md">
-          {t("Login")}
+          {isDemoMode() ? "Explore the WrenLore demo" : t("Login")}
         </Title>
 
-        <SsoLogin />
+        {isDemoMode() && (
+          <Box className={classes.demoAccess} mb="lg">
+            <Text fw={600} mb={4}>
+              Demo login
+            </Text>
+            <Text size="sm" c="dimmed" mb="sm">
+              Use the shared account below. Changes are temporary
+              {getDemoResetSchedule()
+                ? ` and reset ${getDemoResetSchedule()}`
+                : ""}
+              .
+            </Text>
+            <Stack gap={6}>
+              <Group justify="space-between" wrap="nowrap">
+                <Text size="sm">Email</Text>
+                <Code>{getDemoEmail()}</Code>
+              </Group>
+              <Group justify="space-between" wrap="nowrap">
+                <Text size="sm">Password</Text>
+                <Code>{getDemoPassword()}</Code>
+              </Group>
+            </Stack>
+          </Box>
+        )}
+
+        {!isDemoMode() && <SsoLogin />}
 
         {!data?.enforceSso && (
           <>
@@ -135,16 +168,18 @@ export function LoginForm() {
                 {...form.getInputProps("password")}
               />
 
-              <Group justify="flex-end" mt="sm">
-                <Anchor
-                  to={APP_ROUTE.AUTH.FORGOT_PASSWORD}
-                  component={Link}
-                  underline="never"
-                  size="sm"
-                >
-                  {t("Forgot your password?")}
-                </Anchor>
-              </Group>
+              {!isDemoMode() && (
+                <Group justify="flex-end" mt="sm">
+                  <Anchor
+                    to={APP_ROUTE.AUTH.FORGOT_PASSWORD}
+                    component={Link}
+                    underline="never"
+                    size="sm"
+                  >
+                    {t("Forgot your password?")}
+                  </Anchor>
+                </Group>
+              )}
 
               <Button type="submit" fullWidth mt="md" loading={isLoading}>
                 {t("Sign In")}

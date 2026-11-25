@@ -23,6 +23,10 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_IGNORETLS: ${SMTP_IGNORETLS:-false}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DEMO_EMAIL: ${DEMO_EMAIL:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      DEMO_RESET_SCHEDULE: ${DEMO_RESET_SCHEDULE:-}
     ports:
       - "127.0.0.1:${PORT:-3000}:3000"
     restart: unless-stopped
@@ -33,7 +37,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health || exit 1"]
+      test:
+        ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -59,7 +64,14 @@ services:
 
   redis:
     image: redis:8-alpine@sha256:5af80107c1eeecb484a2269b80a26d12bfa6521787da4663bd9f19f60a163483
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
     restart: unless-stopped
     labels:
       io.wrenlore.installation: ${WRENLORE_INSTALL_ID:-}

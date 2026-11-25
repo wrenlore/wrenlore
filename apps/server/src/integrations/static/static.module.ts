@@ -49,6 +49,16 @@ export class StaticModule implements OnModuleInit {
           : undefined,
         POSTHOG_HOST: this.environmentService.getPostHogHost(),
         POSTHOG_KEY: this.environmentService.getPostHogKey(),
+        DEMO_MODE: this.environmentService.isDemoMode(),
+        DEMO_EMAIL: this.environmentService.isDemoMode()
+          ? this.environmentService.getDemoEmail()
+          : undefined,
+        DEMO_PASSWORD: this.environmentService.isDemoMode()
+          ? this.environmentService.getDemoPassword()
+          : undefined,
+        DEMO_RESET_SCHEDULE: this.environmentService.isDemoMode()
+          ? this.environmentService.getDemoResetSchedule()
+          : undefined,
       };
 
       const windowScriptContent = `<script>window.CONFIG=${JSON.stringify(configString)};</script>`;
