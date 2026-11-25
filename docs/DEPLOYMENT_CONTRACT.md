@@ -118,13 +118,7 @@ These checks complement, and do not claim to replace, a real-container smoke tes
 
 ## Backup boundary
 
-A complete backup requires:
-
-- PostgreSQL dump or consistent backup of db_data
-- Copy or snapshot of wrenlore_storage
-- Copy of the installation .env
-
-Redis is persistent for runtime continuity but is not the system of record.
+A complete backup requires a PostgreSQL dump, the `wrenlore_storage` contents, the installation `.env`, and the Compose definition. `scripts/deploy/backup.sh` creates that bundle while the application is paused; `scripts/deploy/restore.sh` restores it only into an empty directory and unused Compose project. Redis is persistent for runtime continuity but is not the system of record. See [the operations guide](OPERATIONS.md).
 
 ## Deferred
 
