@@ -8,14 +8,14 @@ The agent uses the same public installer as the normal one-command path. It does
 
 The current public deployment contract supports:
 
-- a Linux amd64 host;
+- a Linux or macOS Docker host using amd64 or arm64;
 - Docker Engine and the Docker Compose plugin already installed and running;
 - a user account that can run `docker` without privilege escalation;
 - outbound HTTPS access to GitHub Container Registry, Docker Hub and GitHub raw content.
 
 The WrenLore installer does not install Docker, use `sudo`, change group membership, modify package sources or configure a reverse proxy.
 
-For macOS or Windows, follow the normal [installation page](https://wrenlore.com/install/) with Docker Desktop. The agent procedure below is currently bounded to the supported Linux deployment contract.
+On macOS, use Docker Desktop as described on the normal [installation page](https://wrenlore.com/install/). Windows users should follow that page directly; the agent procedure below is bounded to the proved Linux and macOS paths.
 
 ## Paste this prompt into your agent
 
@@ -23,7 +23,7 @@ For macOS or Windows, follow the normal [installation page](https://wrenlore.com
 Install WrenLore on this machine using the official WrenLore installer.
 
 Before changing anything:
-1. Confirm this is a Linux amd64 host.
+1. Confirm this is a Linux or macOS host with Docker reporting amd64 or arm64.
 2. Confirm Docker Engine is running, the Docker Compose plugin is available, and the current user can run both `docker info` and `docker compose version` without sudo.
 3. Check whether `$HOME/.wrenlore` already exists. If it does, treat it as an existing WrenLore installation and use that same directory. Do not replace, print, source or regenerate its `.env` file.
 4. Do not install or reconfigure Docker, use sudo, change user groups, alter package repositories, delete containers or volumes, or adopt resources from another deployment. If a prerequisite is missing or an ownership/collision check fails, stop and report the exact blocker.
