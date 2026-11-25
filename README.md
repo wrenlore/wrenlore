@@ -40,6 +40,8 @@ It generates strong secrets, starts PostgreSQL/pgvector and Redis, and reports s
 
 Open [http://localhost:3000](http://localhost:3000). Rerunning the installer preserves secrets and persistent data.
 
+Prefer to delegate the checks and installation to a coding or operations agent? Use the [agent installation guide](docs/AGENT_INSTALL.md), including its paste-ready prompt and machine-checkable completion criteria.
+
 For domains, TLS, reverse-proxy configuration, backups, source builds and production values, use the [deployment runbook](README-deploy.md). The exact Docker-only support boundary is recorded in the [deployment contract](docs/DEPLOYMENT_CONTRACT.md).
 
 ## Built for agent access without the shared admin token
